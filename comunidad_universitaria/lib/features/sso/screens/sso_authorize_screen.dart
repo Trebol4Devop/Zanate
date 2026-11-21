@@ -122,7 +122,9 @@ class _SsoAuthorizeScreenState extends State<SsoAuthorizeScreen> {
 
     try {
       final currentUrl = SupabaseService.oauthRedirectUrl;
-      final launched = await SupabaseService.signInWithGoogle(redirectTo: currentUrl);
+      final launched = await SupabaseService.signInWithGoogle(
+        redirectTo: currentUrl,
+      );
       if (!launched) {
         throw StateError('No se pudo iniciar el acceso con Google.');
       }
@@ -153,8 +155,11 @@ class _SsoAuthorizeScreenState extends State<SsoAuthorizeScreen> {
 
     // Si estamos en entorno web local (localhost) y el redirect_uri enviado apunta a Netlify/nube de PEMTREE,
     // garantizamos redirigir al PEMTREE local http://localhost:5173/auth/callback
-    final isLocalWeb = kIsWeb && (Uri.base.host == 'localhost' || Uri.base.host == '127.0.0.1');
-    if (isLocalWeb && (raw.contains('netlify.app') || raw.contains('pemtree.'))) {
+    final isLocalWeb =
+        kIsWeb &&
+        (Uri.base.host == 'localhost' || Uri.base.host == '127.0.0.1');
+    if (isLocalWeb &&
+        (raw.contains('netlify.app') || raw.contains('pemtree.'))) {
       return SsoSecurityValidator.defaultLocalRedirectUri;
     }
 
@@ -198,7 +203,8 @@ class _SsoAuthorizeScreenState extends State<SsoAuthorizeScreen> {
       if (!kDebugMode) {
         setState(() {
           _isLoading = false;
-          _authErrorMessage = 'Supabase no está configurado en esta compilación.';
+          _authErrorMessage =
+              'Supabase no está configurado en esta compilación.';
         });
         return;
       }
@@ -290,7 +296,7 @@ class _SsoAuthorizeScreenState extends State<SsoAuthorizeScreen> {
         isDark: isDark,
         title: 'URL de Redirección No Autorizada',
         description:
-            'La dirección de retorno solicitada no pertenece a la lista de orígenes permitidos por Comunidad USAC para PEMTREE.',
+            'La dirección de retorno solicitada no pertenece a la lista de orígenes permitidos por Zanate para PEMTREE.',
         recommendation:
             'En desarrollo local utiliza exactamente http://localhost:5173/auth/callback',
       );
@@ -304,7 +310,8 @@ class _SsoAuthorizeScreenState extends State<SsoAuthorizeScreen> {
         title: 'Cliente SSO Desconocido',
         description:
             'El parámetro client_id "${widget.clientId ?? 'no especificado'}" no está registrado en el servicio de autorización centralizada.',
-        recommendation: 'Verifica que la aplicación cliente envíe client_id=pemtree.',
+        recommendation:
+            'Verifica que la aplicación cliente envíe client_id=pemtree.',
       );
     }
 
@@ -436,7 +443,9 @@ class _SsoAuthorizeScreenState extends State<SsoAuthorizeScreen> {
               'Ir a Zanate',
               style: TextStyle(fontWeight: FontWeight.w700),
             ),
-            onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/', (_) => false),
+            onPressed: () => Navigator.of(
+              context,
+            ).pushNamedAndRemoveUntil('/', (_) => false),
           ),
         ],
       ),
@@ -444,8 +453,11 @@ class _SsoAuthorizeScreenState extends State<SsoAuthorizeScreen> {
   }
 
   Widget _buildConsentCard(ThemeData theme, bool isDark) {
-    final userEmail = SupabaseService.currentUser?.email ?? 'usuario@estudiante.usac.edu.gt';
-    final userAlias = _currentAlias.isNotEmpty ? _currentAlias : 'Estudiante USAC';
+    final userEmail =
+        SupabaseService.currentUser?.email ?? 'usuario@estudiante.usac.edu.gt';
+    final userAlias = _currentAlias.isNotEmpty
+        ? _currentAlias
+        : 'Estudiante USAC';
     final textPrimary = ZanateColors.textPrimary(isDark);
     final textSecondary = ZanateColors.textSecondary(isDark);
     final textMuted = ZanateColors.textMuted(isDark);
@@ -560,7 +572,9 @@ class _SsoAuthorizeScreenState extends State<SsoAuthorizeScreen> {
                   radius: 19,
                   backgroundColor: ZanateColors.zanateBlack,
                   child: Text(
-                    userAlias.isNotEmpty ? userAlias.characters.first.toUpperCase() : 'U',
+                    userAlias.isNotEmpty
+                        ? userAlias.characters.first.toUpperCase()
+                        : 'U',
                     style: const TextStyle(
                       color: ZanateColors.zanateEyeYellow,
                       fontWeight: FontWeight.bold,
@@ -598,10 +612,7 @@ class _SsoAuthorizeScreenState extends State<SsoAuthorizeScreen> {
                       const SizedBox(height: 2),
                       Text(
                         userEmail,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: textMuted,
-                        ),
+                        style: TextStyle(fontSize: 12, color: textMuted),
                       ),
                     ],
                   ),
@@ -670,7 +681,10 @@ class _SsoAuthorizeScreenState extends State<SsoAuthorizeScreen> {
                     ),
                   ),
                   onPressed: _isLoading ? null : _handleCancel,
-                  child: const Text('Cancelar / Rechazar', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    'Cancelar / Rechazar',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
               const SizedBox(width: 14),
@@ -696,7 +710,10 @@ class _SsoAuthorizeScreenState extends State<SsoAuthorizeScreen> {
                             color: ZanateColors.ctaFg(isDark),
                           ),
                         )
-                      : const Text('Autorizar / Continuar', style: TextStyle(fontWeight: FontWeight.bold)),
+                      : const Text(
+                          'Autorizar / Continuar',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                 ),
               ),
             ],
@@ -708,11 +725,7 @@ class _SsoAuthorizeScreenState extends State<SsoAuthorizeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                PhosphorIconsRegular.lockSimple,
-                size: 13,
-                color: textMuted,
-              ),
+              Icon(PhosphorIconsRegular.lockSimple, size: 13, color: textMuted),
               const SizedBox(width: 5),
               Text(
                 'Conexión segura y autenticación protegida',
@@ -906,7 +919,10 @@ class _SsoAuthorizeScreenState extends State<SsoAuthorizeScreen> {
                 : const ZanateGoogleIcon(size: 20),
             label: Text(
               _isLoading ? 'Conectando...' : 'Continuar con Google',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13.5,
+              ),
             ),
             onPressed: (_isLoading || _waitingForGoogle)
                 ? null
@@ -925,10 +941,7 @@ class _SsoAuthorizeScreenState extends State<SsoAuthorizeScreen> {
           Text(
             'El acceso se realiza de forma segura mediante tu cuenta de Google.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 11,
-              color: textMuted,
-            ),
+            style: TextStyle(fontSize: 11, color: textMuted),
           ),
         ],
       ),
@@ -982,7 +995,9 @@ class _SsoAuthorizeScreenState extends State<SsoAuthorizeScreen> {
                     : ZanateColors.zanateBlack,
               ),
               onPressed: () => _performRedirect(_redirectingUrl!),
-              child: const Text('Si no eres redirigido automáticamente, haz clic aquí'),
+              child: const Text(
+                'Si no eres redirigido automáticamente, haz clic aquí',
+              ),
             ),
           ],
         ],

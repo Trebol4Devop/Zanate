@@ -104,7 +104,7 @@ void main() {
         fakeServer.onPost('/auth/v1/factors', (request) {
           final payload = jsonDecode(request.body) as Map<String, dynamic>;
           expect(payload['factor_type'], 'totp');
-          expect(payload['issuer'], 'Comunidad USAC');
+          expect(payload['issuer'], 'Zanate');
           return {
             'id': 'totp-factor',
             'type': 'totp',

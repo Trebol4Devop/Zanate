@@ -1,5 +1,5 @@
 -- =============================================================================
--- PEMTREE / Comunidad USAC · pgTAP Test: RPCs de Moderación y Auto-moderación
+-- PEMTREE / Zanate · pgTAP Test: RPCs de Moderación y Auto-moderación
 -- =============================================================================
 begin;
 

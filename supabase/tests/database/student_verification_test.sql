@@ -1,5 +1,5 @@
 -- =============================================================================
--- PEMTREE / Comunidad USAC · pgTAP Test: Verificación Estudiantil USAC
+-- PEMTREE / Zanate · pgTAP Test: Verificación Estudiantil USAC
 -- Archivo: supabase/tests/database/student_verification_test.sql
 -- Rama: feature/verification-db-hardening
 -- =============================================================================

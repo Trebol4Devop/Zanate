@@ -1,6 +1,6 @@
 # Autenticación con Supabase: Login y Sign Up
 
-Guía técnica del sistema de autenticación de Comunidad USAC con Supabase Auth, PostgreSQL y RLS. La app ofrece únicamente Google OAuth; la primera autenticación crea la cuenta y Google nunca solicita el TOTP de Comunidad USAC. El registro/inicio con correo y contraseña no se ofrece en la app. La inscripción TOTP del perfil queda separada del acceso.
+Guía técnica del sistema de autenticación de Zanate con Supabase Auth, PostgreSQL y RLS. La app ofrece únicamente Google OAuth; la primera autenticación crea la cuenta y Google nunca solicita el TOTP de Zanate. El registro/inicio con correo y contraseña no se ofrece en la app. La inscripción TOTP del perfil queda separada del acceso.
 
 > Verifica los límites del plan gratuito en https://supabase.com/pricing antes de decidir, porque cambian con el tiempo.
 
@@ -8,16 +8,16 @@ Guía técnica del sistema de autenticación de Comunidad USAC con Supabase Auth
 
 ## 1. Alcance y decisiones de arquitectura
 
-| Decisión | Elección | Motivo |
-|---|---|---|
-| Backend | Supabase Auth (GoTrue) | Ya incluye registro, login, tokens, OAuth y recuperación |
-| Base de datos | PostgreSQL de Supabase | Tabla `auth.users` administrada por Supabase + tabla propia `public.profiles` |
-| Autorización | Row Level Security (RLS) | Sin backend propio, la seguridad vive en la BD |
-| Proveedores de la app | Google OAuth | Único método de acceso expuesto en Flutter |
-| Confirmación por correo | No aplica al flujo actual | La app no registra con Email; el acceso es mediante Google OAuth |
-| TOTP | No se solicita en el flujo de login actual | La app no añade un desafío después de entrar; la inscripción existente desde el perfil queda separada y su uso futuro está pendiente |
-| Flujo OAuth | PKCE (por defecto en `supabase-js` v2) | Más seguro que el flujo implícito |
-| Correo transaccional | No configurado | La app no ofrece registro por Email ni recuperación |
+| Decisión                | Elección                                   | Motivo                                                                                                                               |
+| ----------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Backend                 | Supabase Auth (GoTrue)                     | Ya incluye registro, login, tokens, OAuth y recuperación                                                                             |
+| Base de datos           | PostgreSQL de Supabase                     | Tabla `auth.users` administrada por Supabase + tabla propia `public.profiles`                                                        |
+| Autorización            | Row Level Security (RLS)                   | Sin backend propio, la seguridad vive en la BD                                                                                       |
+| Proveedores de la app   | Google OAuth                               | Único método de acceso expuesto en Flutter                                                                                           |
+| Confirmación por correo | No aplica al flujo actual                  | La app no registra con Email; el acceso es mediante Google OAuth                                                                     |
+| TOTP                    | No se solicita en el flujo de login actual | La app no añade un desafío después de entrar; la inscripción existente desde el perfil queda separada y su uso futuro está pendiente |
+| Flujo OAuth             | PKCE (por defecto en `supabase-js` v2)     | Más seguro que el flujo implícito                                                                                                    |
+| Correo transaccional    | No configurado                             | La app no ofrece registro por Email ni recuperación                                                                                  |
 
 ### Componentes
 
@@ -37,7 +37,7 @@ flowchart LR
 
 ## 2. Modelo de datos
 
-`auth.users` lo gestiona Supabase; no la modifiques directamente. **El SQL siguiente es un ejemplo genérico, no se debe ejecutar en este proyecto.** Comunidad USAC ya tiene `public.profiles` y un trigger de creación de perfil administrados por sus migraciones. Para este repositorio, usa las migraciones existentes; no recrees la tabla, las policies ni el trigger.
+`auth.users` lo gestiona Supabase; no la modifiques directamente. **El SQL siguiente es un ejemplo genérico, no se debe ejecutar en este proyecto.** Zanate ya tiene `public.profiles` y un trigger de creación de perfil administrados por sus migraciones. Para este repositorio, usa las migraciones existentes; no recrees la tabla, las policies ni el trigger.
 
 ```sql
 -- Perfil público del usuario
@@ -204,23 +204,23 @@ sequenceDiagram
 
 ```ts
 await supabase.auth.signInWithOAuth({
-  provider: 'google',
+  provider: "google",
   options: { redirectTo: `${window.location.origin}/auth/callback` },
 });
 
 // /auth/callback
-const code = new URL(window.location.href).searchParams.get('code');
+const code = new URL(window.location.href).searchParams.get("code");
 await supabase.auth.exchangeCodeForSession(code);
 ```
 
 ### Configuración paso a paso (gratis)
 
-1. **Google Cloud Console** → crear proyecto → *APIs & Services* → *OAuth consent screen* (tipo External, agrega correos de prueba mientras esté en modo Testing).
-2. *Credentials* → *Create credentials* → *OAuth client ID* → tipo **Web application**.
-3. En *Authorized redirect URIs* agrega: `https://<TU-PROJECT-REF>.supabase.co/auth/v1/callback`
+1. **Google Cloud Console** → crear proyecto → _APIs & Services_ → _OAuth consent screen_ (tipo External, agrega correos de prueba mientras esté en modo Testing).
+2. _Credentials_ → _Create credentials_ → _OAuth client ID_ → tipo **Web application**.
+3. En _Authorized redirect URIs_ agrega: `https://<TU-PROJECT-REF>.supabase.co/auth/v1/callback`
 4. Copia **Client ID** y **Client Secret**.
-5. En Supabase: *Authentication → Providers → Google* → activar y pegar ambos valores.
-6. En Supabase: *Authentication → URL Configuration* → define **Site URL** y agrega en **Redirect URLs** tus rutas (`http://localhost:3000/**` para desarrollo y tu dominio de producción).
+5. En Supabase: _Authentication → Providers → Google_ → activar y pegar ambos valores.
+6. En Supabase: _Authentication → URL Configuration_ → define **Site URL** y agrega en **Redirect URLs** tus rutas (`http://localhost:3000/**` para desarrollo y tu dominio de producción).
 
 ### Caso especial: mismo correo, dos métodos
 
@@ -277,12 +277,12 @@ Se usa **TOTP** (códigos de 6 dígitos que cambian cada 30 s, con Google Authen
 
 ### Conceptos
 
-| Concepto | Significado |
-|---|---|
-| `aal1` | Sesión con un solo factor (contraseña o Google) |
-| `aal2` | Sesión con segundo factor verificado |
-| Factor | Un autenticador inscrito; Supabase guarda el secreto en `auth.mfa_factors` |
-| Challenge | Intento de verificación asociado a un factor |
+| Concepto  | Significado                                                                |
+| --------- | -------------------------------------------------------------------------- |
+| `aal1`    | Sesión con un solo factor (contraseña o Google)                            |
+| `aal2`    | Sesión con segundo factor verificado                                       |
+| Factor    | Un autenticador inscrito; Supabase guarda el secreto en `auth.mfa_factors` |
+| Challenge | Intento de verificación asociado a un factor                               |
 
 Supabase **no obliga** a usar MFA por sí mismo: tú decides en el frontend y en RLS cuándo exigir `aal2`.
 
@@ -305,8 +305,8 @@ flowchart TD
 ```ts
 // 1. Inscribir
 const { data, error } = await supabase.auth.mfa.enroll({
-  factorType: 'totp',
-  friendlyName: 'Mi celular',
+  factorType: "totp",
+  friendlyName: "Mi celular",
 });
 // data.id -> factorId ; data.totp.qr_code -> imagen del QR ; data.totp.secret -> clave manual
 
@@ -324,7 +324,7 @@ Nota: un factor que no se verifica queda como no verificado; limpia los factores
 ### 9.2 TOTP fuera del login actual
 
 La app no solicita TOTP en el flujo de acceso. En particular, iniciar sesión
-con Google nunca pide el TOTP de Comunidad USAC. La inscripción TOTP que
+con Google nunca pide el TOTP de Zanate. La inscripción TOTP que
 permanece disponible desde el perfil no condiciona el acceso; su uso futuro como
 segundo factor queda pendiente de decisión.
 
@@ -343,12 +343,12 @@ flowchart TD
 Aunque Supabase pueda reportar un nivel AAL1 para una cuenta con factor
 inscrito, la app actual no usa ese estado para pedir un desafío ni enruta a la
 inscripción al iniciar sesión. El siguiente ejemplo es una referencia genérica
-para una futura implementación, no el comportamiento actual de Comunidad USAC:
+para una futura implementación, no el comportamiento actual de Zanate:
 
 ```ts
 const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
 
-if (aal.nextLevel === 'aal2' && aal.currentLevel !== aal.nextLevel) {
+if (aal.nextLevel === "aal2" && aal.currentLevel !== aal.nextLevel) {
   // En un futuro flujo MFA, solicitar y verificar el desafío TOTP.
 }
 ```
@@ -386,27 +386,27 @@ La app no ofrece códigos de recuperación ni un flujo para recuperar el acceso 
 
 ### 9.5 Lista de operaciones de la API
 
-| Operación | Método |
-|---|---|
-| Inscribir | `supabase.auth.mfa.enroll({ factorType: 'totp' })` |
-| Crear desafío | `supabase.auth.mfa.challenge({ factorId })` |
-| Verificar | `supabase.auth.mfa.verify({ factorId, challengeId, code })` |
-| Desafío y verificación juntos | `supabase.auth.mfa.challengeAndVerify({ factorId, code })` |
-| Listar factores | `supabase.auth.mfa.listFactors()` |
-| Nivel de aseguramiento | `supabase.auth.mfa.getAuthenticatorAssuranceLevel()` |
-| Eliminar factor | `supabase.auth.mfa.unenroll({ factorId })` |
+| Operación                     | Método                                                      |
+| ----------------------------- | ----------------------------------------------------------- |
+| Inscribir                     | `supabase.auth.mfa.enroll({ factorType: 'totp' })`          |
+| Crear desafío                 | `supabase.auth.mfa.challenge({ factorId })`                 |
+| Verificar                     | `supabase.auth.mfa.verify({ factorId, challengeId, code })` |
+| Desafío y verificación juntos | `supabase.auth.mfa.challengeAndVerify({ factorId, code })`  |
+| Listar factores               | `supabase.auth.mfa.listFactors()`                           |
+| Nivel de aseguramiento        | `supabase.auth.mfa.getAuthenticatorAssuranceLevel()`        |
+| Eliminar factor               | `supabase.auth.mfa.unenroll({ factorId })`                  |
 
 ---
 
 ## 10. Cómo mantenerlo en costo cero
 
-| Pieza | Opción gratuita | Cuidado |
-|---|---|---|
-| Supabase | Plan Free | Los proyectos inactivos se pausan tras un periodo sin actividad; hay límites de BD, almacenamiento y usuarios activos mensuales |
-| Google OAuth | Google Cloud Console sin costo | En modo *Testing* solo funcionan los correos de prueba; para público general hay que publicar la app |
-| Envío de correos | No configurado en el proyecto actual | La app no envía confirmaciones ni restablecimientos por correo |
-| CAPTCHA | hCaptcha o Cloudflare Turnstile (ambos con capa gratuita) | Se activa en Authentication → Attack Protection |
-| Hosting del frontend | Vercel, Netlify o Cloudflare Pages (capas gratuitas) | Opcional según tu proyecto |
+| Pieza                | Opción gratuita                                           | Cuidado                                                                                                                         |
+| -------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Supabase             | Plan Free                                                 | Los proyectos inactivos se pausan tras un periodo sin actividad; hay límites de BD, almacenamiento y usuarios activos mensuales |
+| Google OAuth         | Google Cloud Console sin costo                            | En modo _Testing_ solo funcionan los correos de prueba; para público general hay que publicar la app                            |
+| Envío de correos     | No configurado en el proyecto actual                      | La app no envía confirmaciones ni restablecimientos por correo                                                                  |
+| CAPTCHA              | hCaptcha o Cloudflare Turnstile (ambos con capa gratuita) | Se activa en Authentication → Attack Protection                                                                                 |
+| Hosting del frontend | Vercel, Netlify o Cloudflare Pages (capas gratuitas)      | Opcional según tu proyecto                                                                                                      |
 
 **Estado actual:** no agregues SMTP para los flujos de registro o recuperación retirados. La configuración local desactiva Confirm email; el proyecto alojado aún requiere desactivar esa opción manualmente.
 
@@ -456,13 +456,13 @@ src/
 **Checklist genérico de referencia (no es el estado actual del proyecto)**
 
 Este checklist describe tareas comunes para un proyecto nuevo; no debe seguirse
-como una lista de pasos pendientes para Comunidad USAC. En particular, no ejecutes
+como una lista de pasos pendientes para Zanate. En particular, no ejecutes
 el SQL genérico de la sección 2: los perfiles y su trigger ya están definidos
 por las migraciones del repositorio.
 
 - [ ] Crear proyecto en Supabase
 - [ ] Crear `profiles`, RLS y trigger (solo para un proyecto nuevo; no ejecutar aquí)
-- [ ] Desactivar *Confirm email* en Authentication → Sign In / Providers → Email para este flujo
+- [ ] Desactivar _Confirm email_ en Authentication → Sign In / Providers → Email para este flujo
 - [ ] Configurar Site URL y Redirect URLs
 - [ ] Crear credenciales OAuth en Google Cloud y activarlas en Supabase
 
@@ -478,18 +478,18 @@ por las migraciones del repositorio.
 
 ## 13. Casos de prueba mínimos
 
-| # | Caso | Resultado esperado |
-|---|---|---|
-| 1 | Registro con correo válido y Confirm email desactivado | Se crea usuario y sesión sin enviar correo |
-| 2 | Registro con Confirm email aún activo en remoto | No continúa; se informa que hay que desactivarlo en Supabase |
-| 3 | Login con contraseña incorrecta | Mensaje genérico |
-| 4 | Google con cuenta nueva | Usuario y perfil creados, sesión activa |
-| 5 | Google con correo ya registrado | Se inicia sesión sin duplicar usuario |
-| 6 | Acceso a datos de otro usuario por API | Bloqueado por RLS |
-| 7 | Cerrar sesión y volver atrás | Redirige a login |
-| 8 | Inscribir TOTP con código correcto | Factor verificado y sesión `aal2` |
-| 9 | Inscribir TOTP con código incorrecto | Error y factor sin verificar |
-| 10 | Login con MFA activo, solo primer factor | Redirige a verificación MFA, sin acceso a datos protegidos |
-| 11 | Consulta a tabla protegida con sesión `aal1` y MFA inscrito | Bloqueada por la política RLS `aal2` |
-| 12 | Login con Google y MFA inscrito | Exige también el código TOTP |
-| 13 | Desinscribir un factor sin estar en `aal2` | Rechazado |
+| #   | Caso                                                        | Resultado esperado                                           |
+| --- | ----------------------------------------------------------- | ------------------------------------------------------------ |
+| 1   | Registro con correo válido y Confirm email desactivado      | Se crea usuario y sesión sin enviar correo                   |
+| 2   | Registro con Confirm email aún activo en remoto             | No continúa; se informa que hay que desactivarlo en Supabase |
+| 3   | Login con contraseña incorrecta                             | Mensaje genérico                                             |
+| 4   | Google con cuenta nueva                                     | Usuario y perfil creados, sesión activa                      |
+| 5   | Google con correo ya registrado                             | Se inicia sesión sin duplicar usuario                        |
+| 6   | Acceso a datos de otro usuario por API                      | Bloqueado por RLS                                            |
+| 7   | Cerrar sesión y volver atrás                                | Redirige a login                                             |
+| 8   | Inscribir TOTP con código correcto                          | Factor verificado y sesión `aal2`                            |
+| 9   | Inscribir TOTP con código incorrecto                        | Error y factor sin verificar                                 |
+| 10  | Login con MFA activo, solo primer factor                    | Redirige a verificación MFA, sin acceso a datos protegidos   |
+| 11  | Consulta a tabla protegida con sesión `aal1` y MFA inscrito | Bloqueada por la política RLS `aal2`                         |
+| 12  | Login con Google y MFA inscrito                             | Exige también el código TOTP                                 |
+| 13  | Desinscribir un factor sin estar en `aal2`                  | Rechazado                                                    |

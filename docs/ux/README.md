@@ -103,7 +103,7 @@ Detalle completo en [`01-producto.md`](01-producto.md).
 | Gestión global | No | No | No | No | No | Sí |
 
 **Nota sobre autenticación:** la app actual ofrece solo Google y nunca solicita
-el TOTP de Comunidad USAC. La exigencia AAL2 para escrituras es una migración
+el TOTP de Zanate. La exigencia AAL2 para escrituras es una migración
 local independiente; si está aplicada, puede rechazar escrituras AAL1. Ver
 [`07-autenticacion.md`](07-autenticacion.md).
 

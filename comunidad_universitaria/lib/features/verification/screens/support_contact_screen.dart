@@ -66,9 +66,7 @@ class _SupportContactScreenState extends State<SupportContactScreen> {
     final body = StringBuffer()
       ..writeln('Hola equipo de soporte:')
       ..writeln()
-      ..writeln(
-        'No pude completar la verificación automática en Comunidad USAC.',
-      )
+      ..writeln('No pude completar la verificación automática en Zanate.')
       ..writeln();
 
     if (account != null && account.isNotEmpty) {
@@ -104,10 +102,7 @@ class _SupportContactScreenState extends State<SupportContactScreen> {
     if (launcher != null) return launcher(uri);
 
     try {
-      final opened = await launchUrl(
-        uri,
-        mode: LaunchMode.externalApplication,
-      );
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (opened) return true;
       return await launchUrl(uri, mode: LaunchMode.platformDefault);
     } catch (_) {
@@ -202,10 +197,7 @@ class _SupportContactScreenState extends State<SupportContactScreen> {
           fontWeight: FontWeight.w700,
           color: focusColor,
         ),
-        hintStyle: TextStyle(
-          fontSize: 13.5,
-          color: textMuted,
-        ),
+        hintStyle: TextStyle(fontSize: 13.5, color: textMuted),
         border: inputBorder,
         enabledBorder: inputBorder,
         focusedBorder: focusedBorder,
@@ -308,12 +300,7 @@ class _SupportContactScreenState extends State<SupportContactScreen> {
                   ),
                   items: [
                     for (final reason in _reasons)
-                      DropdownMenuItem(
-                        value: reason,
-                        child: Text(
-                          reason,
-                        ),
-                      ),
+                      DropdownMenuItem(value: reason, child: Text(reason)),
                   ],
                   onChanged: (value) {
                     if (value == null) return;
@@ -384,7 +371,10 @@ class _SupportContactScreenState extends State<SupportContactScreen> {
                       : const Icon(PhosphorIconsBold.envelopeSimple, size: 19),
                   label: const Text(
                     'Enviar correo a soporte',
-                    style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],

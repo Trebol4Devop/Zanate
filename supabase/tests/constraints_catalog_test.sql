@@ -1,5 +1,5 @@
 -- =============================================================================
--- PEMTREE / Comunidad USAC · pgTAP Test: Constraints, Integridad y Catálogos
+-- PEMTREE / Zanate · pgTAP Test: Constraints, Integridad y Catálogos
 -- =============================================================================
 begin;
 

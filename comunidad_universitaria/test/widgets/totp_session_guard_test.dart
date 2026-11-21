@@ -120,7 +120,7 @@ void main() {
 
 const Map<String, dynamic> _verifiedFactor = {
   'id': 'totp-factor',
-  'friendly_name': 'Comunidad USAC',
+  'friendly_name': 'Zanate',
   'factor_type': 'totp',
   'status': 'verified',
   'created_at': '2026-10-03T00:00:00.000Z',

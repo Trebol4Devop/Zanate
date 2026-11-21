@@ -16,13 +16,14 @@
 
 ## 1. Propósito, visión y modelo de negocio
 
-El **Marketplace & Tutorías** de Comunidad USAC es una plataforma de
+El **Marketplace & Tutorías** de Zanate es una plataforma de
 **descubrimiento hiperlocal y generación de prospectos (leads)** dentro del
 campus ([`01-producto.md`](01-producto.md)). Estudiantes y comercios locales
 ofertan productos y servicios a la comunidad; el cierre económico y la entrega
 ocurren **fuera de la aplicación**.
 
 ### 1.1 Pilares de experiencia del Marketplace
+
 1. **Descubrimiento hiperlocal:** cada publicación se vincula con sede, facultad,
    edificio (`building_code`) y un punto de entrega concreto, de modo que el
    comprador encuentre lo que necesita **cerca de donde está**.
@@ -40,15 +41,15 @@ ocurren **fuera de la aplicación**.
 
 ### 1.2 Reglas de negocio inmutables
 
-| ID | Regla | Implicación de experiencia |
-|---|---|---|
-| `RN-MKT-01` | **Exclusión de intermediación financiera.** La app no procesa pagos, retenciones ni cobros por compras entre usuarios. | Ningún flujo muestra "pagar", "carrito" ni "comisión". Toda coordinación y pago ocurre en WhatsApp, Telegram, Instagram o Messenger. |
-| `RN-MKT-02` | **Verificación de identidad obligatoria para publicar.** Ningún usuario anónimo o no verificado crea publicaciones. | El botón "Publicar" evalúa `profiles.is_verified = true` o un perfil comercial aprobado antes de abrir el formulario. |
-| `RN-MKT-03` | **Acceso de lectura abierto.** Catálogo, búsqueda, ficha y contacto están disponibles para todos, sin verificación previa. | El visitante puede explorar y abrir canales externos; solo las acciones de escritura (publicar, votar, guardar) piden sesión. |
-| `RN-MKT-04` | **Monetización por visibilidad.** Los ingresos provienen de planes de suscripción, no de comisiones por venta. | Los límites, insignias y posicionamiento se leen de `marketplace_plans`; nunca se codifican en el cliente. |
-| `RN-MKT-05` | **Moderación sin reescritura de autoría.** La moderación puede ocultar o pausar, nunca alterar autor, precio o contenido. | `moderation_status` cambia; el contenido original se conserva para revisión. |
-| `RN-MKT-06` | **Contacto externo primero.** No hay mensajería interna ni custodia de la conversación. | Los botones abren apps externas con mensaje prellenado y registran el clic antes de salir. |
-| `RN-MKT-07` | **Telemetría agregada y no identificable.** Se mide la conversión sin exponer a quién se mostró un anuncio. | `marketplace_item_events` guarda `viewer_id` opcional; el vendedor solo ve conteos agregados. |
+| ID          | Regla                                                                                                                      | Implicación de experiencia                                                                                                           |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `RN-MKT-01` | **Exclusión de intermediación financiera.** La app no procesa pagos, retenciones ni cobros por compras entre usuarios.     | Ningún flujo muestra "pagar", "carrito" ni "comisión". Toda coordinación y pago ocurre en WhatsApp, Telegram, Instagram o Messenger. |
+| `RN-MKT-02` | **Verificación de identidad obligatoria para publicar.** Ningún usuario anónimo o no verificado crea publicaciones.        | El botón "Publicar" evalúa `profiles.is_verified = true` o un perfil comercial aprobado antes de abrir el formulario.                |
+| `RN-MKT-03` | **Acceso de lectura abierto.** Catálogo, búsqueda, ficha y contacto están disponibles para todos, sin verificación previa. | El visitante puede explorar y abrir canales externos; solo las acciones de escritura (publicar, votar, guardar) piden sesión.        |
+| `RN-MKT-04` | **Monetización por visibilidad.** Los ingresos provienen de planes de suscripción, no de comisiones por venta.             | Los límites, insignias y posicionamiento se leen de `marketplace_plans`; nunca se codifican en el cliente.                           |
+| `RN-MKT-05` | **Moderación sin reescritura de autoría.** La moderación puede ocultar o pausar, nunca alterar autor, precio o contenido.  | `moderation_status` cambia; el contenido original se conserva para revisión.                                                         |
+| `RN-MKT-06` | **Contacto externo primero.** No hay mensajería interna ni custodia de la conversación.                                    | Los botones abren apps externas con mensaje prellenado y registran el clic antes de salir.                                           |
+| `RN-MKT-07` | **Telemetría agregada y no identificable.** Se mide la conversión sin exponer a quién se mostró un anuncio.                | `marketplace_item_events` guarda `viewer_id` opcional; el vendedor solo ve conteos agregados.                                        |
 
 ### 1.3 Planes de suscripción
 
@@ -56,20 +57,21 @@ Los planes viven en `public.marketplace_plans`. Sus precios y límites son
 **configurables por administración** y la interfaz los lee de la base de datos;
 no se hardcodean en Flutter.
 
-| Atributo / límite | Estudiante (`free`) | Emprendedor (`pro_student`) | Comercio (`business_local`) |
-|---|---|---|---|
-| Perfil de usuario | Ventas ocasionales (libros, insumos, tutorías) | Ventas recurrentes o ambulantes en el campus | Locales fijos: cafeterías, librerías, fotocopiadoras |
-| Precio mensual | `Q0` | `marketplace_plans.price_monthly` | `marketplace_plans.price_monthly` |
-| Publicaciones activas (`available`/`reserved`) | Máximo **3** simultáneas | Hasta **20** simultáneas | **Ilimitadas** |
-| Vigencia de publicación | **14 días**; pausa automática al vencer | Permanente mientras el plan esté activo | Permanente mientras el plan esté activo |
-| Multimedia por ítem | Máximo **2** imágenes (`image_urls`) | Hasta **6** imágenes + **1** video (`video_url`) | Galería extendida + **1** video |
-| Insignia de confianza | Estudiante Verificado | Emprendedor Verificado (`sponsor_badge_text`) | Tienda / Local Oficial (`sponsor_badge_text`) |
-| Posicionamiento (`is_sponsored`) | Orgánico | Prioridad media en feed y recomendados | Fijado en carrusel superior y prioridad alta |
-| Ubicación en tiempo real | No disponible | Check-in manual de edificio (`current_building_code`) | Estado "Abierto / Cerrado" automático según horario |
-| Protección de escaparate | Muestra productos de otros vendedores al final | Muestra productos de otros vendedores al final | Oculta o colapsa productos de la competencia en su ficha |
-| Analíticas de conversión | Solo conteo público de upvotes | Vistas y clics a contacto | Panel completo de vistas, clics por red y rendimiento |
+| Atributo / límite                              | Estudiante (`free`)                            | Emprendedor (`pro_student`)                           | Comercio (`business_local`)                              |
+| ---------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------- |
+| Perfil de usuario                              | Ventas ocasionales (libros, insumos, tutorías) | Ventas recurrentes o ambulantes en el campus          | Locales fijos: cafeterías, librerías, fotocopiadoras     |
+| Precio mensual                                 | `Q0`                                           | `marketplace_plans.price_monthly`                     | `marketplace_plans.price_monthly`                        |
+| Publicaciones activas (`available`/`reserved`) | Máximo **3** simultáneas                       | Hasta **20** simultáneas                              | **Ilimitadas**                                           |
+| Vigencia de publicación                        | **14 días**; pausa automática al vencer        | Permanente mientras el plan esté activo               | Permanente mientras el plan esté activo                  |
+| Multimedia por ítem                            | Máximo **2** imágenes (`image_urls`)           | Hasta **6** imágenes + **1** video (`video_url`)      | Galería extendida + **1** video                          |
+| Insignia de confianza                          | Estudiante Verificado                          | Emprendedor Verificado (`sponsor_badge_text`)         | Tienda / Local Oficial (`sponsor_badge_text`)            |
+| Posicionamiento (`is_sponsored`)               | Orgánico                                       | Prioridad media en feed y recomendados                | Fijado en carrusel superior y prioridad alta             |
+| Ubicación en tiempo real                       | No disponible                                  | Check-in manual de edificio (`current_building_code`) | Estado "Abierto / Cerrado" automático según horario      |
+| Protección de escaparate                       | Muestra productos de otros vendedores al final | Muestra productos de otros vendedores al final        | Oculta o colapsa productos de la competencia en su ficha |
+| Analíticas de conversión                       | Solo conteo público de upvotes                 | Vistas y clics a contacto                             | Panel completo de vistas, clics por red y rendimiento    |
 
 **Reglas de vigencia y degradación**
+
 - El cupo de publicaciones activas cuenta `available` + `reserved`; `sold` y
   `paused` no consumen cupo.
 - Al vencer el plan de pago, `seller_profiles.plan_id` vuelve a `free` y se
@@ -82,52 +84,53 @@ no se hardcodean en Flutter.
 
 ### 1.4 Actores del Marketplace
 
-| Actor | Puede leer / contactar | Puede publicar | Presencia en campus | Analíticas |
-|---|:--:|:--:|:--:|:--:|
-| Visitante | Sí | No (pide sesión y verificación) | No | No |
-| Estudiante verificado (`free`) | Sí | Sí, con límites del plan | No | Conteo público de upvotes |
-| Emprendedor (`pro_student`) | Sí | Sí, hasta 20 activas | Check-in manual | Vistas y clics |
-| Comercio local (`business_local`) | Sí | Sí, ilimitadas | Abierto/cerrado por horario | Panel completo |
-| Moderador / Admin | Sí | Según su verificación | No aplica | Panel completo y moderación |
+| Actor                             | Puede leer / contactar |         Puede publicar          |     Presencia en campus     |         Analíticas          |
+| --------------------------------- | :--------------------: | :-----------------------------: | :-------------------------: | :-------------------------: |
+| Visitante                         |           Sí           | No (pide sesión y verificación) |             No              |             No              |
+| Estudiante verificado (`free`)    |           Sí           |    Sí, con límites del plan     |             No              |  Conteo público de upvotes  |
+| Emprendedor (`pro_student`)       |           Sí           |      Sí, hasta 20 activas       |       Check-in manual       |       Vistas y clics        |
+| Comercio local (`business_local`) |           Sí           |         Sí, ilimitadas          | Abierto/cerrado por horario |       Panel completo        |
+| Moderador / Admin                 |           Sí           |      Según su verificación      |          No aplica          | Panel completo y moderación |
 
 ---
 
 ## 2. Matriz de requisitos
 
-| Identificador | Título del requisito | Prioridad | Actor principal | Estado / Tipo |
-|---|---|---|:---:|---|
-| [`UX-MKT-001`](#ux-mkt-001--banner-superior-e-identidad-de-comercio-seguro-estudiantil) | Banner superior e identidad de comercio seguro estudiantil | **Must** | Todos los roles | Objetivo |
-| [`UX-MKT-002`](#ux-mkt-002--carrusel-superior-destacado-para-patrocinadores-y-comercios) | Carrusel superior destacado para patrocinadores y comercios | **Should** | Todos / Comercio | Objetivo |
-| [`UX-MKT-003`](#ux-mkt-003--solicitud-de-cuenta-comercial-y-espacio-de-patrocinio) | Solicitud de cuenta comercial y espacio de patrocinio | **Should** | Estudiante / Comercio | Objetivo |
-| [`UX-MKT-004`](#ux-mkt-004--barra-de-búsqueda-y-filtros-facetados-sede-facultad-edificio-y-categoría) | Barra de búsqueda y filtros facetados (sede, facultad, edificio y categoría) | **Must** | Todos los roles | Objetivo |
-| [`UX-MKT-005`](#ux-mkt-005--cuadrícula-responsiva-y-tarjetas-de-producto-con-contexto-de-plan) | Cuadrícula responsiva y tarjetas de producto con contexto de plan | **Must** | Todos los roles | Objetivo |
-| [`UX-MKT-006`](#ux-mkt-006--galería-multimedia-por-plan-y-visor-modal-con-zoom) | Galería multimedia por plan y visor modal con zoom | **Should** | Todos los roles | Objetivo |
-| [`UX-MKT-007`](#ux-mkt-007--visualización-de-precios-en-quetzales-y-distintivo-de-aportes-gratuitos) | Visualización de precios en Quetzales y distintivo de aportes gratuitos | **Must** | Todos los roles | Objetivo |
-| [`UX-MKT-008`](#ux-mkt-008--gestión-de-ciclo-de-vida-del-artículo-disponible-reservado-vendido) | Gestión de ciclo de vida del artículo (disponible, reservado, vendido) | **Must** | Vendedor | **[Mejora]** |
-| [`UX-MKT-009`](#ux-mkt-009--contacto-directo-multicanal-y-registro-de-intención-de-compra) | Contacto directo multicanal y registro de intención de compra | **Must** | Comprador / Vendedor | Objetivo |
-| [`UX-MKT-010`](#ux-mkt-010--votación-comunitaria-de-utilidad-y-reputación-upvote) | Votación comunitaria de utilidad y reputación (Upvote) | **Should** | Estudiante registrado | Objetivo |
-| [`UX-MKT-011`](#ux-mkt-011--reporte-comunitario-de-anuncios-irregulares-o-fraudulentos) | Reporte comunitario de anuncios irregulares o fraudulentos | **Must** | Todos los roles | Objetivo |
-| [`UX-MKT-012`](#ux-mkt-012--formulario-de-publicación-con-gatekeeping-y-límites-de-plan) | Formulario de publicación con gatekeeping y límites de plan | **Must** | Vendedor verificado | Objetivo |
-| [`UX-MKT-013`](#ux-mkt-013--filtro-semántico-preventivo-de-términos-prohibidos-y-fraude-académico) | Filtro semántico preventivo de términos prohibidos y fraude académico | **Must** | Vendedor / Moderador | Objetivo |
-| [`UX-MKT-014`](#ux-mkt-014--verificación-para-vender-carné-o-cuenta-comercial-aprobada) | Verificación para vender (carné o cuenta comercial aprobada) | **Must** | Vendedor | **[Mejora]** |
-| [`UX-MKT-015`](#ux-mkt-015--almacenamiento-resiliente-de-multimedia-con-fallback-de-infraestructura) | Almacenamiento resiliente de multimedia con fallback de infraestructura | **Should** | Vendedor | **[Mejora]** |
-| [`UX-MKT-016`](#ux-mkt-016--perfil-público-de-tienda-y-carta-de-presentación-del-vendedor) | Perfil público de tienda y carta de presentación del vendedor | **Must** | Vendedor | **[Mejora]** |
-| [`UX-MKT-017`](#ux-mkt-017--límites-efectivos-y-vigencia-por-plan-de-suscripción) | Límites efectivos y vigencia por plan de suscripción | **Must** | Vendedor | Objetivo |
-| [`UX-MKT-018`](#ux-mkt-018--catálogo-de-planes-contratación-y-cambio-de-plan) | Catálogo de planes, contratación y cambio de plan | **Must** | Vendedor / Admin | Objetivo |
-| [`UX-MKT-019`](#ux-mkt-019--perfil-comercial-estado-de-tienda-y-presencia-en-el-campus) | Perfil comercial, estado de tienda y presencia en el campus | **Must** | Comercio / Emprendedor | Objetivo |
-| [`UX-MKT-020`](#ux-mkt-020--feed-principal-ponderado-y-carrusel-destacado) | Feed principal ponderado y carrusel destacado | **Must** | Todos los roles | Objetivo |
-| [`UX-MKT-021`](#ux-mkt-021--ficha-de-detalle-de-producto-con-jerarquía-vertical-estricta) | Ficha de detalle de producto con jerarquía vertical estricta | **Must** | Comprador | Objetivo |
-| [`UX-MKT-022`](#ux-mkt-022--catálogo-del-mismo-vendedor-más-productos-de) | Catálogo del mismo vendedor ("Más productos de…") | **Must** | Comprador | Objetivo |
-| [`UX-MKT-023`](#ux-mkt-023--productos-relacionados-de-otros-vendedores-y-protección-de-escaparate) | Productos relacionados de otros vendedores y protección de escaparate | **Must** | Comprador / Comercio | Objetivo |
-| [`UX-MKT-024`](#ux-mkt-024--telemetría-de-conversión-y-control-de-vistas-por-sesión) | Telemetría de conversión y control de vistas por sesión | **Must** | Vendedor / Plataforma | Objetivo |
-| [`UX-MKT-025`](#ux-mkt-025--guardados-de-productos-marcadores) | Guardados de productos (`marketplace_bookmarks`) | **Should** | Comprador | Objetivo |
-| [`UX-MKT-026`](#ux-mkt-026--panel-mis-ventas-inventario-presencia-y-analíticas) | Panel "Mis ventas": inventario, presencia y analíticas | **Must** | Vendedor | Objetivo |
+| Identificador                                                                                         | Título del requisito                                                         | Prioridad  |    Actor principal     | Estado / Tipo |
+| ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------- | :--------------------: | ------------- |
+| [`UX-MKT-001`](#ux-mkt-001--banner-superior-e-identidad-de-comercio-seguro-estudiantil)               | Banner superior e identidad de comercio seguro estudiantil                   | **Must**   |    Todos los roles     | Objetivo      |
+| [`UX-MKT-002`](#ux-mkt-002--carrusel-superior-destacado-para-patrocinadores-y-comercios)              | Carrusel superior destacado para patrocinadores y comercios                  | **Should** |    Todos / Comercio    | Objetivo      |
+| [`UX-MKT-003`](#ux-mkt-003--solicitud-de-cuenta-comercial-y-espacio-de-patrocinio)                    | Solicitud de cuenta comercial y espacio de patrocinio                        | **Should** | Estudiante / Comercio  | Objetivo      |
+| [`UX-MKT-004`](#ux-mkt-004--barra-de-búsqueda-y-filtros-facetados-sede-facultad-edificio-y-categoría) | Barra de búsqueda y filtros facetados (sede, facultad, edificio y categoría) | **Must**   |    Todos los roles     | Objetivo      |
+| [`UX-MKT-005`](#ux-mkt-005--cuadrícula-responsiva-y-tarjetas-de-producto-con-contexto-de-plan)        | Cuadrícula responsiva y tarjetas de producto con contexto de plan            | **Must**   |    Todos los roles     | Objetivo      |
+| [`UX-MKT-006`](#ux-mkt-006--galería-multimedia-por-plan-y-visor-modal-con-zoom)                       | Galería multimedia por plan y visor modal con zoom                           | **Should** |    Todos los roles     | Objetivo      |
+| [`UX-MKT-007`](#ux-mkt-007--visualización-de-precios-en-quetzales-y-distintivo-de-aportes-gratuitos)  | Visualización de precios en Quetzales y distintivo de aportes gratuitos      | **Must**   |    Todos los roles     | Objetivo      |
+| [`UX-MKT-008`](#ux-mkt-008--gestión-de-ciclo-de-vida-del-artículo-disponible-reservado-vendido)       | Gestión de ciclo de vida del artículo (disponible, reservado, vendido)       | **Must**   |        Vendedor        | **[Mejora]**  |
+| [`UX-MKT-009`](#ux-mkt-009--contacto-directo-multicanal-y-registro-de-intención-de-compra)            | Contacto directo multicanal y registro de intención de compra                | **Must**   |  Comprador / Vendedor  | Objetivo      |
+| [`UX-MKT-010`](#ux-mkt-010--votación-comunitaria-de-utilidad-y-reputación-upvote)                     | Votación comunitaria de utilidad y reputación (Upvote)                       | **Should** | Estudiante registrado  | Objetivo      |
+| [`UX-MKT-011`](#ux-mkt-011--reporte-comunitario-de-anuncios-irregulares-o-fraudulentos)               | Reporte comunitario de anuncios irregulares o fraudulentos                   | **Must**   |    Todos los roles     | Objetivo      |
+| [`UX-MKT-012`](#ux-mkt-012--formulario-de-publicación-con-gatekeeping-y-límites-de-plan)              | Formulario de publicación con gatekeeping y límites de plan                  | **Must**   |  Vendedor verificado   | Objetivo      |
+| [`UX-MKT-013`](#ux-mkt-013--filtro-semántico-preventivo-de-términos-prohibidos-y-fraude-académico)    | Filtro semántico preventivo de términos prohibidos y fraude académico        | **Must**   |  Vendedor / Moderador  | Objetivo      |
+| [`UX-MKT-014`](#ux-mkt-014--verificación-para-vender-carné-o-cuenta-comercial-aprobada)               | Verificación para vender (carné o cuenta comercial aprobada)                 | **Must**   |        Vendedor        | **[Mejora]**  |
+| [`UX-MKT-015`](#ux-mkt-015--almacenamiento-resiliente-de-multimedia-con-fallback-de-infraestructura)  | Almacenamiento resiliente de multimedia con fallback de infraestructura      | **Should** |        Vendedor        | **[Mejora]**  |
+| [`UX-MKT-016`](#ux-mkt-016--perfil-público-de-tienda-y-carta-de-presentación-del-vendedor)            | Perfil público de tienda y carta de presentación del vendedor                | **Must**   |        Vendedor        | **[Mejora]**  |
+| [`UX-MKT-017`](#ux-mkt-017--límites-efectivos-y-vigencia-por-plan-de-suscripción)                     | Límites efectivos y vigencia por plan de suscripción                         | **Must**   |        Vendedor        | Objetivo      |
+| [`UX-MKT-018`](#ux-mkt-018--catálogo-de-planes-contratación-y-cambio-de-plan)                         | Catálogo de planes, contratación y cambio de plan                            | **Must**   |    Vendedor / Admin    | Objetivo      |
+| [`UX-MKT-019`](#ux-mkt-019--perfil-comercial-estado-de-tienda-y-presencia-en-el-campus)               | Perfil comercial, estado de tienda y presencia en el campus                  | **Must**   | Comercio / Emprendedor | Objetivo      |
+| [`UX-MKT-020`](#ux-mkt-020--feed-principal-ponderado-y-carrusel-destacado)                            | Feed principal ponderado y carrusel destacado                                | **Must**   |    Todos los roles     | Objetivo      |
+| [`UX-MKT-021`](#ux-mkt-021--ficha-de-detalle-de-producto-con-jerarquía-vertical-estricta)             | Ficha de detalle de producto con jerarquía vertical estricta                 | **Must**   |       Comprador        | Objetivo      |
+| [`UX-MKT-022`](#ux-mkt-022--catálogo-del-mismo-vendedor-más-productos-de)                             | Catálogo del mismo vendedor ("Más productos de…")                            | **Must**   |       Comprador        | Objetivo      |
+| [`UX-MKT-023`](#ux-mkt-023--productos-relacionados-de-otros-vendedores-y-protección-de-escaparate)    | Productos relacionados de otros vendedores y protección de escaparate        | **Must**   |  Comprador / Comercio  | Objetivo      |
+| [`UX-MKT-024`](#ux-mkt-024--telemetría-de-conversión-y-control-de-vistas-por-sesión)                  | Telemetría de conversión y control de vistas por sesión                      | **Must**   | Vendedor / Plataforma  | Objetivo      |
+| [`UX-MKT-025`](#ux-mkt-025--guardados-de-productos-marcadores)                                        | Guardados de productos (`marketplace_bookmarks`)                             | **Should** |       Comprador        | Objetivo      |
+| [`UX-MKT-026`](#ux-mkt-026--panel-mis-ventas-inventario-presencia-y-analíticas)                       | Panel "Mis ventas": inventario, presencia y analíticas                       | **Must**   |        Vendedor        | Objetivo      |
 
 ---
 
 ## 3. Especificación detallada de requisitos
 
 ### UX-MKT-001 — Banner superior e identidad de comercio seguro estudiantil
+
 - **Actor / rol:** Visitante, Estudiante, Verificado, Moderador, Admin
 - **Prioridad:** Must
 - **Estado objetivo:** La pantalla de Marketplace recibe al usuario con un banner
@@ -159,9 +162,9 @@ no se hardcodean en Flutter.
   - "Conocer planes" abre el catálogo de planes sin exigir sesión (lectura
     abierta); el botón de contratación sí exige sesión.
 - **Estados:**
-  - *Inicial / con datos:* banner estático sin latencia.
-  - *Carga:* no bloquea el render del encabezado.
-  - *Sin conexión:* permanece visible e intacto.
+  - _Inicial / con datos:_ banner estático sin latencia.
+  - _Carga:_ no bloquea el render del encabezado.
+  - _Sin conexión:_ permanece visible e intacto.
 - **Validaciones y reglas de negocio:** La plataforma no es pasarela de pago ni
   custodia fondos [UX-PRD-001]. Recuerda la Regla 5 (trato directo) y la Regla 7
   (seguridad en puntos de encuentro) [ver `08-navegacion-shell-y-reglas.md`].
@@ -180,6 +183,7 @@ no se hardcodean en Flutter.
 ---
 
 ### UX-MKT-002 — Carrusel superior destacado para patrocinadores y comercios
+
 - **Actor / rol:** Visitante, Estudiante, Comercio, Moderador, Admin
 - **Prioridad:** Should
 - **Estado objetivo:** La parte superior del catálogo exhibe el carrusel
@@ -193,13 +197,13 @@ no se hardcodean en Flutter.
   `status = 'available'`, `moderation_status IS DISTINCT FROM 2` y sede
   coincidente. La sede se toma del perfil activo o del filtro seleccionado.
 - **UI / contenido:**
-  - *Modo activo:* contenedor con degradado sutil (`#FFFDF5` → `#FEF3C7` claro;
+  - _Modo activo:_ contenedor con degradado sutil (`#FFFDF5` → `#FEF3C7` claro;
     `#1E293B` → `#0F172A` oscuro), borde dorado de 1.5px (`#F59E0B`) y sombra
     cálida. Chip "Patrocinado" (UX-DSN-008) + insignia del plan ("Tienda / Local
     Oficial" o "Emprendedor Verificado"). Foto 100x100px, nombre comercial
     (`business_name` o `author_alias`), descripción de hasta 3 líneas, chip de
     edificio, chip "Ver video" si `video_url` existe y botón WhatsApp.
-  - *Modo vacío:* banner crema con icono `Icons.campaign_outlined`, título
+  - _Modo vacío:_ banner crema con icono `Icons.campaign_outlined`, título
     "Destaca tu negocio en el Marketplace", descripción "Más alcance, catálogo
     ampliado y presencia en el campus con un plan." y botón "Conocer planes".
 - **Interacciones:**
@@ -209,10 +213,10 @@ no se hardcodean en Flutter.
   - "Contactar por WhatsApp" registra `click_whatsapp` y abre el canal externo
     (UX-MKT-009 / UX-MKT-024).
 - **Estados:**
-  - *Carga:* skeleton de 120px de alto.
-  - *Vacío:* invitación a planes, sin huecos en blanco.
-  - *Con datos:* carrusel horizontal con paginación por deslizamiento.
-  - *Sin conexión:* última lista destacada en caché con aviso discreto.
+  - _Carga:_ skeleton de 120px de alto.
+  - _Vacío:_ invitación a planes, sin huecos en blanco.
+  - _Con datos:_ carrusel horizontal con paginación por deslizamiento.
+  - _Sin conexión:_ última lista destacada en caché con aviso discreto.
 - **Validaciones y reglas de negocio:** Solo `moderation_status = 0` puede
   mostrarse; `moderation_status = 1` queda fuera del carrusel público. El
   carrusel no supera 5 unidades y no repite el mismo vendedor en dos tarjetas
@@ -232,6 +236,7 @@ no se hardcodean en Flutter.
 ---
 
 ### UX-MKT-003 — Solicitud de cuenta comercial y espacio de patrocinio
+
 - **Actor / rol:** Estudiante registrado, Emprendedor, Comercio local
 - **Prioridad:** Should
 - **Estado objetivo:** Un emprendedor o comercio solicita su cuenta comercial y/o
@@ -262,10 +267,10 @@ no se hardcodean en Flutter.
   El equipo se comunicará contigo por WhatsApp.". Si ya hay solicitud activa, el
   botón muestra "Solicitud en revisión" y no abre el formulario (UX-SPN-011).
 - **Estados:**
-  - *Inicial:* formulario limpio con datos de contacto precargados si existen.
-  - *Enviando:* botón deshabilitado con spinner y texto "Enviando…".
-  - *Éxito:* cierre + SnackBar.
-  - *Error:* mensaje en rojo y datos conservados.
+  - _Inicial:_ formulario limpio con datos de contacto precargados si existen.
+  - _Enviando:_ botón deshabilitado con spinner y texto "Enviando…".
+  - _Éxito:_ cierre + SnackBar.
+  - _Error:_ mensaje en rojo y datos conservados.
 - **Validaciones y reglas de negocio:** No solicita tarjetas ni datos bancarios
   [UX-PRD-001]. Una sola solicitud activa por usuario. El plan solo se activa
   tras aprobación de administración (`UX-MKT-018`).
@@ -283,6 +288,7 @@ no se hardcodean en Flutter.
 ---
 
 ### UX-MKT-004 — Barra de búsqueda y filtros facetados (sede, facultad, edificio y categoría)
+
 - **Actor / rol:** Visitante, Estudiante, Verificado, Moderador, Admin
 - **Prioridad:** Must
 - **Estado objetivo:** La exploración del catálogo debe ser rápida, facetada y
@@ -312,12 +318,12 @@ no se hardcodean en Flutter.
   - "Solo gratuitos" filtra `is_free = true OR price <= 0`.
   - La 'X' limpia el texto y restaura los resultados base.
 - **Estados:**
-  - *Inicial:* "Todas las sedes/facultades", sin edificio, búsqueda vacía.
-  - *Cargando:* skeletons `SkeletonCard`.
-  - *Con resultados:* cuadrícula actualizada.
-  - *Vacío tras filtro:* `EmptyStateWidget` "No hay publicaciones con estos
+  - _Inicial:_ "Todas las sedes/facultades", sin edificio, búsqueda vacía.
+  - _Cargando:_ skeletons `SkeletonCard`.
+  - _Con resultados:_ cuadrícula actualizada.
+  - _Vacío tras filtro:_ `EmptyStateWidget` "No hay publicaciones con estos
     filtros" + acciones "Limpiar filtros" y "Ver todo".
-  - *Sin conexión:* filtrado local sobre caché.
+  - _Sin conexión:_ filtrado local sobre caché.
 - **Validaciones y reglas de negocio:** Lógica AND entre facetas; la sede
   preseleccionada no se impone si el usuario elige "Todas". Los filtros se
   conservan al volver de la ficha de producto (UX-MAP-002).
@@ -336,6 +342,7 @@ no se hardcodean en Flutter.
 ---
 
 ### UX-MKT-005 — Cuadrícula responsiva y tarjetas de producto con contexto de plan
+
 - **Actor / rol:** Visitante, Estudiante, Verificado, Moderador, Admin
 - **Prioridad:** Must
 - **Estado objetivo:** Los productos se exhiben en lista vertical en móvil y
@@ -355,7 +362,7 @@ no se hardcodean en Flutter.
     reconocidos.
   - Fila de autor con avatar, `business_name` o `author_alias`, chip de
     verificación, insignia del plan (`Estudiante Verificado`, `Emprendedor
-    Verificado`, `Tienda / Local Oficial`) y tiempo relativo.
+Verificado`, `Tienda / Local Oficial`) y tiempo relativo.
   - Si `is_currently_on_campus = true` (`pro_student`), chip verde "Entregando
     ahora · [edificio]" con `Icons.location_on`. Para `business_local`, chip
     "Abierto ahora" / "Cerrado" calculado desde `business_hours`, sin mostrar la
@@ -367,10 +374,10 @@ no se hardcodean en Flutter.
   avatar/nombre abre la tienda (UX-MKT-016); guardar es optimista y exige sesión.
   Pull-to-refresh en toda la pantalla.
 - **Estados:**
-  - *Carga:* 4 `SkeletonCard` de 220px.
-  - *Vacío:* `EmptyStateWidget` con `Icons.storefront_outlined`, "Aún no hay
+  - _Carga:_ 4 `SkeletonCard` de 220px.
+  - _Vacío:_ `EmptyStateWidget` con `Icons.storefront_outlined`, "Aún no hay
     publicaciones aquí" y botón "Publicar primero".
-  - *Error de red:* `OfflineBanner` con "Reintentar".
+  - _Error de red:_ `OfflineBanner` con "Reintentar".
 - **Validaciones y reglas de negocio:** `moderation_status >= 2` excluido;
   `moderation_status = 1` visible solo para autor y moderadores. Los artículos
   `sold` se muestran con sello y sin contacto. La tarjeta nunca expone datos
@@ -391,6 +398,7 @@ no se hardcodean en Flutter.
 ---
 
 ### UX-MKT-006 — Galería multimedia por plan y visor modal con zoom
+
 - **Actor / rol:** Visitante, Estudiante, Verificado, Moderador, Admin
 - **Prioridad:** Should
 - **Estado objetivo:** La cabecera del producto admite carrusel entre las
@@ -411,10 +419,10 @@ no se hardcodean en Flutter.
   pellizcar/rueda hace zoom; `Escape` o retroceso cierra el visor conservando el
   scroll del catálogo. El video se pausa al salir de la ficha.
 - **Estados:**
-  - *Cargando:* spinner sutil sobre fondo neutro.
-  - *Cargada:* `BoxFit.cover`.
-  - *Error:* placeholder con icono de categoría (UX-MKT-015).
-  - *Visor activo:* foco modal bloqueante.
+  - _Cargando:_ spinner sutil sobre fondo neutro.
+  - _Cargada:_ `BoxFit.cover`.
+  - _Error:_ placeholder con icono de categoría (UX-MKT-015).
+  - _Visor activo:_ foco modal bloqueante.
 - **Validaciones y reglas de negocio:** El máximo de imágenes y la existencia de
   video se validan contra `marketplace_plans` (UX-MKT-017). URLs solo HTTPS.
   Cambiar de imagen no re-renderiza el cuerpo de la tarjeta.
@@ -433,6 +441,7 @@ no se hardcodean en Flutter.
 ---
 
 ### UX-MKT-007 — Visualización de precios en Quetzales y distintivo de aportes gratuitos
+
 - **Actor / rol:** Visitante, Estudiante, Verificado, Moderador, Admin
 - **Prioridad:** Must
 - **Estado objetivo:** Los precios se muestran en Quetzales con prefijo `Q` y dos
@@ -465,6 +474,7 @@ no se hardcodean en Flutter.
 ---
 
 ### UX-MKT-008 — Gestión de ciclo de vida del artículo (disponible, reservado, vendido)
+
 - **Actor / rol:** Vendedor verificado, Comprador
 - **Prioridad:** Must
 - **Estado objetivo:** El vendedor gestiona el estado de cada artículo con
@@ -501,6 +511,7 @@ no se hardcodean en Flutter.
 ---
 
 ### UX-MKT-009 — Contacto directo multicanal y registro de intención de compra
+
 - **Actor / rol:** Visitante, Estudiante, Verificado
 - **Prioridad:** Must
 - **Estado objetivo:** La plataforma propicia el contacto directo sin mensajería
@@ -524,15 +535,15 @@ no se hardcodean en Flutter.
   1. Registrar `marketplace_item_events` (`click_whatsapp`, `click_telegram`,
      `click_instagram`, `click_messenger`) de forma asíncrona y no bloqueante.
   2. Lanzar la URL externa; si no hay app, abrir la versión web.
-  Si la telemetría falla, **el enlace se abre igual** (nunca se bloquea la
-  conversión por analítica).
+     Si la telemetría falla, **el enlace se abre igual** (nunca se bloquea la
+     conversión por analítica).
 - **Estados:** activo | vendido (botones deshabilitados y atenuados con "Este
   artículo ya fue vendido").
 - **Validaciones y reglas de negocio:**
   - Teléfono WhatsApp: se limpian caracteres no numéricos; con 8 dígitos se
     antepone `502`.
   - Mensaje prellenado canónico: `"Hola [author_alias], vi tu publicación
-    '[title]' en el Marketplace universitario. ¿Sigue disponible?"`.
+'[title]' en el Marketplace universitario. ¿Sigue disponible?"`.
   - Instagram/Messenger aceptan `@usuario` o URL y se normalizan.
   - Obligatorio al menos un canal al publicar.
   - No se registra el contenido del mensaje ni el número del comprador.
@@ -549,6 +560,7 @@ no se hardcodean en Flutter.
 ---
 
 ### UX-MKT-010 — Votación comunitaria de utilidad y reputación (Upvote)
+
 - **Actor / rol:** Visitante, Estudiante registrado, Vendedor verificado
 - **Prioridad:** Should
 - **Estado objetivo:** Cada publicación admite votos positivos con actualización
@@ -580,6 +592,7 @@ no se hardcodean en Flutter.
 ---
 
 ### UX-MKT-011 — Reporte comunitario de anuncios irregulares o fraudulentos
+
 - **Actor / rol:** Visitante, Estudiante, Vendedor, Moderador
 - **Prioridad:** Must
 - **Estado objetivo:** Cualquier usuario puede reportar publicaciones que
@@ -616,6 +629,7 @@ no se hardcodean en Flutter.
 ---
 
 ### UX-MKT-012 — Formulario de publicación con gatekeeping y límites de plan
+
 - **Actor / rol:** Vendedor verificado (estudiante o cuenta comercial)
 - **Prioridad:** Must
 - **Estado objetivo:** La creación de anuncios usa un formulario guiado
@@ -624,7 +638,7 @@ no se hardcodean en Flutter.
   nunca llega al formulario: se le redirige al flujo de verificación.
 - **Precondiciones:** Sesión AAL2. `profiles.is_verified = true` **o**
   `seller_profiles` con cuenta comercial aprobada (`seller_type =
-  'local_business'`, solicitud `approved`). Plan resuelto desde
+'local_business'`, solicitud `approved`). Plan resuelto desde
   `seller_profiles.plan_id` (por defecto `free`).
 - **UI / contenido:** Diálogo modal adaptativo:
   - Encabezado con `Icons.storefront`, título "Publicar Producto o Servicio",
@@ -650,12 +664,12 @@ no se hardcodean en Flutter.
   completar, cierra el diálogo e inserta el ítem en la primera posición visible
   del feed; SnackBar "Publicación creada".
 - **Estados:**
-  - *Inicial:* canales precargados del perfil.
-  - *Subiendo multimedia:* progreso "Subiendo foto: 65%…", botón deshabilitado.
-  - *Límite alcanzado:* aviso "Alcanzaste el máximo de [N] publicaciones activas
+  - _Inicial:_ canales precargados del perfil.
+  - _Subiendo multimedia:_ progreso "Subiendo foto: 65%…", botón deshabilitado.
+  - _Límite alcanzado:_ aviso "Alcanzaste el máximo de [N] publicaciones activas
     de tu plan" con CTA "Mejorar plan"; el botón de envío se deshabilita.
-  - *Éxito:* cierre e inserción.
-  - *Error:* alerta sin borrar los datos.
+  - _Éxito:_ cierre e inserción.
+  - _Error:_ alerta sin borrar los datos.
 - **Validaciones y reglas de negocio:** Título >= 4; descripción >= 10; al menos
   un canal; precio >= 0; filtro semántico obligatorio; cupo e imágenes según
   `marketplace_plans`; contar solo publicaciones `available`/`reserved` para el
@@ -675,6 +689,7 @@ no se hardcodean en Flutter.
 ---
 
 ### UX-MKT-013 — Filtro semántico preventivo de términos prohibidos y fraude académico
+
 - **Actor / rol:** Vendedor, Moderador
 - **Prioridad:** Must
 - **Estado objetivo:** Todo intento de publicación pasa por un análisis semántico
@@ -686,8 +701,8 @@ no se hardcodean en Flutter.
   ([`marketplace_service.dart:11-41`](../../comunidad_universitaria/lib/core/services/marketplace_service.dart#L11-L41)).
 - **UI / contenido:**
   - Banner/SnackBar rojo: `"Tu publicación contiene términos restringidos
-    ("[término]"). No se permiten productos o servicios contrarios a las normas
-    comunitarias (Regla 5 y 6)."`.
+("[término]"). No se permiten productos o servicios contrarios a las normas
+comunitarias (Regla 5 y 6)."`.
   - Campo infractor resaltado en rojo.
   - Enlace "Normas de Convivencia" [ver `08-navegacion-shell-y-reglas.md`].
 - **Interacciones:** Antes de cualquier petición remota se evalúa
@@ -709,6 +724,7 @@ no se hardcodean en Flutter.
 ---
 
 ### UX-MKT-014 — Verificación para vender (carné o cuenta comercial aprobada)
+
 - **Actor / rol:** Vendedor verificado (estudiante o cuenta comercial)
 - **Prioridad:** Must
 - **Estado objetivo:** La verificación de identidad es obligatoria para publicar.
@@ -752,6 +768,7 @@ no se hardcodean en Flutter.
 ---
 
 ### UX-MKT-015 — Almacenamiento resiliente de multimedia con fallback de infraestructura
+
 - **Actor / rol:** Vendedor verificado
 - **Prioridad:** Should
 - **Estado objetivo:** La subida de imágenes y video no depende de un único
@@ -795,6 +812,7 @@ no se hardcodean en Flutter.
 ---
 
 ### UX-MKT-016 — Perfil público de tienda y carta de presentación del vendedor
+
 - **Actor / rol:** Vendedor verificado; visible para Visitante, Estudiante,
   Verificado, Moderador, Admin
 - **Prioridad:** Must
@@ -822,11 +840,11 @@ no se hardcodean en Flutter.
 - **Interacciones:** Tocar un producto abre la ficha; "Compartir" copia un enlace
   profundo; el dueño ve además "Editar tienda" y "Mis ventas".
 - **Estados:**
-  - *Carga:* skeleton de cabecera y cuadrícula.
-  - *Con datos:* cabecera + catálogo.
-  - *Vacío:* mensaje de tienda sin publicaciones.
-  - *Sin conexión:* última identidad y catálogo en caché con aviso.
-  - *Suspendida:* "Tienda no disponible" y sin catálogo.
+  - _Carga:_ skeleton de cabecera y cuadrícula.
+  - _Con datos:_ cabecera + catálogo.
+  - _Vacío:_ mensaje de tienda sin publicaciones.
+  - _Sin conexión:_ última identidad y catálogo en caché con aviso.
+  - _Suspendida:_ "Tienda no disponible" y sin catálogo.
 - **Validaciones y reglas de negocio:** Solo se muestran campos comerciales
   consentidos; nunca CUI, carné, correo ni documentos. Los productos `sold` se
   ocultan por defecto; `paused` solo los ve el dueño. Sin grafo social (no seguir).
@@ -845,6 +863,7 @@ no se hardcodean en Flutter.
 ---
 
 ### UX-MKT-017 — Límites efectivos y vigencia por plan de suscripción
+
 - **Actor / rol:** Vendedor verificado
 - **Prioridad:** Must
 - **Estado objetivo:** El sistema aplica de forma consistente los límites de
@@ -889,6 +908,7 @@ no se hardcodean en Flutter.
 ---
 
 ### UX-MKT-018 — Catálogo de planes, contratación y cambio de plan
+
 - **Actor / rol:** Vendedor verificado, Administrador
 - **Prioridad:** Must
 - **Estado objetivo:** El vendedor compara los tres planes y solicita uno sin
@@ -920,11 +940,11 @@ no se hardcodean en Flutter.
   `seller_profiles.plan_id` y `plan_expires_at`, y se refrescan insignias y
   límites.
 - **Estados:**
-  - *Sin sesión:* comparación visible, CTA "Inicia sesión para solicitar".
-  - *Plan actual `free`:* chip "Plan actual" en Estudiante.
-  - *Solicitud pendiente:* estado en la tarjeta del plan solicitado.
-  - *Plan activo:* fecha de renovación y opción "Renovar".
-  - *Error:* mensaje con reintento.
+  - _Sin sesión:_ comparación visible, CTA "Inicia sesión para solicitar".
+  - _Plan actual `free`:_ chip "Plan actual" en Estudiante.
+  - _Solicitud pendiente:_ estado en la tarjeta del plan solicitado.
+  - _Plan activo:_ fecha de renovación y opción "Renovar".
+  - _Error:_ mensaje con reintento.
 - **Validaciones y reglas de negocio:** Los precios y límites provienen de la
   BD; no se hardcodean. Una sola solicitud activa por usuario. El cambio de plan
   no borra publicaciones. La aprobación es exclusiva de admin/moderador
@@ -945,6 +965,7 @@ no se hardcodean en Flutter.
 ---
 
 ### UX-MKT-019 — Perfil comercial, estado de tienda y presencia en el campus
+
 - **Actor / rol:** Comercio local (`business_local`), Emprendedor (`pro_student`)
 - **Prioridad:** Must
 - **Estado objetivo:** Los vendedores de pago gestionan un perfil comercial con
@@ -994,15 +1015,16 @@ no se hardcodean en Flutter.
 ---
 
 ### UX-MKT-020 — Feed principal ponderado y carrusel destacado
+
 - **Actor / rol:** Todos los roles
 - **Prioridad:** Must
 - **Estado objetivo:** El feed no se ordena solo por fecha. Se compone de dos
   secciones: (1) **carrusel superior destacado** con `is_sponsored = true`,
   `status = 'available'` y sede coincidente; (2) **listado general ponderado** por
-  un puntaje de visibilidad *time-decay + tier boost*. El cálculo se centraliza
+  un puntaje de visibilidad _time-decay + tier boost_. El cálculo se centraliza
   en la RPC `get_marketplace_feed` para reducir carga en el cliente.
 - **Precondiciones:** `marketplace_items` con índices por `(sede, status,
-  created_at)` y `(sede, is_sponsored)`; `seller_profiles` para resolver plan y
+created_at)` y `(sede, is_sponsored)`; `seller_profiles` para resolver plan y
   presencia.
 - **UI / contenido:**
   - Cabecera con filtros (UX-MKT-004).
@@ -1028,6 +1050,7 @@ no se hardcodean en Flutter.
   - Desempate: `is_sponsored DESC`, `upvotes DESC`, `created_at DESC`, `id`.
   - El carrusel no consume el cupo del listado ni altera la posición orgánica.
   - Un ítem `hidden` (`moderation_status = 2`) no aparece en ninguna sección.
+
 - **Accesibilidad:** El orden del DOM coincide con el orden visual; se anuncia
   "Sección destacados" antes del carrusel; el listado tiene encabezado "Todos los
   productos".
@@ -1046,6 +1069,7 @@ no se hardcodean en Flutter.
 ---
 
 ### UX-MKT-021 — Ficha de detalle de producto con jerarquía vertical estricta
+
 - **Actor / rol:** Comprador (visitante o estudiante)
 - **Prioridad:** Must
 - **Estado objetivo:** Toda publicación abre una ficha (`ProductDetailScreen`)
@@ -1078,14 +1102,14 @@ no se hardcodean en Flutter.
   guardar, abrir producto del mismo vendedor, abrir tienda, abrir relacionado y
   reportar. El botón de retroceso devuelve al feed con scroll y filtros intactos.
 - **Estados:**
-  - *Carga:* skeleton de galería + bloques.
-  - *Con datos:* seis bloques en orden.
-  - *Vendido:* banner "Este artículo ya fue vendido", contacto deshabilitado y
+  - _Carga:_ skeleton de galería + bloques.
+  - _Con datos:_ seis bloques en orden.
+  - _Vendido:_ banner "Este artículo ya fue vendido", contacto deshabilitado y
     bloque 6 visible solo si el plan lo permite.
-  - *En revisión:* visible solo para el autor y moderadores.
-  - *Sin conexión:* datos en caché y aviso; las acciones externas siguen
+  - _En revisión:_ visible solo para el autor y moderadores.
+  - _Sin conexión:_ datos en caché y aviso; las acciones externas siguen
     disponibles si el canal está guardado.
-  - *Error:* "No pudimos cargar esta publicación" + "Volver".
+  - _Error:_ "No pudimos cargar esta publicación" + "Volver".
 - **Validaciones y reglas de negocio:** No se renderiza contacto si `sold` o
   `moderation_status >= 1` para terceros. El bloque 6 depende de
   `marketplace_plans.hide_competitor_related` del vendedor actual. La ficha no
@@ -1110,6 +1134,7 @@ no se hardcodean en Flutter.
 ---
 
 ### UX-MKT-022 — Catálogo del mismo vendedor ("Más productos de…")
+
 - **Actor / rol:** Comprador
 - **Prioridad:** Must
 - **Estado objetivo:** La ficha muestra un carrusel horizontal con otros
@@ -1129,7 +1154,7 @@ no se hardcodean en Flutter.
   error (se oculta y se registra; no bloquea el resto de la ficha).
 - **Validaciones y reglas de negocio:** Solo ítems del mismo `user_id`, distintos
   del actual, `moderation_status IS DISTINCT FROM 2` y `status IN ('available',
-  'reserved')`. Orden: `available` antes que `reserved`, luego `is_sponsored`,
+'reserved')`. Orden: `available` antes que `reserved`, luego `is_sponsored`,
   `upvotes`, `created_at`. Los `sold` y `paused` no se incluyen.
 - **Accesibilidad:** El carrusel es navegable con teclado y anuncia "Producto X
   de Y del mismo vendedor"; el título es encabezado.
@@ -1145,6 +1170,7 @@ no se hardcodean en Flutter.
 ---
 
 ### UX-MKT-023 — Productos relacionados de otros vendedores y protección de escaparate
+
 - **Actor / rol:** Comprador, Comercio local
 - **Prioridad:** Must
 - **Estado objetivo:** Al final de la ficha se muestran productos similares de
@@ -1168,7 +1194,7 @@ no se hardcodean en Flutter.
   protegido (se omite o colapsa según plan) | error (se oculta).
 - **Validaciones y reglas de negocio:** Candidatos de la misma `sede`, distintos
   del vendedor actual, `status = 'available'`, `moderation_status IS DISTINCT
-  FROM 2` y coincidencia de categoría o facultad. Score:
+FROM 2` y coincidencia de categoría o facultad. Score:
 
   ```text
   (categoría igual ? 50 : 0) + (facultad igual ? 25 : 0)
@@ -1179,6 +1205,7 @@ no se hardcodean en Flutter.
   El flag de protección se lee del plan del vendedor actual
   (`hide_competitor_related`), nunca del comprador. Un ítem oculto por moderación
   nunca se recomienda.
+
 - **Accesibilidad:** La cuadrícula mantiene orden de lectura por filas; el estado
   "sección protegida" no se anuncia como error; cada tarjeta tiene etiqueta
   completa.
@@ -1196,6 +1223,7 @@ no se hardcodean en Flutter.
 ---
 
 ### UX-MKT-024 — Telemetría de conversión y control de vistas por sesión
+
 - **Actor / rol:** Vendedor (consulta), Plataforma (registro)
 - **Prioridad:** Must
 - **Estado objetivo:** La plataforma registra eventos de conversión en
@@ -1241,6 +1269,7 @@ no se hardcodean en Flutter.
 ---
 
 ### UX-MKT-025 — Guardados de productos (marcadores)
+
 - **Actor / rol:** Comprador registrado
 - **Prioridad:** Should
 - **Estado objetivo:** El comprador guarda productos para revisarlos después. El
@@ -1277,6 +1306,7 @@ no se hardcodean en Flutter.
 ---
 
 ### UX-MKT-026 — Panel "Mis ventas": inventario, presencia y analíticas
+
 - **Actor / rol:** Vendedor verificado
 - **Prioridad:** Must
 - **Estado objetivo:** El vendedor gestiona su inventario y entiende su
@@ -1328,13 +1358,13 @@ no se hardcodean en Flutter.
 
 ### 4.1 Tablas existentes que se reutilizan
 
-| Tabla | Uso en el Marketplace |
-|---|---|
-| `marketplace_items` | Publicación: título, precio, categoría, sede/facultad/edificio, multimedia, contacto, `is_sponsored`, `sponsor_badge_text`, `status`, `upvotes`, `moderation_status`, `created_at`. |
-| `marketplace_upvotes` | Un voto por usuario e ítem (PK `item_id`, `user_id`); alimenta `upvotes` y el score del feed. |
-| `categorias_marketplace` | Catálogo cerrado de categorías; FK desde `marketplace_items.category`. |
-| `sponsor_requests` | Solicitud de cuenta comercial, plan y patrocinio (`pending`, `in_review`, `approved`, `rejected`). |
-| `profiles` | Identidad, `is_verified`, `reputation_score` y datos de verificación. |
+| Tabla                    | Uso en el Marketplace                                                                                                                                                               |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `marketplace_items`      | Publicación: título, precio, categoría, sede/facultad/edificio, multimedia, contacto, `is_sponsored`, `sponsor_badge_text`, `status`, `upvotes`, `moderation_status`, `created_at`. |
+| `marketplace_upvotes`    | Un voto por usuario e ítem (PK `item_id`, `user_id`); alimenta `upvotes` y el score del feed.                                                                                       |
+| `categorias_marketplace` | Catálogo cerrado de categorías; FK desde `marketplace_items.category`.                                                                                                              |
+| `sponsor_requests`       | Solicitud de cuenta comercial, plan y patrocinio (`pending`, `in_review`, `approved`, `rejected`).                                                                                  |
+| `profiles`               | Identidad, `is_verified`, `reputation_score` y datos de verificación.                                                                                                               |
 
 ### 4.2 Nuevas tablas requeridas
 
@@ -1459,6 +1489,7 @@ ON CONFLICT (id) DO NOTHING;
 ```
 
 **RLS mínima esperada**
+
 - `marketplace_plans`: `SELECT` público; escritura solo admin.
 - `seller_profiles`: `SELECT` de campos comerciales para todos; `INSERT`/`UPDATE`
   del propietario; aprobación de plan y `seller_type` solo admin/moderador.
@@ -1486,6 +1517,7 @@ get_marketplace_feed(
 ```
 
 Reglas:
+
 1. `status = 'available'`, `moderation_status IS DISTINCT FROM 2`.
 2. Filtros AND por sede, facultad, edificio, categoría y búsqueda textual
    (`title`, `description`, `building_code`; insensible a mayúsculas/tildes).
@@ -1646,6 +1678,7 @@ $$ LANGUAGE plpgsql STABLE SECURITY INVOKER;
 ## 5. Flujos de usuario principales
 
 ### 5.1 Comprador: del feed a la conversación externa
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -1674,6 +1707,7 @@ sequenceDiagram
 ```
 
 ### 5.2 Vendedor: verificación, publicación y vigencia del plan
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -1706,6 +1740,7 @@ sequenceDiagram
 ```
 
 ### 5.3 Vendedor: contratación y cambio de plan
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -1726,6 +1761,7 @@ sequenceDiagram
 ```
 
 ### 5.4 Comercio: estado de tienda y presencia
+
 ```mermaid
 flowchart TD
     A["Vendedor abre 'Mi tienda'"] --> B{"¿Plan de pago?"}
@@ -1739,6 +1775,7 @@ flowchart TD
 ```
 
 ### 5.5 Verificación de carné para vendedor estudiante
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -1823,31 +1860,31 @@ sequenceDiagram
 
 ## 8. Trazabilidad con código y base de datos
 
-| Requisito | Componentes y Servicios Dart | Tablas / Columnas Supabase | Archivos de prueba |
-|---|---|---|---|
-| `UX-MKT-001` | `MarketplaceScreen`, `MaxWidthContainer` | N/A (UI y navegación) | `test/features/marketplace/marketplace_screen_test.dart` |
-| `UX-MKT-002` | `SponsorCarousel`, `UrlUtils` | `marketplace_items.is_sponsored`, `sponsor_badge_text`, `video_url`; `marketplace_plans` | `test/features/marketplace/sponsor_carousel_test.dart` |
-| `UX-MKT-003` | `SponsorRequestDialog`, `MarketplaceService` | `sponsor_requests` (+ `plan_id` nuevo) | `test/features/marketplace/sponsor_request_test.dart` |
-| `UX-MKT-004` | `MarketplaceScreen`, `USACConstants` | `marketplace_items.category`, `sede`, `facultad`, `building_code`, `is_free` | `test/features/marketplace/marketplace_filters_test.dart` |
-| `UX-MKT-005` | `MarketplaceCard`, `SkeletonCard`, `EmptyStateWidget` | `marketplace_items.*`, `seller_profiles.plan_id`, `is_currently_on_campus` | `test/features/marketplace/marketplace_card_test.dart` |
-| `UX-MKT-006` | `PageView`, `ImageViewerDialog`, reproductor de video | `marketplace_items.image_urls`, `video_url`; `marketplace_plans.max_images_per_item` | `test/features/marketplace/image_viewer_test.dart` |
-| `UX-MKT-007` | `MarketplaceItem.formattedPrice`, `MarketplaceCard` | `marketplace_items.price`, `is_free` | `test/core/models/marketplace_item_test.dart` |
-| `UX-MKT-008` | `MarketplaceCard`, `MarketplaceService.updateItemStatus` | `marketplace_items.status`, `user_id` | `test/features/marketplace/item_lifecycle_test.dart` |
-| `UX-MKT-009` | `MarketplaceCard`, `ProductDetailScreen`, `UrlUtils`, `MarketplaceItem.whatsappUrl` | `marketplace_items.contact_*`, `social_links`; `marketplace_item_events` | `test/core/utils/url_utils_test.dart` |
-| `UX-MKT-010` | `MarketplaceCard`, `MarketplaceService.toggleUpvote` | `marketplace_upvotes` (PK `item_id`, `user_id`) | `test/features/marketplace/upvote_test.dart` |
-| `UX-MKT-011` | `ReportDialog`, `MarketplaceService.reportListing` | `marketplace_reports`, `marketplace_items.reported_count`, `moderation_status` | `test/features/marketplace/report_dialog_test.dart` |
-| `UX-MKT-012` | `CreateListingDialog`, `MarketplaceService.createListing` | `marketplace_items`, `profiles.is_verified`, `seller_profiles.plan_id`, `marketplace_plans` | `test/features/marketplace/create_listing_test.dart` |
-| `UX-MKT-013` | `MarketplaceService.validateContent`, `_prohibitedKeywords` | Cliente + trigger/constraint en BD | `test/core/services/marketplace_service_test.dart` |
-| `UX-MKT-014` | `CarneValidationModal`, `IdentityBadgeChip`, `ExternalSellerReviewPanel` (nuevo) | `profiles.is_verified`, `seller_profiles.seller_type`, `sponsor_requests.status` | `test/features/profile/carne_validation_test.dart` |
-| `UX-MKT-015` | `StorageService.uploadImageFile`, Worker R2 + Supabase Storage | Bucket `listings`; `marketplace_plans.allow_video` | `test/core/services/storage_service_test.dart` |
-| `UX-MKT-016` | `StoreProfileScreen` (nuevo), `SellerPresentationCard` (nuevo) | `seller_profiles.*`, `profiles`, `get_seller_catalog` | (nuevo) |
-| `UX-MKT-017` | `MarketplaceService.checkPlanLimits`, `CreateListingDialog`, `MisVentasScreen` | `marketplace_plans.*`, `seller_profiles.plan_expires_at`, `marketplace_items.status` | (nuevo) |
-| `UX-MKT-018` | `MarketplacePlansSheet` (nuevo), `SponsorRequestDialog` | `marketplace_plans`, `sponsor_requests`, `seller_profiles` | (nuevo) |
-| `UX-MKT-019` | `StoreSettingsScreen` (nuevo) | `seller_profiles.business_*`, `business_hours`, `is_currently_on_campus` | (nuevo) |
-| `UX-MKT-020` | `MarketplaceScreen`, `MarketplaceService.getFeed` | RPC `get_marketplace_feed`; índices de feed | (nuevo) |
-| `UX-MKT-021` | `ProductDetailScreen` (nuevo) | `marketplace_items.*`, `seller_profiles`, `marketplace_plans` | (nuevo) |
-| `UX-MKT-022` | `SellerCatalogCarousel` (nuevo) | RPC `get_seller_catalog` | (nuevo) |
-| `UX-MKT-023` | `RelatedItemsGrid` (nuevo) | RPC `get_related_marketplace_items`; `marketplace_plans.hide_competitor_related` | (nuevo) |
-| `UX-MKT-024` | `MarketplaceTelemetryService` (nuevo) | `marketplace_item_events` (+ índice) | (nuevo) |
-| `UX-MKT-025` | `BookmarkButton`, `SavedItemsScreen` (nuevo) | `marketplace_bookmarks` | (nuevo) |
-| `UX-MKT-026` | `MisVentasScreen` (nuevo), `SellerAnalyticsCard` (nuevo) | `marketplace_items`, `marketplace_item_events`, `seller_profiles` | (nuevo) |
+| Requisito    | Componentes y Servicios Dart                                                        | Tablas / Columnas Supabase                                                                  | Archivos de prueba                                        |
+| ------------ | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `UX-MKT-001` | `MarketplaceScreen`, `MaxWidthContainer`                                            | N/A (UI y navegación)                                                                       | `test/features/marketplace/marketplace_screen_test.dart`  |
+| `UX-MKT-002` | `SponsorCarousel`, `UrlUtils`                                                       | `marketplace_items.is_sponsored`, `sponsor_badge_text`, `video_url`; `marketplace_plans`    | `test/features/marketplace/sponsor_carousel_test.dart`    |
+| `UX-MKT-003` | `SponsorRequestDialog`, `MarketplaceService`                                        | `sponsor_requests` (+ `plan_id` nuevo)                                                      | `test/features/marketplace/sponsor_request_test.dart`     |
+| `UX-MKT-004` | `MarketplaceScreen`, `USACConstants`                                                | `marketplace_items.category`, `sede`, `facultad`, `building_code`, `is_free`                | `test/features/marketplace/marketplace_filters_test.dart` |
+| `UX-MKT-005` | `MarketplaceCard`, `SkeletonCard`, `EmptyStateWidget`                               | `marketplace_items.*`, `seller_profiles.plan_id`, `is_currently_on_campus`                  | `test/features/marketplace/marketplace_card_test.dart`    |
+| `UX-MKT-006` | `PageView`, `ImageViewerDialog`, reproductor de video                               | `marketplace_items.image_urls`, `video_url`; `marketplace_plans.max_images_per_item`        | `test/features/marketplace/image_viewer_test.dart`        |
+| `UX-MKT-007` | `MarketplaceItem.formattedPrice`, `MarketplaceCard`                                 | `marketplace_items.price`, `is_free`                                                        | `test/core/models/marketplace_item_test.dart`             |
+| `UX-MKT-008` | `MarketplaceCard`, `MarketplaceService.updateItemStatus`                            | `marketplace_items.status`, `user_id`                                                       | `test/features/marketplace/item_lifecycle_test.dart`      |
+| `UX-MKT-009` | `MarketplaceCard`, `ProductDetailScreen`, `UrlUtils`, `MarketplaceItem.whatsappUrl` | `marketplace_items.contact_*`, `social_links`; `marketplace_item_events`                    | `test/core/utils/url_utils_test.dart`                     |
+| `UX-MKT-010` | `MarketplaceCard`, `MarketplaceService.toggleUpvote`                                | `marketplace_upvotes` (PK `item_id`, `user_id`)                                             | `test/features/marketplace/upvote_test.dart`              |
+| `UX-MKT-011` | `ReportDialog`, `MarketplaceService.reportListing`                                  | `marketplace_reports`, `marketplace_items.reported_count`, `moderation_status`              | `test/features/marketplace/report_dialog_test.dart`       |
+| `UX-MKT-012` | `CreateListingDialog`, `MarketplaceService.createListing`                           | `marketplace_items`, `profiles.is_verified`, `seller_profiles.plan_id`, `marketplace_plans` | `test/features/marketplace/create_listing_test.dart`      |
+| `UX-MKT-013` | `MarketplaceService.validateContent`, `_prohibitedKeywords`                         | Cliente + trigger/constraint en BD                                                          | `test/core/services/marketplace_service_test.dart`        |
+| `UX-MKT-014` | `CarneValidationModal`, `IdentityBadgeChip`, `ExternalSellerReviewPanel` (nuevo)    | `profiles.is_verified`, `seller_profiles.seller_type`, `sponsor_requests.status`            | `test/features/profile/carne_validation_test.dart`        |
+| `UX-MKT-015` | `StorageService.uploadImageFile`, Worker R2 + Supabase Storage                      | Bucket `listings`; `marketplace_plans.allow_video`                                          | `test/core/services/storage_service_test.dart`            |
+| `UX-MKT-016` | `StoreProfileScreen` (nuevo), `SellerPresentationCard` (nuevo)                      | `seller_profiles.*`, `profiles`, `get_seller_catalog`                                       | (nuevo)                                                   |
+| `UX-MKT-017` | `MarketplaceService.checkPlanLimits`, `CreateListingDialog`, `MisVentasScreen`      | `marketplace_plans.*`, `seller_profiles.plan_expires_at`, `marketplace_items.status`        | (nuevo)                                                   |
+| `UX-MKT-018` | `MarketplacePlansSheet` (nuevo), `SponsorRequestDialog`                             | `marketplace_plans`, `sponsor_requests`, `seller_profiles`                                  | (nuevo)                                                   |
+| `UX-MKT-019` | `StoreSettingsScreen` (nuevo)                                                       | `seller_profiles.business_*`, `business_hours`, `is_currently_on_campus`                    | (nuevo)                                                   |
+| `UX-MKT-020` | `MarketplaceScreen`, `MarketplaceService.getFeed`                                   | RPC `get_marketplace_feed`; índices de feed                                                 | (nuevo)                                                   |
+| `UX-MKT-021` | `ProductDetailScreen` (nuevo)                                                       | `marketplace_items.*`, `seller_profiles`, `marketplace_plans`                               | (nuevo)                                                   |
+| `UX-MKT-022` | `SellerCatalogCarousel` (nuevo)                                                     | RPC `get_seller_catalog`                                                                    | (nuevo)                                                   |
+| `UX-MKT-023` | `RelatedItemsGrid` (nuevo)                                                          | RPC `get_related_marketplace_items`; `marketplace_plans.hide_competitor_related`            | (nuevo)                                                   |
+| `UX-MKT-024` | `MarketplaceTelemetryService` (nuevo)                                               | `marketplace_item_events` (+ índice)                                                        | (nuevo)                                                   |
+| `UX-MKT-025` | `BookmarkButton`, `SavedItemsScreen` (nuevo)                                        | `marketplace_bookmarks`                                                                     | (nuevo)                                                   |
+| `UX-MKT-026` | `MisVentasScreen` (nuevo), `SellerAnalyticsCard` (nuevo)                            | `marketplace_items`, `marketplace_item_events`, `seller_profiles`                           | (nuevo)                                                   |

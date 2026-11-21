@@ -1,6 +1,6 @@
 -- =============================================================================
 -- Migración: 20261117120000_zero_pii_hardening.sql
--- Módulo: Endurecimiento de Seguridad Zero-PII (Comunidad USAC)
+-- Módulo: Endurecimiento de Seguridad Zero-PII (Zanate)
 -- Rol: Ingeniero Senior de PostgreSQL y Supabase
 -- =============================================================================
 

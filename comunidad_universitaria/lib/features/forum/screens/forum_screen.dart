@@ -497,7 +497,7 @@ class _ForumScreenState extends State<ForumScreen> {
     await ShareCountService.incrementShare(post.id);
 
     final shareText =
-        '${post.title}\n\n${post.content}\n\n— ${post.authorAlias} (Comunidad USAC)';
+        '${post.title}\n\n${post.content}\n\n— ${post.authorAlias} (Zanate)';
     try {
       await SharePlus.instance.share(
         ShareParams(text: shareText, subject: post.title),
@@ -507,7 +507,9 @@ class _ForumScreenState extends State<ForumScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Publicación compartida ($newCount veces). El texto se copió.'),
+          content: Text(
+            'Publicación compartida ($newCount veces). El texto se copió.',
+          ),
           backgroundColor: ZanateColors.zanateBlack,
         ),
       );
@@ -660,16 +662,16 @@ class _ForumScreenState extends State<ForumScreen> {
           _posts.insert(0, created.copyWith(quotedPost: post));
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Publicación reposteada en el foro.'),
-          ),
+          const SnackBar(content: Text('Publicación reposteada en el foro.')),
         );
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('No se pudo repostear: ${e.toString().replaceAll('Exception: ', '')}'),
+          content: Text(
+            'No se pudo repostear: ${e.toString().replaceAll('Exception: ', '')}',
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -910,10 +912,7 @@ class _ForumScreenState extends State<ForumScreen> {
       decoration: BoxDecoration(
         color: ZanateColors.card(isDark),
         border: Border(
-          bottom: BorderSide(
-            color: ZanateColors.border(isDark),
-            width: 1.0,
-          ),
+          bottom: BorderSide(color: ZanateColors.border(isDark), width: 1.0),
         ),
       ),
       child: Row(
@@ -938,7 +937,9 @@ class _ForumScreenState extends State<ForumScreen> {
             child: PhosphorIcon(
               PhosphorIconsFill.usersThree,
               size: 16,
-              color: isDark ? ZanateColors.zanateEyeYellow : ZanateColors.zanateBlack,
+              color: isDark
+                  ? ZanateColors.zanateEyeYellow
+                  : ZanateColors.zanateBlack,
             ),
           ),
           const SizedBox(width: 8),
@@ -994,10 +995,7 @@ class _ForumScreenState extends State<ForumScreen> {
       decoration: BoxDecoration(
         color: ZanateColors.card(isDark),
         border: Border(
-          bottom: BorderSide(
-            color: ZanateColors.border(isDark),
-            width: 1.0,
-          ),
+          bottom: BorderSide(color: ZanateColors.border(isDark), width: 1.0),
         ),
       ),
       child: Row(
@@ -1141,10 +1139,7 @@ class _ForumScreenState extends State<ForumScreen> {
                 onPressed: _clearSearch,
               )
             : null,
-        contentPadding: const EdgeInsets.symmetric(
-          vertical: 0,
-          horizontal: 10,
-        ),
+        contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
         filled: true,
         fillColor: ZanateColors.surface(isDark),
         border: OutlineInputBorder(
@@ -1210,9 +1205,7 @@ class _ForumScreenState extends State<ForumScreen> {
       padding: EdgeInsets.fromLTRB(14, isMobile ? 8 : 10, 14, 10),
       decoration: BoxDecoration(
         color: ZanateColors.card(isDark),
-        border: Border(
-          bottom: BorderSide(color: borderColor, width: 1.0),
-        ),
+        border: Border(bottom: BorderSide(color: borderColor, width: 1.0)),
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -1246,9 +1239,7 @@ class _ForumScreenState extends State<ForumScreen> {
                     PhosphorIcon(
                       PhosphorIconsFill.flame,
                       size: 16,
-                      color: isHot
-                          ? ZanateColors.zanateBlack
-                          : inactiveText,
+                      color: isHot ? ZanateColors.zanateBlack : inactiveText,
                     ),
                     const SizedBox(width: 6),
                     Text(
@@ -1293,19 +1284,19 @@ class _ForumScreenState extends State<ForumScreen> {
                     PhosphorIcon(
                       PhosphorIconsFill.clock,
                       size: 16,
-                      color: isRecent
-                          ? ZanateColors.zanateBlack
-                          : inactiveText,
+                      color: isRecent ? ZanateColors.zanateBlack : inactiveText,
                     ),
                     const SizedBox(width: 6),
                     Text(
                       'Recientes',
                       style: GoogleFonts.outfit(
                         fontSize: 13,
-                        fontWeight:
-                            isRecent ? FontWeight.w700 : FontWeight.w600,
-                        color:
-                            isRecent ? ZanateColors.zanateBlack : inactiveText,
+                        fontWeight: isRecent
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                        color: isRecent
+                            ? ZanateColors.zanateBlack
+                            : inactiveText,
                       ),
                     ),
                   ],
@@ -1411,9 +1402,7 @@ class _ForumScreenState extends State<ForumScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: ZanateColors.card(isDark),
-          border: Border(
-            bottom: BorderSide(color: borderColor, width: 1.0),
-          ),
+          border: Border(bottom: BorderSide(color: borderColor, width: 1.0)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -1483,16 +1472,14 @@ class _ForumScreenState extends State<ForumScreen> {
                   backgroundColor: isDark
                       ? ZanateColors.zanateEyeYellow
                       : ZanateColors.zanateBlack,
-                  foregroundColor:
-                      isDark ? ZanateColors.zanateBlack : Colors.white,
+                  foregroundColor: isDark
+                      ? ZanateColors.zanateBlack
+                      : Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                icon: const PhosphorIcon(
-                  PhosphorIconsBold.plus,
-                  size: 18,
-                ),
+                icon: const PhosphorIcon(PhosphorIconsBold.plus, size: 18),
                 onPressed: _openCreateDialog,
               ),
             ],

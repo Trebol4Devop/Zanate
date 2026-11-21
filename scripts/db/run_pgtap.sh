@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# PEMTREE / Comunidad USAC · Runner para pruebas de integración pgTAP (DB)
+# PEMTREE / Zanate · Runner para pruebas de integración pgTAP (DB)
 # =============================================================================
 set -euo pipefail
 

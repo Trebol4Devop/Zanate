@@ -1,5 +1,5 @@
 -- =============================================================================
--- PEMTREE / Comunidad USAC · pgTAP Test: Sincronización de Contadores y Triggers
+-- PEMTREE / Zanate · pgTAP Test: Sincronización de Contadores y Triggers
 -- =============================================================================
 begin;
 

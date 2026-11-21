@@ -1,5 +1,5 @@
 -- =============================================================================
--- PEMTREE / Comunidad USAC · pgTAP Test: Marketplace UX, Planes, Privacidad y RPCs
+-- PEMTREE / Zanate · pgTAP Test: Marketplace UX, Planes, Privacidad y RPCs
 -- Archivo: supabase/tests/database/marketplace_ux_test.sql
 -- Rama: feature/marketplace-ux-supabase
 -- =============================================================================

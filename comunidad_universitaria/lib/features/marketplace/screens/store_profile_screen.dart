@@ -94,7 +94,7 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
 
     final storeName = prof.businessName ?? prof.displayName;
     final shareText =
-        'Visita la tienda "$storeName" en el Marketplace de Comunidad USAC.\n'
+        'Visita la tienda "$storeName" en el Marketplace de Zanate.\n'
         'Catálogo de productos y contacto directo.';
 
     try {
@@ -150,10 +150,8 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
 
     Navigator.of(context).push<void>(
       MaterialPageRoute(
-        builder: (ctx) => _EditStoreScreen(
-          profile: prof,
-          onProfileUpdated: _loadStoreData,
-        ),
+        builder: (ctx) =>
+            _EditStoreScreen(profile: prof, onProfileUpdated: _loadStoreData),
       ),
     );
   }
@@ -236,156 +234,171 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
     }
 
     final prof = _profile!;
-    final storeName = (prof.businessName != null && prof.businessName!.trim().isNotEmpty)
+    final storeName =
+        (prof.businessName != null && prof.businessName!.trim().isNotEmpty)
         ? prof.businessName!
         : prof.displayName;
 
     return MarketplaceTheme.wrap(
       context,
       Scaffold(
-      backgroundColor: ZanateColors.bg(isDark),
-      appBar: AppBar(
-        centerTitle: true,
-        leading: IconButton(
-          tooltip: 'Volver',
-          icon: PhosphorIcon(
-            PhosphorIconsBold.caretLeft,
-            size: 22,
-            color: ZanateColors.textPrimary(isDark),
-          ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text(
-          storeName,
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.w700,
-            fontSize: 16.5,
-            color: isDark ? Colors.white : ZanateColors.zanateBlack,
-          ),
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Compartir tienda',
-            icon: const Icon(PhosphorIconsRegular.shareNetwork),
-            onPressed: _handleShareStore,
-          ),
-          if (prof.isMyStore)
-            IconButton(
-              tooltip: 'Editar tienda',
-              icon: const Icon(PhosphorIconsRegular.pencilSimple),
-              onPressed: _openEditStoreSheet,
-            )
-          else
-            PopupMenuButton<String>(
-              tooltip: 'Más opciones',
-              onSelected: (val) {
-                if (val == 'report') _handleReportStore();
-              },
-              itemBuilder: (ctx) => [
-                const PopupMenuItem(
-                  value: 'report',
-                  child: Row(
-                    children: [
-                      Icon(PhosphorIconsRegular.flag, size: 16, color: Color(0xFFEF4444)),
-                      SizedBox(width: 8),
-                      Text('Reportar tienda'),
-                    ],
-                  ),
-                ),
-              ],
+        backgroundColor: ZanateColors.bg(isDark),
+        appBar: AppBar(
+          centerTitle: true,
+          leading: IconButton(
+            tooltip: 'Volver',
+            icon: PhosphorIcon(
+              PhosphorIconsBold.caretLeft,
+              size: 22,
+              color: ZanateColors.textPrimary(isDark),
             ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _loadStoreData,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: isDesktop ? 1000 : double.infinity),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // 1. Store Header (Banner + Avatar + Info)
-                  _buildHeader(prof, isDark, theme),
-                  const SizedBox(height: 16),
-
-                  // 2. Catalog Section
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          title: Text(
+            storeName,
+            style: GoogleFonts.outfit(
+              fontWeight: FontWeight.w700,
+              fontSize: 16.5,
+              color: isDark ? Colors.white : ZanateColors.zanateBlack,
+            ),
+          ),
+          actions: [
+            IconButton(
+              tooltip: 'Compartir tienda',
+              icon: const Icon(PhosphorIconsRegular.shareNetwork),
+              onPressed: _handleShareStore,
+            ),
+            if (prof.isMyStore)
+              IconButton(
+                tooltip: 'Editar tienda',
+                icon: const Icon(PhosphorIconsRegular.pencilSimple),
+                onPressed: _openEditStoreSheet,
+              )
+            else
+              PopupMenuButton<String>(
+                tooltip: 'Más opciones',
+                onSelected: (val) {
+                  if (val == 'report') _handleReportStore();
+                },
+                itemBuilder: (ctx) => [
+                  const PopupMenuItem(
+                    value: 'report',
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(
-                          child: Semantics(
-                            header: true,
-                            child: Text(
-                              'Catálogo de publicaciones',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
+                        Icon(
+                          PhosphorIconsRegular.flag,
+                          size: 16,
+                          color: Color(0xFFEF4444),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${_catalog.length} disponibles',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                          ),
-                        ),
+                        SizedBox(width: 8),
+                        Text('Reportar tienda'),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
+                ],
+              ),
+          ],
+        ),
+        body: RefreshIndicator(
+          onRefresh: _loadStoreData,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isDesktop ? 1000 : double.infinity,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // 1. Store Header (Banner + Avatar + Info)
+                    _buildHeader(prof, isDark, theme),
+                    const SizedBox(height: 16),
 
-                  if (_catalog.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 40),
-                      child: EmptyStateWidget(
-                        icon: PhosphorIconsRegular.storefront,
-                        title: 'Esta tienda aún no tiene publicaciones activas',
-                        description: 'Vuelve más tarde para descubrir nuevos productos o tutorías.',
-                      ),
-                    )
-                  else
+                    // 2. Catalog Section
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: isDesktop
-                          ? GridView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: _catalog.length,
-                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 3,
-                                crossAxisSpacing: 14,
-                                mainAxisSpacing: 14,
-                                childAspectRatio: 0.76,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Semantics(
+                              header: true,
+                              child: Text(
+                                'Catálogo de publicaciones',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 16,
+                                ),
                               ),
-                              itemBuilder: (ctx, i) => _buildCatalogItem(_catalog[i]),
-                            )
-                          : GridView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: _catalog.length,
-                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                crossAxisSpacing: 10,
-                                mainAxisSpacing: 10,
-                                childAspectRatio: 0.68,
-                              ),
-                              itemBuilder: (ctx, i) => _buildCatalogItem(_catalog[i]),
                             ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${_catalog.length} disponibles',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? const Color(0xFF94A3B8)
+                                  : const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  const SizedBox(height: 32),
-                ],
+                    const SizedBox(height: 12),
+
+                    if (_catalog.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 40),
+                        child: EmptyStateWidget(
+                          icon: PhosphorIconsRegular.storefront,
+                          title:
+                              'Esta tienda aún no tiene publicaciones activas',
+                          description:
+                              'Vuelve más tarde para descubrir nuevos productos o tutorías.',
+                        ),
+                      )
+                    else
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: isDesktop
+                            ? GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: _catalog.length,
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 3,
+                                      crossAxisSpacing: 14,
+                                      mainAxisSpacing: 14,
+                                      childAspectRatio: 0.76,
+                                    ),
+                                itemBuilder: (ctx, i) =>
+                                    _buildCatalogItem(_catalog[i]),
+                              )
+                            : GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: _catalog.length,
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2,
+                                      crossAxisSpacing: 10,
+                                      mainAxisSpacing: 10,
+                                      childAspectRatio: 0.68,
+                                    ),
+                                itemBuilder: (ctx, i) =>
+                                    _buildCatalogItem(_catalog[i]),
+                              ),
+                      ),
+                    const SizedBox(height: 32),
+                  ],
+                ),
               ),
             ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -419,7 +432,10 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
                       )
                     : null,
                 image: bannerUrl != null
-                    ? DecorationImage(image: NetworkImage(bannerUrl), fit: BoxFit.cover)
+                    ? DecorationImage(
+                        image: NetworkImage(bannerUrl),
+                        fit: BoxFit.cover,
+                      )
                     : null,
               ),
             ),
@@ -521,9 +537,13 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
                   ),
 
                   // Open / Closed Status for local businesses
-                  if (prof.businessHours != null && prof.businessHours!.isNotEmpty)
+                  if (prof.businessHours != null &&
+                      prof.businessHours!.isNotEmpty)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: isOpen == true
                             ? const Color(0xFF10B981).withValues(alpha: 0.15)
@@ -558,7 +578,10 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
                   // Presence on campus
                   if (prof.isOnCampus)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF10B981).withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(6),
@@ -566,10 +589,15 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(PhosphorIconsFill.mapPin, size: 12, color: Color(0xFF059669)),
+                          const Icon(
+                            PhosphorIconsFill.mapPin,
+                            size: 12,
+                            color: Color(0xFF059669),
+                          ),
                           const SizedBox(width: 4),
                           Text(
-                            prof.currentBuildingCode != null && prof.currentBuildingCode!.isNotEmpty
+                            prof.currentBuildingCode != null &&
+                                    prof.currentBuildingCode!.isNotEmpty
                                 ? 'Entregando ahora · ${prof.currentBuildingCode}'
                                 : 'Entregando ahora en el campus',
                             style: const TextStyle(
@@ -586,13 +614,16 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
               const SizedBox(height: 10),
 
               // Description
-              if (prof.businessDescription != null && prof.businessDescription!.isNotEmpty) ...[
+              if (prof.businessDescription != null &&
+                  prof.businessDescription!.isNotEmpty) ...[
                 Text(
                   prof.businessDescription!,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontSize: 13,
                     height: 1.35,
-                    color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                    color: isDark
+                        ? const Color(0xFFCBD5E1)
+                        : const Color(0xFF475569),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -606,7 +637,10 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Text(
                     'Punto de entrega: ${prof.currentLocationNote}',
-                    style: const TextStyle(fontSize: 11.5, fontStyle: FontStyle.italic),
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
                 ),
             ],
@@ -639,10 +673,8 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) => ProductDetailScreen(
-              itemId: item.id,
-              initialItem: item,
-            ),
+            builder: (_) =>
+                ProductDetailScreen(itemId: item.id, initialItem: item),
           ),
         );
       },
@@ -651,10 +683,7 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
         decoration: BoxDecoration(
           color: ZanateColors.card(isDark),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: ZanateColors.border(isDark),
-            width: 1.0,
-          ),
+          border: Border.all(color: ZanateColors.border(isDark), width: 1.0),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -711,7 +740,9 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
                       'Edificio ${item.buildingCode}',
                       style: TextStyle(
                         fontSize: 10,
-                        color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                        color: isDark
+                            ? const Color(0xFF94A3B8)
+                            : const Color(0xFF64748B),
                       ),
                     ),
                   ],
@@ -749,9 +780,15 @@ class _EditStoreScreenState extends State<_EditStoreScreen> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.profile.businessName ?? '');
-    _descController = TextEditingController(text: widget.profile.businessDescription ?? '');
-    _noteController = TextEditingController(text: widget.profile.currentLocationNote ?? '');
+    _nameController = TextEditingController(
+      text: widget.profile.businessName ?? '',
+    );
+    _descController = TextEditingController(
+      text: widget.profile.businessDescription ?? '',
+    );
+    _noteController = TextEditingController(
+      text: widget.profile.currentLocationNote ?? '',
+    );
     _isOnCampus = widget.profile.isOnCampus;
     _selectedBuilding = widget.profile.currentBuildingCode ?? 'T-3';
   }
@@ -796,9 +833,9 @@ class _EditStoreScreenState extends State<_EditStoreScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al actualizar: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al actualizar: $e')));
     }
   }
 
@@ -893,7 +930,9 @@ class _EditStoreScreenState extends State<_EditStoreScreen> {
                       style: TextStyle(color: primaryText),
                       maxLines: 3,
                       maxLength: 300,
-                      decoration: zanateField('Descripción de la tienda o productos'),
+                      decoration: zanateField(
+                        'Descripción de la tienda o productos',
+                      ),
                     ),
                     const SizedBox(height: 8),
                     SwitchListTile(
@@ -927,11 +966,14 @@ class _EditStoreScreenState extends State<_EditStoreScreen> {
                             .map(
                               (b) => DropdownMenuItem<String>(
                                 value: b['building_code']?.toString(),
-                                child: Text('${b['building_code']} · ${b['nombre']}'),
+                                child: Text(
+                                  '${b['building_code']} · ${b['nombre']}',
+                                ),
                               ),
                             )
                             .toList(),
-                        onChanged: (val) => setState(() => _selectedBuilding = val),
+                        onChanged: (val) =>
+                            setState(() => _selectedBuilding = val),
                       ),
                       const SizedBox(height: 12),
                       TextField(
@@ -949,8 +991,9 @@ class _EditStoreScreenState extends State<_EditStoreScreen> {
                         backgroundColor: isDark
                             ? ZanateColors.zanateEyeYellow
                             : ZanateColors.zanateBlack,
-                        foregroundColor:
-                            isDark ? ZanateColors.zanateBlack : Colors.white,
+                        foregroundColor: isDark
+                            ? ZanateColors.zanateBlack
+                            : Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),

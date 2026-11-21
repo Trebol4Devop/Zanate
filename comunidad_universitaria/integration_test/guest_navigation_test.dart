@@ -12,7 +12,9 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   group('E2E: Flujo de Navegación de Invitado (Sin Backend)', () {
-    testWidgets('Navegación fluida entre pestañas en vista móvil (400x800)', (tester) async {
+    testWidgets('Navegación fluida entre pestañas en vista móvil (400x800)', (
+      tester,
+    ) async {
       await launchApp(tester, surfaceSize: const Size(400, 800));
 
       // 1. Inicia en el Foro Estudiantil
@@ -44,103 +46,112 @@ void main() {
       expect(find.byType(NavigationBar), findsOneWidget);
     });
 
-    testWidgets('Interacción con AppBar: aviso legal, normas, perfil y cambio de tema', (tester) async {
-      await launchApp(tester, surfaceSize: const Size(400, 800));
+    testWidgets(
+      'Interacción con AppBar: aviso legal, normas, perfil y cambio de tema',
+      (tester) async {
+        await launchApp(tester, surfaceSize: const Size(400, 800));
 
-      // 1. Abrir diálogo de Aviso Comunitario desde el título 'Comunidad USAC'
-      final titleWidget = find.text('Comunidad USAC');
-      expect(titleWidget, findsOneWidget);
-      await tester.tap(titleWidget);
-      await tester.pumpAndSettle();
+        // 1. Abrir diálogo de Aviso Comunitario desde el título 'Zanate'
+        final titleWidget = find.text('Zanate');
+        expect(titleWidget, findsOneWidget);
+        await tester.tap(titleWidget);
+        await tester.pumpAndSettle();
 
-      expect(find.text('Aviso Comunitario'), findsOneWidget);
-      expect(find.text('Entendido'), findsOneWidget);
-      await tester.tap(find.text('Entendido'));
-      await tester.pumpAndSettle();
+        expect(find.text('Aviso Comunitario'), findsOneWidget);
+        expect(find.text('Entendido'), findsOneWidget);
+        await tester.tap(find.text('Entendido'));
+        await tester.pumpAndSettle();
 
-      // 2. Navegar a la pantalla de Normas (RulesScreen)
-      final shieldIcon = find.byIcon(Icons.shield_outlined);
-      expect(shieldIcon, findsOneWidget);
-      await tester.tap(shieldIcon);
-      await tester.pumpAndSettle();
+        // 2. Navegar a la pantalla de Normas (RulesScreen)
+        final shieldIcon = find.byIcon(Icons.shield_outlined);
+        expect(shieldIcon, findsOneWidget);
+        await tester.tap(shieldIcon);
+        await tester.pumpAndSettle();
 
-      expect(find.byType(RulesScreen), findsOneWidget);
-      Navigator.of(tester.element(find.byType(RulesScreen))).pop();
-      await tester.pumpAndSettle();
+        expect(find.byType(RulesScreen), findsOneWidget);
+        Navigator.of(tester.element(find.byType(RulesScreen))).pop();
+        await tester.pumpAndSettle();
 
-      // 3. Navegar a la pantalla de Perfil (ProfileScreen) vía AliasBadgeButton
-      final aliasBadge = find.byType(AliasBadgeButton);
-      expect(aliasBadge, findsOneWidget);
-      await tester.tap(aliasBadge);
-      await tester.pumpAndSettle();
+        // 3. Navegar a la pantalla de Perfil (ProfileScreen) vía AliasBadgeButton
+        final aliasBadge = find.byType(AliasBadgeButton);
+        expect(aliasBadge, findsOneWidget);
+        await tester.tap(aliasBadge);
+        await tester.pumpAndSettle();
 
-      expect(find.byType(ProfileScreen), findsOneWidget);
-      Navigator.of(tester.element(find.byType(ProfileScreen))).pop();
-      await tester.pumpAndSettle();
+        expect(find.byType(ProfileScreen), findsOneWidget);
+        Navigator.of(tester.element(find.byType(ProfileScreen))).pop();
+        await tester.pumpAndSettle();
 
-      // 4. Alternar tema claro/oscuro
-      final themeToggle = find.byTooltip('Cambiar tema');
-      expect(themeToggle, findsOneWidget);
-      await tester.tap(themeToggle);
-      await tester.pumpAndSettle();
-    });
+        // 4. Alternar tema claro/oscuro
+        final themeToggle = find.byTooltip('Cambiar tema');
+        expect(themeToggle, findsOneWidget);
+        await tester.tap(themeToggle);
+        await tester.pumpAndSettle();
+      },
+    );
 
-    testWidgets('Apertura y cierre de diálogos de creación (Grupos y Marketplace)', (tester) async {
-      await launchApp(tester, surfaceSize: const Size(400, 800));
+    testWidgets(
+      'Apertura y cierre de diálogos de creación (Grupos y Marketplace)',
+      (tester) async {
+        await launchApp(tester, surfaceSize: const Size(400, 800));
 
-      // Ir a pestaña de grupos
-      await tester.tap(find.text('Grupos'));
-      await tester.pumpAndSettle();
+        // Ir a pestaña de grupos
+        await tester.tap(find.text('Grupos'));
+        await tester.pumpAndSettle();
 
-      // Abrir diálogo de crear grupo
-      final fabGrupos = find.text('Sugerir Enlace');
-      expect(fabGrupos, findsOneWidget);
-      await tester.tap(fabGrupos);
-      await tester.pumpAndSettle();
+        // Abrir diálogo de crear grupo
+        final fabGrupos = find.text('Sugerir Enlace');
+        expect(fabGrupos, findsOneWidget);
+        await tester.tap(fabGrupos);
+        await tester.pumpAndSettle();
 
-      expect(find.byType(CreateGroupDialog), findsOneWidget);
-      Navigator.of(tester.element(find.byType(CreateGroupDialog))).pop();
-      await tester.pumpAndSettle();
-      expect(find.byType(CreateGroupDialog), findsNothing);
+        expect(find.byType(CreateGroupDialog), findsOneWidget);
+        Navigator.of(tester.element(find.byType(CreateGroupDialog))).pop();
+        await tester.pumpAndSettle();
+        expect(find.byType(CreateGroupDialog), findsNothing);
 
-      // Ir a pestaña de marketplace
-      await tester.tap(find.text('Marketplace'));
-      await tester.pumpAndSettle();
+        // Ir a pestaña de marketplace
+        await tester.tap(find.text('Marketplace'));
+        await tester.pumpAndSettle();
 
-      // Abrir diálogo de crear publicación de marketplace
-      final fabMarket = find.text('Publicar Artículo');
-      expect(fabMarket, findsOneWidget);
-      await tester.tap(fabMarket);
-      await tester.pumpAndSettle();
+        // Abrir diálogo de crear publicación de marketplace
+        final fabMarket = find.text('Publicar Artículo');
+        expect(fabMarket, findsOneWidget);
+        await tester.tap(fabMarket);
+        await tester.pumpAndSettle();
 
-      expect(find.byType(CreateListingDialog), findsOneWidget);
-      Navigator.of(tester.element(find.byType(CreateListingDialog))).pop();
-      await tester.pumpAndSettle();
-      expect(find.byType(CreateListingDialog), findsNothing);
-    });
+        expect(find.byType(CreateListingDialog), findsOneWidget);
+        Navigator.of(tester.element(find.byType(CreateListingDialog))).pop();
+        await tester.pumpAndSettle();
+        expect(find.byType(CreateListingDialog), findsNothing);
+      },
+    );
 
-    testWidgets('Modo escritorio (1200x800): renderiza barra superior horizontal y oculta NavigationBar', (tester) async {
-      await launchApp(tester, surfaceSize: const Size(1200, 800));
+    testWidgets(
+      'Modo escritorio (1200x800): renderiza barra superior horizontal y oculta NavigationBar',
+      (tester) async {
+        await launchApp(tester, surfaceSize: const Size(1200, 800));
 
-      // No debe existir bottom NavigationBar en escritorio
-      expect(find.byType(NavigationBar), findsNothing);
+        // No debe existir bottom NavigationBar en escritorio
+        expect(find.byType(NavigationBar), findsNothing);
 
-      // Deben estar las pestañas de navegación horizontal
-      expect(find.text('Foro Estudiantil'), findsOneWidget);
-      expect(find.text('Grupos de Estudio'), findsOneWidget);
-      expect(find.text('Marketplace & Tutorías'), findsOneWidget);
+        // Deben estar las pestañas de navegación horizontal
+        expect(find.text('Foro Estudiantil'), findsOneWidget);
+        expect(find.text('Grupos de Estudio'), findsOneWidget);
+        expect(find.text('Marketplace & Tutorías'), findsOneWidget);
 
-      // Alternar hacia Grupos de Estudio
-      await tester.tap(find.text('Grupos de Estudio'));
-      await tester.pumpAndSettle();
+        // Alternar hacia Grupos de Estudio
+        await tester.tap(find.text('Grupos de Estudio'));
+        await tester.pumpAndSettle();
 
-      // Alternar hacia Marketplace
-      await tester.tap(find.text('Marketplace & Tutorías'));
-      await tester.pumpAndSettle();
+        // Alternar hacia Marketplace
+        await tester.tap(find.text('Marketplace & Tutorías'));
+        await tester.pumpAndSettle();
 
-      // Regresar al Foro
-      await tester.tap(find.text('Foro Estudiantil'));
-      await tester.pumpAndSettle();
-    });
+        // Regresar al Foro
+        await tester.tap(find.text('Foro Estudiantil'));
+        await tester.pumpAndSettle();
+      },
+    );
   });
 }

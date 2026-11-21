@@ -1,4 +1,4 @@
-# Aplicación Flutter de Comunidad USAC
+# Aplicación Flutter de Zanate
 
 Este directorio contiene el cliente Flutter. Para requisitos, conexión segura a
 Supabase local, comandos de ejecución y pruebas, consulta el [README de la raíz](../README.md).

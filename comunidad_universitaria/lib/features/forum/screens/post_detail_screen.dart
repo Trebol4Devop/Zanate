@@ -151,7 +151,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     await ShareCountService.incrementShare(_post.id);
 
     final shareText =
-        '${_post.title}\n\n${_post.content}\n\n— ${_post.authorAlias} (Comunidad USAC)';
+        '${_post.title}\n\n${_post.content}\n\n— ${_post.authorAlias} (Zanate)';
     try {
       await SharePlus.instance.share(
         ShareParams(text: shareText, subject: _post.title),
@@ -161,7 +161,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Publicación compartida ($newCount veces). El texto se copió.'),
+          content: Text(
+            'Publicación compartida ($newCount veces). El texto se copió.',
+          ),
           backgroundColor: ZanateColors.zanateBlack,
         ),
       );
@@ -323,9 +325,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         ),
         content: Text(
           '¿Estás seguro de que deseas eliminar esta publicación?',
-          style: TextStyle(
-            color: ZanateColors.textSecondary(isDark),
-          ),
+          style: TextStyle(color: ZanateColors.textSecondary(isDark)),
         ),
         actions: [
           TextButton(
@@ -384,9 +384,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       ).showSnackBar(const SnackBar(content: Text('Comentario eliminado')));
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No se pudo eliminar el comentario.'),
-        ),
+        const SnackBar(content: Text('No se pudo eliminar el comentario.')),
       );
     }
   }
@@ -533,10 +531,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     title: 'Reportar Publicación',
                     subtitle: 'Publicación de ${_post.authorAlias}',
                     onSubmitted: (reason) {
-                      ForumService.reportPost(
-                        postId: _post.id,
-                        reason: reason,
-                      );
+                      ForumService.reportPost(postId: _post.id, reason: reason);
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text(
@@ -659,8 +654,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 vertical: 5,
                               ),
                               decoration: BoxDecoration(
-                                color: ZanateColors.zanateEyeYellow
-                                    .withValues(alpha: 0.22),
+                                color: ZanateColors.zanateEyeYellow.withValues(
+                                  alpha: 0.22,
+                                ),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
@@ -734,14 +730,19 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 decoration: BoxDecoration(
                                   color: panelSurface,
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: panelBorder, width: 0.8),
+                                  border: Border.all(
+                                    color: panelBorder,
+                                    width: 0.8,
+                                  ),
                                 ),
                                 child: Text(
                                   _getCategoryLabel(_post.category),
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
-                                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                    color: isDark
+                                        ? const Color(0xFF94A3B8)
+                                        : const Color(0xFF64748B),
                                   ),
                                 ),
                               ),
@@ -902,39 +903,55 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                         ),
                                         borderRadius: BorderRadius.circular(10),
                                         child: Container(
-                                          constraints: const BoxConstraints(minHeight: 40),
+                                          constraints: const BoxConstraints(
+                                            minHeight: 40,
+                                          ),
                                           decoration: BoxDecoration(
-                                            borderRadius: BorderRadius.circular(10),
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
                                             border: Border.all(
                                               color: isMyVote
                                                   ? (isDark
-                                                      ? ZanateColors.zanateEyeYellow
-                                                      : ZanateColors.zanateBlack)
+                                                        ? ZanateColors
+                                                              .zanateEyeYellow
+                                                        : ZanateColors
+                                                              .zanateBlack)
                                                   : panelBorder,
                                               width: isMyVote ? 1.5 : 1.0,
                                             ),
                                           ),
                                           child: ClipRRect(
-                                            borderRadius: BorderRadius.circular(9),
+                                            borderRadius: BorderRadius.circular(
+                                              9,
+                                            ),
                                             child: Stack(
                                               alignment: Alignment.centerLeft,
                                               children: [
                                                 if (hasVoted)
                                                   Positioned.fill(
                                                     child: FractionallySizedBox(
-                                                      alignment: Alignment.centerLeft,
+                                                      alignment:
+                                                          Alignment.centerLeft,
                                                       widthFactor: percent,
                                                       child: Container(
                                                         color: isMyVote
-                                                            ? ZanateColors.zanateEyeYellow
-                                                                .withValues(
-                                                                  alpha: isDark
-                                                                      ? 0.25
-                                                                      : 0.34,
-                                                                )
+                                                            ? ZanateColors
+                                                                  .zanateEyeYellow
+                                                                  .withValues(
+                                                                    alpha:
+                                                                        isDark
+                                                                        ? 0.25
+                                                                        : 0.34,
+                                                                  )
                                                             : (isDark
-                                                                  ? Colors.white.withValues(alpha: 0.08)
-                                                                  : ZanateColors.pillBg),
+                                                                  ? Colors.white
+                                                                        .withValues(
+                                                                          alpha:
+                                                                              0.08,
+                                                                        )
+                                                                  : ZanateColors
+                                                                        .pillBg),
                                                       ),
                                                     ),
                                                   ),
@@ -954,11 +971,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                                           children: [
                                                             if (isMyVote) ...[
                                                               PhosphorIcon(
-                                                                PhosphorIconsFill.checkCircle,
+                                                                PhosphorIconsFill
+                                                                    .checkCircle,
                                                                 size: 16,
                                                                 color: isDark
-                                                                    ? ZanateColors.zanateEyeYellow
-                                                                    : ZanateColors.zanateBlack,
+                                                                    ? ZanateColors
+                                                                          .zanateEyeYellow
+                                                                    : ZanateColors
+                                                                          .zanateBlack,
                                                               ),
                                                               const SizedBox(
                                                                 width: 8,
@@ -971,9 +991,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                                                   fontSize: 13,
                                                                   fontWeight:
                                                                       isMyVote
-                                                                      ? FontWeight.w700
-                                                                      : FontWeight.w500,
-                                                                  color: primaryTextColor,
+                                                                      ? FontWeight
+                                                                            .w700
+                                                                      : FontWeight
+                                                                            .w500,
+                                                                  color:
+                                                                      primaryTextColor,
                                                                 ),
                                                               ),
                                                             ),
@@ -981,7 +1004,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                                         ),
                                                       ),
                                                       if (hasVoted) ...[
-                                                        const SizedBox(width: 8),
+                                                        const SizedBox(
+                                                          width: 8,
+                                                        ),
                                                         Text(
                                                           '${(percent * 100).toStringAsFixed(0)}% · ${opt.votesCount} votos',
                                                           style: TextStyle(
@@ -990,8 +1015,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                                                 FontWeight.w600,
                                                             color: isMyVote
                                                                 ? (isDark
-                                                                    ? ZanateColors.zanateEyeYellow
-                                                                    : ZanateColors.zanateBlack)
+                                                                      ? ZanateColors
+                                                                            .zanateEyeYellow
+                                                                      : ZanateColors
+                                                                            .zanateBlack)
                                                                 : secondaryTextColor,
                                                           ),
                                                         ),
@@ -1065,14 +1092,16 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                   decoration: BoxDecoration(
                                     color: _post.isLikedByMe
                                         ? ZanateColors.zanateEyeYellow
-                                            .withValues(alpha: isDark ? 0.22 : 0.30)
+                                              .withValues(
+                                                alpha: isDark ? 0.22 : 0.30,
+                                              )
                                         : panelSurface,
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: _post.isLikedByMe
                                           ? (isDark
-                                              ? ZanateColors.zanateEyeYellow
-                                              : ZanateColors.zanateBlack)
+                                                ? ZanateColors.zanateEyeYellow
+                                                : ZanateColors.zanateBlack)
                                           : panelBorder,
                                       width: _post.isLikedByMe ? 1.2 : 1.0,
                                     ),
@@ -1087,8 +1116,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                         size: 17,
                                         color: _post.isLikedByMe
                                             ? (isDark
-                                                ? ZanateColors.zanateEyeYellow
-                                                : ZanateColors.zanateBlack)
+                                                  ? ZanateColors.zanateEyeYellow
+                                                  : ZanateColors.zanateBlack)
                                             : secondaryTextColor,
                                       ),
                                       const SizedBox(width: 7),
@@ -1099,8 +1128,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                           fontWeight: FontWeight.w700,
                                           color: _post.isLikedByMe
                                               ? (isDark
-                                                  ? ZanateColors.zanateEyeYellow
-                                                  : ZanateColors.zanateBlack)
+                                                    ? ZanateColors
+                                                          .zanateEyeYellow
+                                                    : ZanateColors.zanateBlack)
                                               : primaryTextColor,
                                         ),
                                       ),
@@ -1118,7 +1148,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                   decoration: BoxDecoration(
                                     color: panelSurface,
                                     borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(color: panelBorder, width: 0.8),
+                                    border: Border.all(
+                                      color: panelBorder,
+                                      width: 0.8,
+                                    ),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
@@ -1196,11 +1229,18 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         ),
                         child: Column(
                           children: [
-                            Icon(PhosphorIconsRegular.warningCircle, size: 32, color: Colors.amber.shade700),
+                            Icon(
+                              PhosphorIconsRegular.warningCircle,
+                              size: 32,
+                              color: Colors.amber.shade700,
+                            ),
                             const SizedBox(height: 8),
                             Text(
                               'No se pudieron cargar los comentarios.',
-                              style: TextStyle(color: primaryTextColor, fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                color: primaryTextColor,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                             const SizedBox(height: 10),
                             OutlinedButton.icon(
@@ -1212,7 +1252,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 ),
                               ),
                               onPressed: _loadComments,
-                              icon: const PhosphorIcon(PhosphorIconsRegular.arrowsClockwise, size: 16),
+                              icon: const PhosphorIcon(
+                                PhosphorIconsRegular.arrowsClockwise,
+                                size: 16,
+                              ),
                               label: const Text('Reintentar'),
                             ),
                           ],
@@ -1268,9 +1311,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           Container(
             decoration: BoxDecoration(
               color: panelColor,
-              border: Border(
-                top: BorderSide(color: panelBorder, width: 0.9),
-              ),
+              border: Border(top: BorderSide(color: panelBorder, width: 0.9)),
             ),
             child: SafeArea(
               top: false,
@@ -1325,7 +1366,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               ),
                             ),
                             IconButton(
-                              icon: const PhosphorIcon(PhosphorIconsRegular.x, size: 14),
+                              icon: const PhosphorIcon(
+                                PhosphorIconsRegular.x,
+                                size: 14,
+                              ),
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
                               onPressed: _cancelReply,
@@ -1366,7 +1410,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             ),
                             const Spacer(),
                             IconButton(
-                              icon: const PhosphorIcon(PhosphorIconsRegular.x, size: 16),
+                              icon: const PhosphorIcon(
+                                PhosphorIconsRegular.x,
+                                size: 16,
+                              ),
                               onPressed: () =>
                                   setState(() => _commentGifUrl = null),
                             ),
@@ -1424,11 +1471,17 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(14),
-                                borderSide: BorderSide(color: panelBorder, width: 1.0),
+                                borderSide: BorderSide(
+                                  color: panelBorder,
+                                  width: 1.0,
+                                ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(14),
-                                borderSide: BorderSide(color: panelBorder, width: 1.0),
+                                borderSide: BorderSide(
+                                  color: panelBorder,
+                                  width: 1.0,
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(14),

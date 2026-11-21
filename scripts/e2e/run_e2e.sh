@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# PEMTREE / Comunidad USAC · Runner para pruebas E2E (Flutter integration_test)
+# PEMTREE / Zanate · Runner para pruebas E2E (Flutter integration_test)
 # =============================================================================
 # Ejecuta cada archivo de integration_test/ en su PROPIO proceso 'flutter test'.
 #

@@ -1,5 +1,5 @@
 -- =============================================================================
--- PEMTREE / Comunidad USAC · pgTAP Test: Backend administrativo del Marketplace
+-- PEMTREE / Zanate · pgTAP Test: Backend administrativo del Marketplace
 -- Archivo: supabase/tests/database/marketplace_admin_test.sql
 -- Migración objetivo: 20261113130000_marketplace_admin_backend.sql
 --
