@@ -134,6 +134,7 @@ class ProfileService {
           .select(
             'id, title, category, content, author_alias, author_hash, likes, carrera, image_url, gif_url, is_pinned, quoted_post_id, reposts_count, moderation_status, created_at, comments_count, hot_score, expires_at, deleted_at, is_legal_hold',
           )
+          .isFilter('deleted_at', null)
           .neq('moderation_status', 2);
 
       if (alias.trim().isNotEmpty) {
