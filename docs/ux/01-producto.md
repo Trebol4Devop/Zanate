@@ -18,6 +18,7 @@ El producto declara explícitamente **independencia institucional**: no
 representa ni cuenta con afiliación oficial de las autoridades universitarias.
 
 ### 1.1 Pilares de valor
+
 1. **Foro académico estructurado** por facultad y carrera, con canales temáticos.
 2. **Directorio de grupos de estudio** con reputación comunitaria.
 3. **Marketplace y tutorías peer-to-peer** sin comisiones ni custodia de fondos,
@@ -31,20 +32,21 @@ representa ni cuenta con afiliación oficial de las autoridades universitarias.
 
 ## 2. Objetivos de experiencia
 
-| Objetivo | Cómo se mide | Requisitos relacionados |
-|---|---|---|
-| Incorporación sin fricción | % que completa registro + MFA TOTP sin abandonar | UX-AUTH |
-| Confianza en las transacciones | % de vendedores con identidad verificada; reportes de fraude | UX-MKT, UX-PRF |
-| Sostenibilidad del Marketplace | adopción de planes (`pro_student`, `business_local`) y retención de vendedores | UX-MKT-017, UX-MKT-018 |
-| Descubrimiento de funcionalidades | % de usuarios que acceden a Grupos y Marketplace | UX-NAV, UX-GRP |
-| Comunidad sana | tiempo de resolución de reportes | UX-FORO, UX-MKT, UX-GRP |
-| Accesibilidad | cumplimiento WCAG 2.2 AA verificable | UX-X |
+| Objetivo                          | Cómo se mide                                                                   | Requisitos relacionados |
+| --------------------------------- | ------------------------------------------------------------------------------ | ----------------------- |
+| Incorporación sin fricción        | % que completa registro + MFA TOTP sin abandonar                               | UX-AUTH                 |
+| Confianza en las transacciones    | % de vendedores con identidad verificada; reportes de fraude                   | UX-MKT, UX-PRF          |
+| Sostenibilidad del Marketplace    | adopción de planes (`pro_student`, `business_local`) y retención de vendedores | UX-MKT-017, UX-MKT-018  |
+| Descubrimiento de funcionalidades | % de usuarios que acceden a Grupos y Marketplace                               | UX-NAV, UX-GRP          |
+| Comunidad sana                    | tiempo de resolución de reportes                                               | UX-FORO, UX-MKT, UX-GRP |
+| Accesibilidad                     | cumplimiento WCAG 2.2 AA verificable                                           | UX-X                    |
 
 ---
 
 ## 3. Alcance
 
 ### 3.1 Incluido
+
 - Foro estudiantil con canales, publicaciones, comentarios anidados, encuestas,
   reacciones, guardado, citado y reporte.
 - Marketplace de productos, servicios y tutorías, con perfiles de tienda y
@@ -52,13 +54,14 @@ representa ni cuenta con afiliación oficial de las autoridades universitarias.
 - Directorio de grupos de estudio (WhatsApp, Telegram, Discord, Drive).
 - Perfil, alias, avatar, verificación de carné y actividad propia.
 - Autenticación exclusiva mediante Google OAuth; el primer acceso crea la
-  cuenta automáticamente. Google nunca solicita el TOTP de Comunidad USAC. La
+  cuenta automáticamente. Google nunca solicita el TOTP de Zanate. La
   inscripción TOTP queda separada del login y su uso futuro está pendiente;
   SSO con PEMTREE es una integración objetivo.
 - Cascarón de navegación, tema claro/oscuro, normas y descargos.
 - Sistemas transversales: estados, accesibilidad, responsividad, i18n.
 
 ### 3.2 No objetivos (Won't, por ahora)
+
 - **UX-PRD-001 — Sin pagos en la plataforma.** La app no procesa pagos ni
   custodia fondos; toda transacción es directa entre estudiantes.
 - **UX-PRD-002 — Sin mensajería interna.** La comunicación ocurre por canales
@@ -69,6 +72,7 @@ representa ni cuenta con afiliación oficial de las autoridades universitarias.
   móvil; el escritorio es un objetivo secundario derivado de Flutter.
 
 ### 3.3 Supuestos
+
 - Los estudiantes usan principalmente teléfono; el diseño prioriza móvil y
   escala a desktop.
 - Muchos accesos ocurren con conexión intermitente → se requiere caché y
@@ -118,7 +122,7 @@ representa ni cuenta con afiliación oficial de las autoridades universitarias.
     [`12-patrocinios.md`](12-patrocinios.md) (`UX-SPN`).
 
 - **UX-PRD-016 — Vendedor externo verificado (nuevo).**
-  - **Estado objetivo:** persona no estudiante que vende productos o servicios en la comunidad USAC. Ingresa identificándose con documentos personales y es admitida por un administrador; queda catalogada como verificada y se refleja en `seller_profiles` (`seller_type = 'local_business'`).
+  - **Estado objetivo:** persona no estudiante que vende productos o servicios en la Zanate. Ingresa identificándose con documentos personales y es admitida por un administrador; queda catalogada como verificada y se refleja en `seller_profiles` (`seller_type = 'local_business'`).
   - **Regla:** requiere admisión explícita de un administrador; al aprobarse obtiene el distintivo "Vendedor externo verificado", puede publicar y vender en el Marketplace y postularse a patrocinador o a un plan comercial. No accede al foro como estudiante ni a canales académicos.
   - **Detalle:** ver UX-PRF-035 en 06-perfil-y-cuenta.md y UX-MKT-014/016 en 04-marketplace.md.
   - **Criterios de aceptación:**
@@ -134,6 +138,7 @@ representa ni cuenta con afiliación oficial de las autoridades universitarias.
     - **Given** un comercio aprobado, **When** se le activa `business_local`, **Then** obtiene publicaciones ilimitadas, insignia oficial y carrusel destacado.
 
 ### 4.2 Matriz de capacidades
+
 La matriz resumida vive en [`README.md`](README.md#4-roles-y-matriz-de-capacidades-resumen);
 el detalle de cada capacidad se especifica en el documento de su área.
 
@@ -172,10 +177,12 @@ el detalle de cada capacidad se especifica en el documento de su área.
 ---
 
 ## 6. Métricas de éxito del producto
+
 El detalle operativo (eventos y KPIs) está en
 [`11-metricas-y-trazabilidad.md`](11-metricas-y-trazabilidad.md).
 
 ---
 
 ## 7. Trazabilidad
+
 Ver matriz global en [`11-metricas-y-trazabilidad.md`](11-metricas-y-trazabilidad.md).

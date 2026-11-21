@@ -1,5 +1,5 @@
 -- =============================================================================
--- PEMTREE / Comunidad USAC · pgTAP Test: Comments RLS & Visibilidad
+-- PEMTREE / Zanate · pgTAP Test: Comments RLS & Visibilidad
 -- =============================================================================
 begin;
 

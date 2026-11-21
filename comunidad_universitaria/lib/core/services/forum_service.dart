@@ -114,8 +114,10 @@ class ForumService {
         if (bookmarkedIds.isEmpty) return [];
 
         var bookmarksQuery = SupabaseService.client
-            .from('safe_posts_feed')
-            .select('$_postFallbackColumns, is_mine')
+            .from('posts')
+            .select(_postFallbackColumns)
+            .isFilter('deleted_at', null)
+            .neq('moderation_status', 2)
             .inFilter('id', bookmarkedIds);
 
         if (carrera != 'todas') {
@@ -158,8 +160,10 @@ class ForumService {
       }
 
       var query = SupabaseService.client
-          .from('safe_posts_feed')
-          .select('$_postFallbackColumns, is_mine');
+          .from('posts')
+          .select(_postFallbackColumns)
+          .isFilter('deleted_at', null)
+          .neq('moderation_status', 2);
 
       if (category != 'todos') {
         query = query.eq('category', category);
@@ -199,7 +203,7 @@ class ForumService {
       final posts = await _hydratePosts(data, currentUserId);
 
       CacheService.set(_cacheNamespace, cacheKey, List<Post>.from(posts));
-      if (isDefaultQuery) {
+      if (isDefaultQuery && posts.isNotEmpty) {
         await CacheService.setPersisted(
           _cacheNamespace,
           cacheKey,
@@ -208,80 +212,6 @@ class ForumService {
       }
       return posts;
     } catch (e) {
-      if (e is PostgrestException &&
-          (e.code == '42501' ||
-              e.message.contains('generate_author_hash') ||
-              e.code == '42P01')) {
-        try {
-          var fallbackQuery = SupabaseService.client
-              .from('posts')
-              .select(_postFallbackColumns)
-              .isFilter('deleted_at', null)
-              .neq('moderation_status', 2);
-
-          if (showOnlyBookmarks) {
-            final currentUserId = SupabaseService.currentUserId;
-            if (currentUserId == null) return [];
-            final bookmarksRes = await SupabaseService.client
-                .from('post_bookmarks')
-                .select('post_id')
-                .eq('user_id', currentUserId)
-                .order('created_at', ascending: false)
-                .timeout(const Duration(seconds: 10));
-            final bookmarkedIds = (bookmarksRes as List<dynamic>)
-                .map((e) => e['post_id'].toString())
-                .toList();
-            if (bookmarkedIds.isEmpty) return [];
-            fallbackQuery = fallbackQuery.inFilter('id', bookmarkedIds);
-          } else if (category != 'todos') {
-            fallbackQuery = fallbackQuery.eq('category', category);
-          }
-
-          if (carrera != 'todas') {
-            fallbackQuery = fallbackQuery.eq('carrera', carrera);
-          } else if (facultad != 'todas') {
-            final careerIds = _getCareerIdsForFaculty(facultad);
-            fallbackQuery = fallbackQuery.inFilter(
-              'carrera',
-              careerIds.isNotEmpty ? careerIds.toList() : const ['__none__'],
-            );
-          }
-
-          if (searchQuery.trim().isNotEmpty) {
-            final q = searchQuery.trim();
-            fallbackQuery = fallbackQuery.or(
-              'title.ilike.%$q%,content.ilike.%$q%',
-            );
-          }
-
-          final PostgrestTransformBuilder<List<Map<String, dynamic>>>
-          orderedFallbackQuery;
-          if (feedMode == FeedMode.hot) {
-            orderedFallbackQuery = fallbackQuery
-                .order('is_pinned', ascending: false)
-                .order('hot_score', ascending: false)
-                .order('created_at', ascending: false);
-          } else {
-            orderedFallbackQuery = fallbackQuery
-                .order('is_pinned', ascending: false)
-                .order('created_at', ascending: false);
-          }
-
-          final response = await orderedFallbackQuery
-              .limit(50)
-              .timeout(const Duration(seconds: 10));
-          final List<dynamic> data = response as List<dynamic>;
-          final posts = await _hydratePosts(
-            data,
-            SupabaseService.currentUserId,
-          );
-
-          CacheService.set(_cacheNamespace, cacheKey, List<Post>.from(posts));
-          return posts;
-        } catch (innerError) {
-          debugPrint('Error en fallback directo a tabla posts: $innerError');
-        }
-      }
       debugPrint('Error al obtener posts del foro: $e');
       if (isDefaultQuery) {
         final persisted = await _readPersistedPosts(cacheKey, allowStale: true);
@@ -295,16 +225,23 @@ class ForumService {
   static Future<List<Post>?> _readPersistedPosts(
     String cacheKey, {
     bool allowStale = false,
-  }) {
-    return CacheService.getPersisted<List<Post>>(_cacheNamespace, cacheKey, (
-      data,
-    ) {
-      if (data is! List) throw const FormatException('Caché de posts inválida');
-      return data
-          .whereType<Map>()
-          .map((item) => _postFromCacheMap(Map<String, dynamic>.from(item)))
-          .toList();
-    }, allowStale: allowStale);
+  }) async {
+    final list = await CacheService.getPersisted<List<Post>>(
+      _cacheNamespace,
+      cacheKey,
+      (data) {
+        if (data is! List) throw const FormatException('Caché de posts inválida');
+        return data
+            .whereType<Map>()
+            .map((item) => _postFromCacheMap(Map<String, dynamic>.from(item)))
+            .toList();
+      },
+      allowStale: allowStale,
+    );
+    if (list != null && list.isEmpty) {
+      return null;
+    }
+    return list;
   }
 
   static Map<String, dynamic> _postToCacheMap(Post post) {
@@ -385,30 +322,52 @@ class ForumService {
     final postIds = data.map((item) => item['id'].toString()).toList();
     final Set<String> likedPostIds = {};
     final Set<String> bookmarkedPostIds = {};
+    final Set<String> myPostIds = {};
     final Map<String, String> userVotesByPollId = {};
     final Map<String, PostPoll> pollsByPostId = {};
     final Map<String, Post> quotedPostsMap = {};
 
-    // 1. Liked and Bookmarked sets (sin proyectar user_id)
+    // 1. Liked and Bookmarked sets y autoría de posts (sin proyectar user_id)
     if (currentUserId != null) {
-      final likesRes = await SupabaseService.client
-          .from('post_likes')
-          .select('post_id')
-          .eq('user_id', currentUserId)
-          .inFilter('post_id', postIds);
+      try {
+        final likesRes = await SupabaseService.client
+            .from('post_likes')
+            .select('post_id')
+            .eq('user_id', currentUserId)
+            .inFilter('post_id', postIds);
 
-      for (var item in likesRes) {
-        likedPostIds.add(item['post_id'].toString());
+        for (var item in likesRes) {
+          likedPostIds.add(item['post_id'].toString());
+        }
+      } catch (e) {
+        debugPrint('Error cargando likes del usuario: $e');
       }
 
-      final bookmarksRes = await SupabaseService.client
-          .from('post_bookmarks')
-          .select('post_id')
-          .eq('user_id', currentUserId)
-          .inFilter('post_id', postIds);
+      try {
+        final bookmarksRes = await SupabaseService.client
+            .from('post_bookmarks')
+            .select('post_id')
+            .eq('user_id', currentUserId)
+            .inFilter('post_id', postIds);
 
-      for (var item in bookmarksRes) {
-        bookmarkedPostIds.add(item['post_id'].toString());
+        for (var item in bookmarksRes) {
+          bookmarkedPostIds.add(item['post_id'].toString());
+        }
+      } catch (e) {
+        debugPrint('Error cargando marcadores del usuario: $e');
+      }
+
+      try {
+        final authorsRes = await SupabaseService.client
+            .from('post_authors')
+            .select('post_id')
+            .inFilter('post_id', postIds);
+
+        for (var item in authorsRes) {
+          myPostIds.add(item['post_id'].toString());
+        }
+      } catch (e) {
+        debugPrint('Error verificando autoría de posts: $e');
       }
     }
 
@@ -424,15 +383,19 @@ class ForumService {
           .toList();
 
       if (currentUserId != null && pollIds.isNotEmpty) {
-        final votesRes = await SupabaseService.client
-            .from('post_poll_votes')
-            .select('poll_id, option_id')
-            .eq('user_id', currentUserId)
-            .inFilter('poll_id', pollIds);
+        try {
+          final votesRes = await SupabaseService.client
+              .from('post_poll_votes')
+              .select('poll_id, option_id')
+              .eq('user_id', currentUserId)
+              .inFilter('poll_id', pollIds);
 
-        for (var v in votesRes) {
-          userVotesByPollId[v['poll_id'].toString()] = v['option_id']
-              .toString();
+          for (var v in votesRes) {
+            userVotesByPollId[v['poll_id'].toString()] = v['option_id']
+                .toString();
+          }
+        } catch (e) {
+          debugPrint('Error cargando votos de encuestas: $e');
         }
       }
 
@@ -471,6 +434,7 @@ class ForumService {
         final quotedRes = await SupabaseService.client
             .from('posts')
             .select(_postFallbackColumns)
+            .isFilter('deleted_at', null)
             .neq('moderation_status', 2)
             .inFilter('id', quotedIds);
 
@@ -495,6 +459,11 @@ class ForumService {
       final qId = map['quoted_post_id']?.toString();
       final quoted = (qId != null) ? quotedPostsMap[qId] : null;
 
+      final bool isMine = map['is_mine'] == true ||
+          map['is_my_post'] == true ||
+          myPostIds.contains(postId);
+      map['is_mine'] = isMine;
+
       return Post.fromMap(
         map,
         isLikedByMe: likedPostIds.contains(postId),
@@ -502,7 +471,7 @@ class ForumService {
         commentCount: commentCount,
         poll: pollsByPostId[postId],
         quotedPost: quoted,
-      );
+      ).copyWith(isMine: isMine);
     }).toList();
   }
 
@@ -709,6 +678,7 @@ class ForumService {
       final response = await SupabaseService.client
           .from('comments')
           .select(_commentFallbackColumns)
+          .isFilter('deleted_at', null)
           .neq('moderation_status', 2)
           .eq('post_id', postId)
           .order('created_at', ascending: true)
@@ -719,14 +689,33 @@ class ForumService {
           .map((item) => PostComment.fromMap(Map<String, dynamic>.from(item)))
           .toList();
 
-      for (var c in allComments) {
-        c.children = [];
+      final currentUserId = SupabaseService.currentUserId;
+      final Set<String> myCommentIds = {};
+      if (currentUserId != null && allComments.isNotEmpty) {
+        try {
+          final commentIds = allComments.map((c) => c.id).toList();
+          final authorsRes = await SupabaseService.client
+              .from('comment_authors')
+              .select('comment_id')
+              .inFilter('comment_id', commentIds);
+          for (var item in authorsRes) {
+            myCommentIds.add(item['comment_id'].toString());
+          }
+        } catch (e) {
+          debugPrint('Error verificando autoría de comentarios: $e');
+        }
       }
 
       final Map<String, PostComment> map = {};
       final List<PostComment> rootComments = [];
 
-      for (var c in allComments) {
+      for (var i = 0; i < allComments.length; i++) {
+        var c = allComments[i];
+        c.children = [];
+        if (myCommentIds.contains(c.id)) {
+          c = c.copyWith(isMine: true);
+          allComments[i] = c;
+        }
         map[c.id] = c;
       }
 

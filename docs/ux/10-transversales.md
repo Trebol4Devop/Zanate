@@ -53,18 +53,18 @@ identificados en el levantamiento de código:
 
 ## 3. Matriz de aplicación transversal por módulo
 
-| Dimensión transversal                                    | Foro  | Marketplace | Grupos | Perfil / Cuenta | Auth / MFA |  SSO  |
-| -------------------------------------------------------- | :---: | :---------: | :----: | :-------------: | :--------: | :---: |
-| **Manejo de errores** (`UX-X-001`, `002`, `003`)         | Hecho |    Hecho    | Hecho  |      Hecho      |   Hecho    | Hecho |
-| **Estados vacíos** (`UX-X-004`)                          | Hecho |    Hecho    | Hecho  |      Hecho      |    N/A     |  N/A  |
-| **Carga con skeletons** (`UX-X-005`)                     | Hecho |    Hecho    | Hecho  |      Hecho      |    N/A     |  N/A  |
-| **Modo offline y caché** (`UX-X-006`)                    | Parcial | Parcial | Parcial | Parcial | N/A | N/A |
-| **Notificaciones / Snackbars** (`UX-X-007`)              | Hecho |    Hecho    | Hecho  |      Hecho      |   Hecho    | Hecho |
-| **Accesibilidad WCAG 2.2 AA** (`UX-X-008`, `009`, `010`) | Hecho |    Hecho    | Hecho  |      Hecho      |   Hecho    | Hecho |
-| **Responsividad y modales** (`UX-X-011`, `012`)          | Hecho |    Hecho    | Hecho  |      Hecho      |   Hecho    | Hecho |
-| **Internacionalización es-GT** (`UX-X-013`)              | Hecho |    Hecho    | Hecho  |      Hecho      |   Hecho    | Hecho |
-| **Rendimiento percibido** (`UX-X-014`)                   | Hecho |    Hecho    | Hecho  |      Hecho      |   Hecho    | Hecho |
-| **Privacidad de datos** (`UX-X-015`)                     | Hecho |    Hecho    | Hecho  |      Hecho      |   Hecho    | Hecho |
+| Dimensión transversal                                    |  Foro   | Marketplace | Grupos  | Perfil / Cuenta | Auth / MFA |  SSO  |
+| -------------------------------------------------------- | :-----: | :---------: | :-----: | :-------------: | :--------: | :---: |
+| **Manejo de errores** (`UX-X-001`, `002`, `003`)         |  Hecho  |    Hecho    |  Hecho  |      Hecho      |   Hecho    | Hecho |
+| **Estados vacíos** (`UX-X-004`)                          |  Hecho  |    Hecho    |  Hecho  |      Hecho      |    N/A     |  N/A  |
+| **Carga con skeletons** (`UX-X-005`)                     |  Hecho  |    Hecho    |  Hecho  |      Hecho      |    N/A     |  N/A  |
+| **Modo offline y caché** (`UX-X-006`)                    | Parcial |   Parcial   | Parcial |     Parcial     |    N/A     |  N/A  |
+| **Notificaciones / Snackbars** (`UX-X-007`)              |  Hecho  |    Hecho    |  Hecho  |      Hecho      |   Hecho    | Hecho |
+| **Accesibilidad WCAG 2.2 AA** (`UX-X-008`, `009`, `010`) |  Hecho  |    Hecho    |  Hecho  |      Hecho      |   Hecho    | Hecho |
+| **Responsividad y modales** (`UX-X-011`, `012`)          |  Hecho  |    Hecho    |  Hecho  |      Hecho      |   Hecho    | Hecho |
+| **Internacionalización es-GT** (`UX-X-013`)              |  Hecho  |    Hecho    |  Hecho  |      Hecho      |   Hecho    | Hecho |
+| **Rendimiento percibido** (`UX-X-014`)                   |  Hecho  |    Hecho    |  Hecho  |      Hecho      |   Hecho    | Hecho |
+| **Privacidad de datos** (`UX-X-015`)                     |  Hecho  |    Hecho    |  Hecho  |      Hecho      |   Hecho    | Hecho |
 
 ---
 
@@ -396,7 +396,7 @@ identificados en el levantamiento de código:
 - **Discrepancia identificada y corrección aplicada:** El foro usaba cortes propios (768px y 1050px) distintos de las utilidades centrales. `forum_screen.dart` ahora usa `Responsive.isMobile` y `Responsive.isDesktop`; la navegación conserva el corte móvil de 700px y el layout desktop comienza en 1100px.
 - **Precondiciones:** La ventana de la aplicación se ejecuta en dispositivos de diversas dimensiones o se redimensiona dinámicamente en el navegador.
 - **UI / contenido:**
-  - _Móvil (< 700px):_ Título de AppBar abreviado ("Comunidad USAC"), navegación inferior fija, ocultamiento de columnas auxiliares.
+  - _Móvil (< 700px):_ Título de AppBar abreviado ("Zanatefija, ocultamiento de columnas auxiliares.
   - _Tablet (700px – 1100px):_ Título completo ("Comunidad Universitaria"), pestañas superiores, catálogo en 2 columnas simétricas.
   - _Desktop (≥ 1100px):_ Experiencia inmersiva completa de 4 columnas en foro; catálogo comercial en 3–4 columnas con ancho máximo de lectura contenido a 1200px.
 - **Interacciones:**

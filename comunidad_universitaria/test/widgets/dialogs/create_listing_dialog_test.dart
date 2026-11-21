@@ -36,7 +36,9 @@ void main() {
   }
 
   group('CreateListingDialog Widget Tests', () {
-    testWidgets('Renderiza en vista móvil (400x800) con todos los campos clave', (tester) async {
+    testWidgets('Renderiza en vista móvil (400x800) con todos los campos clave', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
@@ -45,7 +47,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Publicar Producto o Servicio'), findsOneWidget);
-      expect(find.text('Marketplace Universitario · Comunidad USAC'), findsNothing);
+      expect(find.text('Marketplace Universitario · Zanate'), findsNothing);
       expect(find.text('Perfil estudiantil de contacto directo'), findsNothing);
       expect(find.byType(IdentityBadgeChip), findsOneWidget);
       expect(find.byIcon(PhosphorIconsRegular.gear), findsOneWidget);
@@ -55,13 +57,22 @@ void main() {
       expect(find.text('Aporte o tutoría GRATUITA'), findsOneWidget);
 
       // Campos de formulario
-      expect(find.widgetWithText(TextFormField, 'Título del producto o servicio'), findsOneWidget);
-      expect(find.widgetWithText(TextFormField, 'Precio en Quetzales'), findsOneWidget);
+      expect(
+        find.widgetWithText(TextFormField, 'Título del producto o servicio'),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(TextFormField, 'Precio en Quetzales'),
+        findsOneWidget,
+      );
 
       // Sin campos embebidos de canales; muestra botón para configurar si no hay canales guardados
       expect(find.widgetWithText(TextFormField, 'WhatsApp'), findsNothing);
       expect(find.widgetWithText(TextFormField, 'Instagram'), findsNothing);
-      expect(find.widgetWithText(TextFormField, 'Facebook Messenger'), findsNothing);
+      expect(
+        find.widgetWithText(TextFormField, 'Facebook Messenger'),
+        findsNothing,
+      );
       expect(find.widgetWithText(TextFormField, 'Telegram'), findsNothing);
       expect(find.text('Configurar canales de contacto'), findsOneWidget);
 
@@ -111,7 +122,9 @@ void main() {
       },
     );
 
-    testWidgets('Toggle de Aporte GRATUITO oculta el campo de Precio', (tester) async {
+    testWidgets('Toggle de Aporte GRATUITO oculta el campo de Precio', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
@@ -120,7 +133,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // Inicialmente el campo de precio está visible
-      expect(find.widgetWithText(TextFormField, 'Precio en Quetzales'), findsOneWidget);
+      expect(
+        find.widgetWithText(TextFormField, 'Precio en Quetzales'),
+        findsOneWidget,
+      );
 
       // Activamos checkbox gratuito
       final freeCheckbox = find.byType(Checkbox);
@@ -129,17 +145,25 @@ void main() {
       await tester.pumpAndSettle();
 
       // Campo de precio desaparece
-      expect(find.widgetWithText(TextFormField, 'Precio en Quetzales'), findsNothing);
+      expect(
+        find.widgetWithText(TextFormField, 'Precio en Quetzales'),
+        findsNothing,
+      );
 
       // Desactivamos checkbox
       await tester.tap(freeCheckbox);
       await tester.pumpAndSettle();
 
       // Vuelve a aparecer
-      expect(find.widgetWithText(TextFormField, 'Precio en Quetzales'), findsOneWidget);
+      expect(
+        find.widgetWithText(TextFormField, 'Precio en Quetzales'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('Valida longitud mínima del título al intentar publicar', (tester) async {
+    testWidgets('Valida longitud mínima del título al intentar publicar', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(600, 900);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
@@ -155,20 +179,31 @@ void main() {
       await tester.tap(publishBtn);
       await tester.pumpAndSettle();
 
-      expect(find.text('Ingresa un título de al menos 4 caracteres.'), findsOneWidget);
+      expect(
+        find.text('Ingresa un título de al menos 4 caracteres.'),
+        findsOneWidget,
+      );
 
       // Llenamos con título de 2 letras
-      final titleField = find.widgetWithText(TextFormField, 'Título del producto o servicio');
+      final titleField = find.widgetWithText(
+        TextFormField,
+        'Título del producto o servicio',
+      );
       await tester.ensureVisible(titleField);
       await tester.enterText(titleField, 'AB');
       await tester.ensureVisible(publishBtn);
       await tester.tap(publishBtn);
       await tester.pumpAndSettle();
 
-      expect(find.text('Ingresa un título de al menos 4 caracteres.'), findsOneWidget);
+      expect(
+        find.text('Ingresa un título de al menos 4 caracteres.'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('Exige al menos un canal de contacto si el título es válido', (tester) async {
+    testWidgets('Exige al menos un canal de contacto si el título es válido', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 1000);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
@@ -177,13 +212,22 @@ void main() {
       await tester.pumpAndSettle();
 
       // Ingresamos un título y descripción válidos
-      final titleField = find.widgetWithText(TextFormField, 'Título del producto o servicio');
+      final titleField = find.widgetWithText(
+        TextFormField,
+        'Título del producto o servicio',
+      );
       await tester.ensureVisible(titleField);
       await tester.enterText(titleField, 'Calculadora Texas TI-84 Plus');
 
-      final descField = find.widgetWithText(TextFormField, 'Descripción detallada');
+      final descField = find.widgetWithText(
+        TextFormField,
+        'Descripción detallada',
+      );
       await tester.ensureVisible(descField);
-      await tester.enterText(descField, 'Calculadora gráfica en perfecto estado con manuales incluidos.');
+      await tester.enterText(
+        descField,
+        'Calculadora gráfica en perfecto estado con manuales incluidos.',
+      );
       await tester.pumpAndSettle();
 
       // Intentamos publicar sin canales configurados en perfil
@@ -194,7 +238,9 @@ void main() {
 
       // Debe advertir por falta de canales de contacto en el perfil
       expect(
-        find.text('Debes configurar al menos un canal de contacto en tu perfil.'),
+        find.text(
+          'Debes configurar al menos un canal de contacto en tu perfil.',
+        ),
         findsOneWidget,
       );
     });

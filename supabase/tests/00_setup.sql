@@ -1,5 +1,5 @@
 -- =============================================================================
--- PEMTREE / Comunidad USAC · pgTAP Test Suite Setup & Auth Helpers
+-- PEMTREE / Zanate · pgTAP Test Suite Setup & Auth Helpers
 -- =============================================================================
 create extension if not exists pgtap;
 

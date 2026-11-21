@@ -1,5 +1,5 @@
 -- =============================================================================
--- PEMTREE / Comunidad USAC · pgTAP Test: Vistas Públicas v_public_posts y v_public_comments
+-- PEMTREE / Zanate · pgTAP Test: Vistas Públicas v_public_posts y v_public_comments
 -- =============================================================================
 begin;
 

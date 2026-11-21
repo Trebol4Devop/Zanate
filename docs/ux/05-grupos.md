@@ -405,7 +405,7 @@ abordando directamente:
   - _Copiado:_ SnackBar visible informando la copia exitosa.
   - _Fallo de apertura:_ Diálogo o SnackBar informativo ofreciendo copiar el enlace si no se pudo abrir la aplicación externa.
 - **Validaciones y reglas de negocio:**
-  - La apertura siempre se realiza en un proceso externo para no interrumpir el estado de la sesión de Comunidad USAC.
+  - La apertura siempre se realiza en un proceso externo para no interrumpir el estado de la sesión de Zanate.
   - La acción de unirse y copiar es pública y no requiere inicio de sesión (capacidad abierta según matriz de roles).
 - **Accesibilidad:**
   - Etiqueta semántica completa: "Unirse al grupo de [Curso] en [Plataforma]".

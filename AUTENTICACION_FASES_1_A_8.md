@@ -7,22 +7,22 @@ plan de seguridad adicional acordado.
 
 **Decisión actual de acceso:** la app ofrece únicamente Google OAuth; el primer
 acceso crea la cuenta automáticamente. No hay login ni registro por
-correo/contraseña. Google nunca solicita el TOTP de Comunidad USAC. La
+correo/contraseña. Google nunca solicita el TOTP de Zanate. La
 inscripción TOTP del perfil queda separada y su uso futuro está pendiente. No se
 implementa OTP ni recuperación por correo.
 
 ## Estado general
 
-| Fase | Alcance | Estado |
-|---|---|---|
-| 1 | Flujo invitado y lectura pública | Implementada; pgTAP verifica restricciones de escritura |
-| 2 | Pantalla de acceso | `AuthModal` ofrece únicamente Google OAuth; el primer acceso crea la cuenta |
-| 3 | Confirmación de registro por correo | Se retiró el OTP enviado por correo; `enable_confirmations = false` localmente. TOTP para MFA se conserva. El proyecto remoto debe configurarse por separado |
-| 4 | Sesión, cierre de sesión y navegación | Login/logout probados en Auth local; persistencia tras cerrar y reabrir la app queda pendiente de E2E |
-| 5 | Perfil y compatibilidad con el esquema | Trigger y perfil comprobados en la prueba E2E local; migración de contribuciones guest antiguas sigue siendo una decisión de producto |
-| 6 | Google OAuth con PKCE | Código y callbacks web/móvil preparados; pendiente configurar proveedor/redirects y probar con credenciales reales |
-| 7 | Recuperación de contraseña | Aplazada; el flujo de recuperación por correo se retiró de la app por límites del SMTP incluido |
-| 8 | Seguridad adicional y pruebas | RLS de perfiles y visitantes cuenta con pruebas; el acceso no exige TOTP. La migración AAL2 local debe revisarse por separado y Google requiere credenciales externas |
+| Fase | Alcance                                | Estado                                                                                                                                                                |
+| ---- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | Flujo invitado y lectura pública       | Implementada; pgTAP verifica restricciones de escritura                                                                                                               |
+| 2    | Pantalla de acceso                     | `AuthModal` ofrece únicamente Google OAuth; el primer acceso crea la cuenta                                                                                           |
+| 3    | Confirmación de registro por correo    | Se retiró el OTP enviado por correo; `enable_confirmations = false` localmente. TOTP para MFA se conserva. El proyecto remoto debe configurarse por separado          |
+| 4    | Sesión, cierre de sesión y navegación  | Login/logout probados en Auth local; persistencia tras cerrar y reabrir la app queda pendiente de E2E                                                                 |
+| 5    | Perfil y compatibilidad con el esquema | Trigger y perfil comprobados en la prueba E2E local; migración de contribuciones guest antiguas sigue siendo una decisión de producto                                 |
+| 6    | Google OAuth con PKCE                  | Código y callbacks web/móvil preparados; pendiente configurar proveedor/redirects y probar con credenciales reales                                                    |
+| 7    | Recuperación de contraseña             | Aplazada; el flujo de recuperación por correo se retiró de la app por límites del SMTP incluido                                                                       |
+| 8    | Seguridad adicional y pruebas          | RLS de perfiles y visitantes cuenta con pruebas; el acceso no exige TOTP. La migración AAL2 local debe revisarse por separado y Google requiere credenciales externas |
 
 Las pruebas y configuración descritas aquí son locales o simuladas; no
 sustituyen una prueba real contra el proveedor. No se han publicado estas
@@ -123,7 +123,7 @@ credenciales del proveedor y acceso al proyecto remoto correcto.
 - La app no ofrece registro por correo/contraseña, confirmación por correo ni
   OTP por email. El ajuste local `auth.email.enable_confirmations = false` no
   modifica el proyecto alojado y no interviene en el acceso con Google.
-- Google nunca solicita el TOTP de Comunidad USAC. La inscripción TOTP del
+- Google nunca solicita el TOTP de Zanate. La inscripción TOTP del
   perfil sigue separada del acceso y su uso futuro está pendiente.
 
 Archivos principales:

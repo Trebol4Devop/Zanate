@@ -1,4 +1,4 @@
-# Comunidad USAC
+# Zanate
 
 Aplicación Flutter para la comunidad universitaria, con backend Supabase y
 almacenamiento de imágenes mediante un Cloudflare Worker/R2 desplegado.
@@ -48,7 +48,7 @@ supabase status
 > **Importante:** la app tiene valores predeterminados de Supabase alojado en
 > `comunidad_universitaria/lib/core/config/supabase_config.dart`. Al ejecutar
 > la app sin `--dart-define`, no asumas que estás conectado a la base local ni
-> al proyecto remoto de Comunidad USAC que esperas. Para desarrollo local,
+> al proyecto remoto de Zanate que esperas. Para desarrollo local,
 > proporciona siempre la URL y la key que muestra `supabase status`.
 
 Desde PowerShell, en otra terminal:
@@ -104,7 +104,7 @@ locales. No la crees ni la uses en Supabase remoto.
 ### Flujo para agregar una migración
 
 1. Desde la raíz, crea un archivo versionado con `supabase migration new
-   descripcion_del_cambio` y escribe el cambio en el archivo nuevo de
+descripcion_del_cambio` y escribe el cambio en el archivo nuevo de
    `supabase/migrations/`. No edites el snapshot ni archivos históricos.
 2. Revisa el SQL y agrega/actualiza pruebas pgTAP en `supabase/tests/` para los
    permisos o cambios de esquema relevantes.
@@ -148,7 +148,7 @@ no proporciona todavía un runner equivalente para PowerShell/Windows.
 - La app ofrece únicamente acceso con Google OAuth; la primera autenticación
   crea la cuenta automáticamente. No muestra login ni registro por
   correo/contraseña.
-- Google nunca solicita el TOTP de Comunidad USAC. La inscripción TOTP disponible
+- Google nunca solicita el TOTP de Zanate. La inscripción TOTP disponible
   en el perfil queda separada del flujo de acceso y su uso futuro está pendiente.
 - La confirmación de correo está desactivada en la configuración local. Ese
   archivo no modifica la configuración Auth del proyecto alojado; además, el

@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Comunidad USAC (Linux Desktop)",
+      "name": "Zanate (Linux Desktop)",
       "cwd": "comunidad_universitaria",
       "request": "launch",
       "type": "dart",
@@ -15,7 +15,7 @@
       ]
     },
     {
-      "name": "Comunidad USAC (Android)",
+      "name": "Zanate (Android)",
       "cwd": "comunidad_universitaria",
       "request": "launch",
       "type": "dart",
@@ -27,7 +27,7 @@
       ]
     },
     {
-      "name": "Comunidad USAC (Chrome Web)",
+      "name": "Zanate (Chrome Web)",
       "cwd": "comunidad_universitaria",
       "request": "launch",
       "type": "dart",
@@ -40,7 +40,7 @@
       ]
     },
     {
-      "name": "Comunidad USAC (Windows Desktop)",
+      "name": "Zanate (Windows Desktop)",
       "cwd": "comunidad_universitaria",
       "request": "launch",
       "type": "dart",

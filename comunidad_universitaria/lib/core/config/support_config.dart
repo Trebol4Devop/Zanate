@@ -11,8 +11,7 @@ class SupportConfig {
   );
 
   static const String subjectPrefix =
-      'Soporte — Verificación automática Comunidad USAC';
+      'Soporte — Verificación automática Zanate';
 
-  static const String merchantSubjectPrefix =
-      'Alta de comercio — Comunidad USAC';
+  static const String merchantSubjectPrefix = 'Alta de comercio — Zanate';
 }

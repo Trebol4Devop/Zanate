@@ -1,5 +1,5 @@
 -- =============================================================================
--- PEMTREE / Comunidad USAC · pgTAP Test: Groups & Marketplace RLS & Moderación
+-- PEMTREE / Zanate · pgTAP Test: Groups & Marketplace RLS & Moderación
 -- =============================================================================
 begin;
 

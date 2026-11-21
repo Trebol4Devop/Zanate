@@ -97,7 +97,8 @@ class SupabaseService {
 
         final creds = await GoogleAuthDesktopService.signIn();
         if (creds == null) {
-          final errorMsg = GoogleAuthDesktopService.lastError ??
+          final errorMsg =
+              GoogleAuthDesktopService.lastError ??
               'Google Sign-In fue cancelado, expiró el tiempo de espera o no se recibieron credenciales en el navegador.';
           debugPrint(errorMsg);
           lastGoogleAuthError = errorMsg;
@@ -136,7 +137,8 @@ class SupabaseService {
         redirectTo: redirectUrl,
       );
       if (!res) {
-        lastGoogleAuthError = 'No se pudo abrir el proveedor de OAuth de Google.';
+        lastGoogleAuthError =
+            'No se pudo abrir el proveedor de OAuth de Google.';
       }
       return res;
     } on AuthException catch (e) {
@@ -225,8 +227,8 @@ class SupabaseService {
       }
       return await client.auth.mfa.enroll(
         factorType: FactorType.totp,
-        issuer: 'Comunidad USAC',
-        friendlyName: 'Comunidad USAC',
+        issuer: 'Zanate',
+        friendlyName: 'Zanate',
       );
     } catch (e) {
       debugPrint('Error iniciando inscripción TOTP: $e');

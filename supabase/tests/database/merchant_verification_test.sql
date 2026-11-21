@@ -1,5 +1,5 @@
 -- =============================================================================
--- PEMTREE / Comunidad USAC · pgTAP Test: Verificación de Comerciantes USAC
+-- PEMTREE / Zanate · pgTAP Test: Verificación de Comerciantes USAC
 -- Archivo: supabase/tests/database/merchant_verification_test.sql
 -- Rama: feature/merchant-verification-db
 -- =============================================================================

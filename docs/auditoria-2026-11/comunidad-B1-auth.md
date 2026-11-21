@@ -1,21 +1,24 @@
 # Auditoría Inicialización Supabase, Autenticación e Identidad — Comunidad_USAC (comunidad_universitaria)
 
 ## Resumen
-Se auditó la integración de Supabase, autenticación, identidad, almacenamiento local y el mecanismo de SSO en el cliente Flutter de Comunidad USAC contrastándolo con el volcado real de base de datos (`EVIDENCIA-BD.md`). Se identificaron fallas críticas en el flujo SSO (uso del antipatrón Implicit Grant exponiendo access y refresh tokens en URL sin PKCE ni validación de state/audiencia), imposibilidad funcional de registrar la aceptación de términos por falta de GRANT UPDATE sobre `profiles` (error 42501), ineficacia del guardián TOTP (no está montado en la app y no existe enforcement RLS en BD) y almacenamiento en texto plano de datos identificativos en SharedPreferences.
+
+Se auditó la integración de Supabase, autenticación, identidad, almacenamiento local y el mecanismo de SSO en el cliente Flutter de Zanate contrastándolo con el volcado real de base de datos (`EVIDENCIA-BD.md`). Se identificaron fallas críticas en el flujo SSO (uso del antipatrón Implicit Grant exponiendo access y refresh tokens en URL sin PKCE ni validación de state/audiencia), imposibilidad funcional de registrar la aceptación de términos por falta de GRANT UPDATE sobre `profiles` (error 42501), ineficacia del guardián TOTP (no está montado en la app y no existe enforcement RLS en BD) y almacenamiento en texto plano de datos identificativos en SharedPreferences.
 
 ---
 
 ## Respuestas Concretas a Preguntas de la Auditoría
 
 ### 1. `supabase_config.dart`: URL y anon key hardcodeadas
+
 - **Evaluación del riesgo vs. mala práctica**:
-  - *Naturaleza técnica*: En la arquitectura de Supabase (PostgREST/GoTrue), la `anon key` es una clave pública/publishable por diseño (JWT con claim `"role": "anon"`). Todo cliente web o móvil la expone forzosamente en sus peticiones REST mediante el encabezado `apikey`.
-  - *Mala práctica*: Definir la URL de producción (`https://hfvsstkfqszpjrsrwhql.supabase.co`) y la anon key como `defaultValue` dentro del control de versiones Git. Provoca que entornos locales de desarrollo, ejecuciones de prueba y CI/CD apunten por defecto a la base de datos de producción, con riesgo de polución de datos o dependencia accidental. Dificulta además la rotación de credenciales.
-  - *Riesgo real*: La seguridad de la `anon key` descansa íntegramente en las políticas RLS y los privilegios de PostgreSQL. Al estar expuesta públicamente en el repo junto a la URL, cualquier agente externo puede interactuar directamente con la API REST (`/rest/v1/`). Contrastando con `EVIDENCIA-BD.md` (§7 y §8), esto permite explotación directa de endpoints permisivos sin pasar por la UI (e.g. `POST /rest/v1/sponsor_requests` sin rate-limit/captcha, o lectura de `posts` incluyendo `author_hash`).
+  - _Naturaleza técnica_: En la arquitectura de Supabase (PostgREST/GoTrue), la `anon key` es una clave pública/publishable por diseño (JWT con claim `"role": "anon"`). Todo cliente web o móvil la expone forzosamente en sus peticiones REST mediante el encabezado `apikey`.
+  - _Mala práctica_: Definir la URL de producción (`https://hfvsstkfqszpjrsrwhql.supabase.co`) y la anon key como `defaultValue` dentro del control de versiones Git. Provoca que entornos locales de desarrollo, ejecuciones de prueba y CI/CD apunten por defecto a la base de datos de producción, con riesgo de polución de datos o dependencia accidental. Dificulta además la rotación de credenciales.
+  - _Riesgo real_: La seguridad de la `anon key` descansa íntegramente en las políticas RLS y los privilegios de PostgreSQL. Al estar expuesta públicamente en el repo junto a la URL, cualquier agente externo puede interactuar directamente con la API REST (`/rest/v1/`). Contrastando con `EVIDENCIA-BD.md` (§7 y §8), esto permite explotación directa de endpoints permisivos sin pasar por la UI (e.g. `POST /rest/v1/sponsor_requests` sin rate-limit/captcha, o lectura de `posts` incluyendo `author_hash`).
 - **Sobreescritura por `--dart-define`**: SÍ. En `comunidad_universitaria/lib/core/config/supabase_config.dart:5-13`, las constantes se declaran con `String.fromEnvironment('SUPABASE_URL', ...)` y `String.fromEnvironment('SUPABASE_ANON_KEY', ...)`.
 - **¿Funciona en release?**: SÍ. `String.fromEnvironment` en Dart se resuelve en tiempo de compilación tanto en modo `debug` como en `profile` y `release` (`flutter build apk --release`, `flutter build web --release`). Al estar asociadas a constantes `static const`, el compilador AOT/dart2js sustituye los valores en el árbol de sintaxis.
 
 ### 2. Flujo PKCE, Persistencia de Sesión y Refresh de Token
+
 - **PKCE**:
   - En la inicialización del cliente (`supabase_config.dart:46-48`), se configura `authFlowType: AuthFlowType.pkce`.
   - Para el login federado con Google (`SupabaseService.signInWithGoogle` en `supabase_service.dart:61-64`), el SDK `supabase_flutter` implementa PKCE correctamente intercambiando el `code_verifier` por tokens mediante el callback del navegador/esquema de app.
@@ -27,6 +30,7 @@ Se auditó la integración de Supabase, autenticación, identidad, almacenamient
   - Al compartir el `refresh_token` con PEMTREE mediante SSO en la URL, se introduce un conflicto de rotación: si ambos clientes intentan refrescar token de manera independiente, la rotación de tokens de Supabase (Refresh Token Rotation) invalidará la sesión del otro o revocará la sesión global por detección de reuso.
 
 ### 3. Revisión Línea por Línea de SSO (`sso_security_validator.dart`)
+
 - **Validación de origen**:
   - Líneas 24-64 (`isValidRedirectUri`): Valida que el `redirect_uri` tenga esquema y autoridad válidos, rechaza asteriscos/wildcards (`effectiveUri.contains('*')`), rechaza `userInfo` (evita `https://evil.com@attacker.com`), permite `localhost` y `127.0.0.1` en `http`/`https` con ruta estricta `/auth/callback`, y para producción exige `https` con sufijos permitidos (`pemtree.netlify.app` y sus previews `<deploy>--pemtree.netlify.app`, `pemtree.com`, `pemtree.app`, `pemtree.org`) requiriendo ruta `/auth/callback`.
   - **No valida** el origen del iniciador HTTP (referrer/origen de la pestaña web que abrió la vista de autorización).
@@ -43,15 +47,16 @@ Se auditó la integración de Supabase, autenticación, identidad, almacenamient
   - En `sso_authorize_screen.dart:67-68`, se evalúa `widget.clientId?.trim().toLowerCase() == 'pemtree'`. Es una comparación de cadenas no constante en tiempo, pero `client_id` es un identificador público, no un secreto criptográfico. No existen secretos de cliente involucrados.
 
 ### 4. Confianza en Datos Locales y Operaciones sobre `profiles`
+
 - **¿Se confía en SharedPreferences/SecureStorage para roles o verificación?**:
-  - *Roles*: NO. En `LocalStorageService.getUserProfile()` (`local_storage_service.dart:60`), el rol se consulta siempre al servidor mediante `SupabaseService.getUserRole()` (`supabase_service.dart:215-230`), consultando la tabla `user_roles`. Si falla, hace fallback a `'student'`.
-  - *Verificación*: NO. En `local_storage_service.dart:55-58, 105`, el flag local `isCarneVerified` se resetea forzosamente a `false` en cada lectura y guardado (`isCarneVerified = false`).
-  - *Problema de privacidad*: Sin embargo, `local_storage_service.dart:94, 100` almacena el carné (`usac_student_carne`) y el nombre real (`usac_student_name`) en texto plano en `SharedPreferences`.
+  - _Roles_: NO. En `LocalStorageService.getUserProfile()` (`local_storage_service.dart:60`), el rol se consulta siempre al servidor mediante `SupabaseService.getUserRole()` (`supabase_service.dart:215-230`), consultando la tabla `user_roles`. Si falla, hace fallback a `'student'`.
+  - _Verificación_: NO. En `local_storage_service.dart:55-58, 105`, el flag local `isCarneVerified` se resetea forzosamente a `false` en cada lectura y guardado (`isCarneVerified = false`).
+  - _Problema de privacidad_: Sin embargo, `local_storage_service.dart:94, 100` almacena el carné (`usac_student_carne`) y el nombre real (`usac_student_name`) en texto plano en `SharedPreferences`.
 - **Falla de permisos en escritura sobre `profiles`**:
-  - *Evidencia en BD*: En `EVIDENCIA-BD.md` §7:
+  - _Evidencia en BD_: En `EVIDENCIA-BD.md` §7:
     `authenticated` → `has_table_privilege(profiles,'UPDATE')` | **false** → la política de UPDATE existe pero el GRANT no.
     En `EVIDENCIA-BD.md` §3, la tabla `profiles` tiene concedido UPDATE sobre solo 4 columnas (`accepted_terms_at, accepted_terms_version, carrera, full_name`).
-  - *Flujo que falla con "permission denied"*:
+  - _Flujo que falla con "permission denied"_:
     En `comunidad_universitaria/lib/core/services/profile_service.dart:50-56` (`ProfileService.acceptTerms()`):
     ```dart
     await SupabaseService.client
@@ -63,15 +68,17 @@ Se auditó la integración de Supabase, autenticación, identidad, almacenamient
         .eq('id', uid);
     ```
     Invocado desde el modal de términos (`comunidad_universitaria/lib/features/legal/widgets/terms_consent_modal.dart:40`). Al no contar el rol `authenticated` con el privilegio SQL de UPDATE a nivel de tabla sobre `profiles`, la consulta REST `PATCH /rest/v1/profiles?id=eq.<uid>` de PostgREST es rechazada por PostgreSQL con error `42501 permission denied for table profiles`.
-  - *Consecuencia*: El usuario autenticado no puede completar la aceptación de términos; el modal captura la excepción, muestra error en rojo y aborta el flujo.
+  - _Consecuencia_: El usuario autenticado no puede completar la aceptación de términos; el modal captura la excepción, muestra error en rojo y aborta el flujo.
 
 ### 5. Guardián TOTP (`TotpSessionGuard`)
+
 - **¿Es solo UI o bloquea operaciones?**:
   - **No está montado**: En la aplicación real (`lib/main.dart` y `lib/features/navigation/app_shell.dart`), `TotpSessionGuard` **no está instanciado ni montado** en ninguna ruta ni envolviendo el árbol de widgets. Solo existe en su archivo de definición y en `test/widgets/totp_session_guard_test.dart`.
   - **Es solo UI**: En `totp_session_guard.dart:160-184`, el guardián únicamente dibuja un `Stack` con un `OverlayEntry` tapando la pantalla. No intercepta llamadas HTTP de Supabase, no retiene tokens y no cancela operaciones asíncronas de fondo.
   - **Cero enforcement en backend**: En `EVIDENCIA-BD.md`, ninguna política RLS ni función en PostgreSQL valida el claim `aal` (`auth.jwt() ->> 'aal' = 'aal2'`). Cualquier cliente HTTP con el JWT de nivel 1 (AAL1) puede consultar y mutar la base de datos sin haber verificado el código TOTP. Es **100% cosmético**.
 
 ### 6. Logs (`debugPrint`/`print`) con Información Sensible
+
 - **Tokens**: SÍ. En `comunidad_universitaria/lib/features/sso/screens/sso_authorize_screen.dart:258`, la función `_performRedirect(String url)` ejecuta:
   `debugPrint('Error al redirigir a PEMTREE: $e');`.
   La variable `url` contiene `#access_token=...&refresh_token=...`. Cuando el plugin `url_launcher` lanza una excepción (por ejemplo `PlatformException`), el mensaje de error incluye la URL completa con los tokens de acceso y refresco en texto plano, quedando registrados en la consola y logs del sistema.
@@ -83,6 +90,7 @@ Se auditó la integración de Supabase, autenticación, identidad, almacenamient
 ## Hallazgos
 
 ### H-1: Falla de ejecución en aceptación de términos por falta de GRANT UPDATE sobre `profiles`
+
 - Severidad: ALTA
 - Tipo: GRANTS
 - Ubicación: `comunidad_universitaria/lib/core/services/profile_service.dart:50-56` (llamado desde `lib/features/legal/widgets/terms_consent_modal.dart:40`)
@@ -112,6 +120,7 @@ Se auditó la integración de Supabase, autenticación, identidad, almacenamient
 ---
 
 ### H-2: Fuga de credenciales maestras y uso de Implicit Grant en SSO hacia PEMTREE
+
 - Severidad: CRÍTICA
 - Tipo: AUTH
 - Ubicación: `comunidad_universitaria/lib/features/sso/screens/sso_authorize_screen.dart:170-176, 208-223` y `comunidad_universitaria/lib/features/sso/sso_security_validator.dart:66-102`
@@ -146,16 +155,17 @@ Se auditó la integración de Supabase, autenticación, identidad, almacenamient
     };
     ```
 - Impacto:
-  1. La aplicación utiliza el flujo *OAuth 2.0 Implicit Grant* desaconsejado y revocado por RFC 8252 y OAuth 2.0 Security BCP.
+  1. La aplicación utiliza el flujo _OAuth 2.0 Implicit Grant_ desaconsejado y revocado por RFC 8252 y OAuth 2.0 Security BCP.
   2. Transmite el `refresh_token` maestro de la cuenta del estudiante en el hash fragment del navegador (`#access_token=...&refresh_token=...`). El hash queda expuesto en el historial del cliente, en scripts de terceros en el dominio receptor y en logs.
-  3. Supabase Auth implementa *Refresh Token Rotation*. Al entregarse el mismo refresh token a PEMTREE y conservarse en Comunidad USAC, las peticiones concurrentes de refresco invalidan las sesiones entre ambas aplicaciones por detección de reuso de token.
+  3. Supabase Auth implementa _Refresh Token Rotation_. Al entregarse el mismo refresh token a PEMTREE y conservarse en Zanate, las peticiones concurrentes de refresco invalidan las sesiones entre ambas aplicaciones por detección de reuso de token.
 - Corrección propuesta:
-  1. Reemplazar la transferencia directa de tokens por un flujo *Authorization Code with PKCE*.
-  2. La app Comunidad USAC debe generar un código de autorización temporal y de un solo uso asociado al usuario, para que PEMTREE intercambie dicho código directamente con el backend mediante `code_verifier`. Nunca transferir `refresh_token` en fragmentos de URL.
+  1. Reemplazar la transferencia directa de tokens por un flujo _Authorization Code with PKCE_.
+  2. La app Zanate debe generar un código de autorización temporal y de un solo uso asociado al usuario, para que PEMTREE intercambie dicho código directamente con el backend mediante `code_verifier`. Nunca transferir `refresh_token` en fragmentos de URL.
 
 ---
 
 ### H-3: Ausencia de validación de `state` (anti-CSRF), expiración y audiencia en SSO
+
 - Severidad: ALTA
 - Tipo: AUTH
 - Ubicación: `comunidad_universitaria/lib/features/sso/sso_security_validator.dart:26-64, 69-102` y `lib/features/sso/screens/sso_authorize_screen.dart:66-76`
@@ -181,6 +191,7 @@ Se auditó la integración de Supabase, autenticación, identidad, almacenamient
 ---
 
 ### H-4: Guardián TOTP (`TotpSessionGuard`) deshabilitado en ejecución y sin validación RLS en base de datos
+
 - Severidad: MEDIA
 - Tipo: AUTH
 - Ubicación: `comunidad_universitaria/lib/features/shared/widgets/totp_session_guard.dart:10-184` (ausente en `lib/main.dart` y `lib/features/navigation/app_shell.dart`)
@@ -200,6 +211,7 @@ Se auditó la integración de Supabase, autenticación, identidad, almacenamient
 ---
 
 ### H-5: Almacenamiento no cifrado de carné y nombre oficial en `SharedPreferences`
+
 - Severidad: MEDIA
 - Tipo: PRIVACIDAD
 - Ubicación: `comunidad_universitaria/lib/core/services/local_storage_service.dart:18-19, 93-103` y `lib/features/profile/widgets/carne_validation_modal.dart:78-85`
@@ -213,7 +225,7 @@ Se auditó la integración de Supabase, autenticación, identidad, almacenamient
       await prefs.setString(_keyStudentName, profile.studentName!.trim());
     }
     ```
-  - En `TermsConsentModal` (`terms_consent_modal.dart:181-184`), la app estipula: *"Tu CUI y número de carné estudiantil se almacenan exclusivamente como una huella HMAC irreversible... garantizando que nunca se guarden en texto plano"*.
+  - En `TermsConsentModal` (`terms_consent_modal.dart:181-184`), la app estipula: _"Tu CUI y número de carné estudiantil se almacenan exclusivamente como una huella HMAC irreversible... garantizando que nunca se guarden en texto plano"_.
   - En `pubspec.yaml`, no se utiliza ningún almacenamiento cifrado seguro (`flutter_secure_storage`).
 - Impacto: En plataformas móviles (Android/iOS) y Web, `SharedPreferences` almacena los datos en archivos XML o almacenamiento de navegador sin cifrar. En caso de acceso físico al dispositivo, respaldos o dispositivos rooteados, el número de carné y nombre completo pueden ser leídos directamente, contradiciendo los términos de privacidad comunicados al usuario.
 - Corrección propuesta: Reemplazar el almacenamiento en `SharedPreferences` de campos de identidad sensible por `flutter_secure_storage` (utilizando Android Keystore y Apple Keychain), o evitar el almacenamiento persistente de carné y nombre en texto plano, conservando únicamente el hash irreversible en servidor.
@@ -221,6 +233,7 @@ Se auditó la integración de Supabase, autenticación, identidad, almacenamient
 ---
 
 ### H-6: Consultas a columnas inexistentes en `profiles` (`seller_verification_status` y `alias`)
+
 - Severidad: MEDIA
 - Tipo: ESQUEMA
 - Ubicación:
@@ -253,6 +266,7 @@ Se auditó la integración de Supabase, autenticación, identidad, almacenamient
 ---
 
 ### H-7: Filtración de tokens de acceso y refresco en logs de depuración durante excepciones de SSO
+
 - Severidad: BAJA
 - Tipo: PRIVACIDAD
 - Ubicación: `comunidad_universitaria/lib/features/sso/screens/sso_authorize_screen.dart:246-260`
@@ -284,6 +298,7 @@ Se auditó la integración de Supabase, autenticación, identidad, almacenamient
 ---
 
 ### H-8: Anon key y URL de producción en el repositorio
+
 - Severidad: BAJA
 - Tipo: SECRETOS
 - Ubicación: `comunidad_universitaria/lib/core/config/supabase_config.dart:5-13`
@@ -296,6 +311,7 @@ Se auditó la integración de Supabase, autenticación, identidad, almacenamient
 ---
 
 ## No verificado
+
 1. **Comportamiento en navegadores móviles externos**: No se pudo verificar la interacción de `launchUrl` en navegadores iOS Safari en modo privado al retornar a la aplicación mediante esquemas de URL personalizados (`comunidadusac://`).
 2. **Configuración de Google OAuth Client ID**: No se tiene acceso a la consola de Google Cloud para verificar las restricciones de orígenes y URIs de redirección autorizadas asociadas al proveedor de Google Sign-In.
 3. **Mecanismo de validación oficial de carné**: En la app no hay endpoints o Edge Functions implementados para contrastar los datos de carné con los sistemas de Registro y Estadística de la USAC; el modal actual opera únicamente en modo borrador local.

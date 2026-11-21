@@ -139,7 +139,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     await ShareCountService.incrementShare(item.id);
 
     final shareText =
-        '${item.title} - ${item.formattedPrice}\n\n${item.description}\n\nUbicación: ${item.locationDetail.isNotEmpty ? item.locationDetail : item.sede}\n— Publicado por ${item.authorAlias} en Comunidad USAC';
+        '${item.title} - ${item.formattedPrice}\n\n${item.description}\n\nUbicación: ${item.locationDetail.isNotEmpty ? item.locationDetail : item.sede}\n— Publicado por ${item.authorAlias} en Zanate';
     try {
       await SharePlus.instance.share(
         ShareParams(text: shareText, subject: item.title),
@@ -391,9 +391,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         backgroundColor: ZanateColors.ctaBg(isDark),
         foregroundColor: ZanateColors.ctaFg(isDark),
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       );
 
       Widget zanateDialogTitle(String title) => Column(
@@ -558,7 +556,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                 Text(
                   (status != null && status.reason.isNotEmpty)
                       ? '${status.reason}\n\nElige cómo quieres verificar tu cuenta:'
-                      : 'Para publicar en el Marketplace necesitas verificar que perteneces a la comunidad USAC. Elige una opción:',
+                      : 'Para publicar en el Marketplace necesitas verificar que perteneces a la Zanate. Elige una opción:',
                   style: bodyStyle,
                 ),
                 const SizedBox(height: 16),
@@ -595,8 +593,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                 _VerificationPathOption(
                   icon: PhosphorIconsRegular.storefront,
                   title: 'Comerciante del campus',
-                  subtitle:
-                      'Contacta con soporte para registrar tu negocio.',
+                  subtitle: 'Contacta con soporte para registrar tu negocio.',
                   onTap: () {
                     Navigator.of(dialogContext).pop();
                     Navigator.of(context).push(
@@ -715,9 +712,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
         color: ZanateColors.card(isDark),
-        border: Border(
-          bottom: BorderSide(color: ZanateColors.border(isDark)),
-        ),
+        border: Border(bottom: BorderSide(color: ZanateColors.border(isDark))),
       ),
       child: Row(
         children: [
@@ -730,11 +725,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
               onAliasChanged: widget.onAliasChanged,
               onToggleTheme: widget.onToggleTheme,
             ),
-            icon: Icon(
-              PhosphorIconsRegular.gear,
-              size: 22,
-              color: textPrimary,
-            ),
+            icon: Icon(PhosphorIconsRegular.gear, size: 22, color: textPrimary),
             splashRadius: 22,
           ),
 
@@ -796,11 +787,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
           IconButton(
             tooltip: 'Publicar Anuncio',
             onPressed: _handleCreateListingClick,
-            icon: Icon(
-              PhosphorIconsBold.plus,
-              size: 22,
-              color: textPrimary,
-            ),
+            icon: Icon(PhosphorIconsBold.plus, size: 22, color: textPrimary),
             splashRadius: 22,
           ),
         ],
@@ -815,9 +802,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: ZanateColors.card(isDark),
-        border: Border(
-          bottom: BorderSide(color: ZanateColors.border(isDark)),
-        ),
+        border: Border(bottom: BorderSide(color: ZanateColors.border(isDark))),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1176,9 +1161,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: ZanateColors.card(isDark),
-        border: Border(
-          bottom: BorderSide(color: ZanateColors.border(isDark)),
-        ),
+        border: Border(bottom: BorderSide(color: ZanateColors.border(isDark))),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1210,7 +1193,10 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                     borderRadius: BorderRadius.circular(12),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 180),
-                      constraints: const BoxConstraints(minWidth: 140, maxWidth: 185),
+                      constraints: const BoxConstraints(
+                        minWidth: 140,
+                        maxWidth: 185,
+                      ),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
                         vertical: 11,
@@ -1252,8 +1238,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                             style: TextStyle(
                               fontSize: 10.5,
                               color: isSelected
-                                  ? ZanateColors.zanateBlack
-                                      .withValues(alpha: 0.78)
+                                  ? ZanateColors.zanateBlack.withValues(
+                                      alpha: 0.78,
+                                    )
                                   : textSecondary,
                             ),
                           ),
@@ -1286,10 +1273,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       decoration: BoxDecoration(
         color: ZanateColors.card(isDark),
         border: Border(
-          bottom: BorderSide(
-            color: ZanateColors.border(isDark),
-            width: 0.8,
-          ),
+          bottom: BorderSide(color: ZanateColors.border(isDark), width: 0.8),
         ),
       ),
       child: Column(
@@ -1401,8 +1385,8 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                                   color: item.isFree
                                       ? ZanateColors.zanateEyeYellow
                                       : (isDark
-                                          ? Colors.white
-                                          : ZanateColors.zanateBlack),
+                                            ? Colors.white
+                                            : ZanateColors.zanateBlack),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
@@ -1413,8 +1397,8 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                                     color: item.isFree
                                         ? ZanateColors.zanateBlack
                                         : (isDark
-                                            ? ZanateColors.zanateBlack
-                                            : Colors.white),
+                                              ? ZanateColors.zanateBlack
+                                              : Colors.white),
                                   ),
                                 ),
                               ),
@@ -1477,9 +1461,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: ZanateColors.card(isDark),
-        border: Border(
-          bottom: BorderSide(color: borderColor),
-        ),
+        border: Border(bottom: BorderSide(color: borderColor)),
       ),
       child: Row(
         children: [
@@ -1716,10 +1698,7 @@ class _VerificationPathOption extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: ZanateColors.surface(isDark),
-          border: Border.all(
-            color: ZanateColors.border(isDark),
-            width: 1.0,
-          ),
+          border: Border.all(color: ZanateColors.border(isDark), width: 1.0),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(

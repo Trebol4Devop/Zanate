@@ -1,6 +1,6 @@
 # 07 — Autenticación y Seguridad
 
-> Especificación de requisitos de experiencia de usuario (UX) para autenticación en **Comunidad Universitaria USAC**: modo visitante, acceso exclusivo con Google OAuth/PKCE y servidor SSO para PEMTREE. Google nunca solicita el TOTP de Comunidad USAC. La inscripción TOTP queda separada del login y su uso futuro está pendiente. Convenciones, matriz de roles y plantilla en [`README.md`](README.md).
+> Especificación de requisitos de experiencia de usuario (UX) para autenticación en **Comunidad Universitaria USAC**: modo visitante, acceso exclusivo con Google OAuth/PKCE y servidor SSO para PEMTREE. Google nunca solicita el TOTP de Zanate TOTP queda separada del login y su uso futuro está pendiente. Convenciones, matriz de roles y plantilla en [`README.md`](README.md).
 
 ---
 
@@ -9,7 +9,7 @@
 El flujo actual de autenticación de la plataforma **Comunidad Universitaria USAC** ofrece:
 
 1. **Lectura como visitante:** se puede consultar contenido público sin crear una cuenta.
-2. **Acceso con cuenta:** la app ofrece únicamente Google OAuth. La primera autenticación crea la cuenta si todavía no existe; Google nunca solicita el TOTP de Comunidad USAC.
+2. **Acceso con cuenta:** la app ofrece únicamente Google OAuth. La primera autenticación crea la cuenta si todavía no existe; Google nunca solicita el TOTP de Zanate
 3. **Sin acceso por correo:** la app no ofrece registro/inicio de sesión con correo y contraseña ni envía OTP por correo.
 4. **SSO para PEMTREE:** la plataforma conserva el flujo OAuth 2.0 / PKCE para herramientas satélite; el acceso se realiza con Google antes de autorizar la integración.
 
@@ -28,7 +28,6 @@ Este documento formaliza y eleva la experiencia analizada en el **Inventario UX*
 - **Inventario 8.1 / Vacío 1 `[Mejora]`:** Se retiró el guard de TOTP del flujo principal de la app. La inscripción TOTP y cualquier requisito MFA futuro quedan separados del inicio de sesión.
 - **Inventario 8.6 / Vacío 6 `[Mejora]`:** Eliminación de la sobreescritura arbitraria de la URI de redirección hacia `localhost:5173` cuando se ejecutan pruebas en hosts locales, respetando la URL legítima solicitada por PEMTREE ([`sso_authorize_screen.dart:188-194`](../../comunidad_universitaria/lib/features/sso/screens/sso_authorize_screen.dart#L188-L194)).
 
-
 ---
 
 ## 3. Matriz de capacidades de acceso y seguridad por rol
@@ -38,23 +37,23 @@ Este documento formaliza y eleva la experiencia analizada en el **Inventario UX*
 > TOTP. La migración local AAL2 es independiente y, si está aplicada, puede
 > bloquear escrituras AAL1; su estado debe comprobarse en cada entorno.
 
-| Capacidad                                 |  Visitante (Sin sesión)  |  Estudiante en Gracia (AAL1)  | Estudiante Activo (AAL2) | Estudiante Verificado (AAL2) | Vendedor externo verificado (AAL2) | Moderador (AAL2) | Administrador (AAL2) |
-| ----------------------------------------- | :----------------------: | :---------------------------: | :----------------------: | :--------------------------: | :--------------------------------: | :--------------: | :------------------: |
-| Explorar foro, marketplace y grupos       |          Hecho           |             Hecho             |          Hecho           |            Hecho             |               Hecho                |      Hecho       |        Hecho         |
-| Buscar contenidos y filtrar facultades    |          Hecho           |             Hecho             |          Hecho           |            Hecho             |               Hecho                |      Hecho       |        Hecho         |
-| Iniciar sesión (Google)                    |          Hecho           |              N/A              |           N/A            |             N/A              |                N/A                 |       N/A        |         N/A          |
-| Crear nueva cuenta comunitaria            |          Hecho           |              N/A              |           N/A            |             N/A              |                N/A                 |       N/A        |         N/A          |
-| Publicar temas y comentarios en el foro   |  Falta _(interceptado)_  | Hecho _(hasta vencer gracia)_ |          Hecho           |            Hecho             |            Falta / N-A             |      Hecho       |        Hecho         |
-| Votar en encuestas y reacciones (_likes_) |  Falta _(interceptado)_  | Hecho _(hasta vencer gracia)_ |          Hecho           |            Hecho             |            Falta / N-A             |      Hecho       |        Hecho         |
-| Publicar artículos en el marketplace      |  Falta _(interceptado)_  |    Falta _(requiere AAL2)_    | Falta _(requiere verificación)_ |     Hecho _(carné)_      |               Hecho                |      Hecho       |        Hecho         |
-| Registrar nuevos grupos de WhatsApp       |  Falta _(interceptado)_  |    Falta _(requiere AAL2)_    |          Hecho           |            Hecho             |            Falta / N-A             |      Hecho       |        Hecho         |
-| Votar reputación de grupos (_upvote_)     |  Falta _(interceptado)_  | Hecho _(hasta vencer gracia)_ |          Hecho           |            Hecho             |            Falta / N-A             |      Hecho       |        Hecho         |
-| Códigos de recuperación MFA (aplazados)   |       No disponible      |        No disponible         |     No disponible       |       No disponible          |          No disponible            | No disponible    | No disponible        |
-| Desactivar segundo factor TOTP            |          Falta           |             Falta             |          Hecho           |            Hecho             |               Hecho                |      Hecho       |        Hecho         |
-| Autorizar accesos SSO (PEMTREE)           | Falta _(login embebido)_ |   Hecho _(AAL1 suficiente)_   |          Hecho           |            Hecho             |            Falta / N-A             |      Hecho       |        Hecho         |
-| Acceder a funciones de moderación         |          Falta           |             Falta             |          Falta           |            Falta             |               Falta                |      Hecho       |        Hecho         |
+| Capacidad                                 |  Visitante (Sin sesión)  |  Estudiante en Gracia (AAL1)  |    Estudiante Activo (AAL2)     | Estudiante Verificado (AAL2) | Vendedor externo verificado (AAL2) | Moderador (AAL2) | Administrador (AAL2) |
+| ----------------------------------------- | :----------------------: | :---------------------------: | :-----------------------------: | :--------------------------: | :--------------------------------: | :--------------: | :------------------: |
+| Explorar foro, marketplace y grupos       |          Hecho           |             Hecho             |              Hecho              |            Hecho             |               Hecho                |      Hecho       |        Hecho         |
+| Buscar contenidos y filtrar facultades    |          Hecho           |             Hecho             |              Hecho              |            Hecho             |               Hecho                |      Hecho       |        Hecho         |
+| Iniciar sesión (Google)                   |          Hecho           |              N/A              |               N/A               |             N/A              |                N/A                 |       N/A        |         N/A          |
+| Crear nueva cuenta comunitaria            |          Hecho           |              N/A              |               N/A               |             N/A              |                N/A                 |       N/A        |         N/A          |
+| Publicar temas y comentarios en el foro   |  Falta _(interceptado)_  | Hecho _(hasta vencer gracia)_ |              Hecho              |            Hecho             |            Falta / N-A             |      Hecho       |        Hecho         |
+| Votar en encuestas y reacciones (_likes_) |  Falta _(interceptado)_  | Hecho _(hasta vencer gracia)_ |              Hecho              |            Hecho             |            Falta / N-A             |      Hecho       |        Hecho         |
+| Publicar artículos en el marketplace      |  Falta _(interceptado)_  |    Falta _(requiere AAL2)_    | Falta _(requiere verificación)_ |       Hecho _(carné)_        |               Hecho                |      Hecho       |        Hecho         |
+| Registrar nuevos grupos de WhatsApp       |  Falta _(interceptado)_  |    Falta _(requiere AAL2)_    |              Hecho              |            Hecho             |            Falta / N-A             |      Hecho       |        Hecho         |
+| Votar reputación de grupos (_upvote_)     |  Falta _(interceptado)_  | Hecho _(hasta vencer gracia)_ |              Hecho              |            Hecho             |            Falta / N-A             |      Hecho       |        Hecho         |
+| Códigos de recuperación MFA (aplazados)   |      No disponible       |         No disponible         |          No disponible          |        No disponible         |           No disponible            |  No disponible   |    No disponible     |
+| Desactivar segundo factor TOTP            |          Falta           |             Falta             |              Hecho              |            Hecho             |               Hecho                |      Hecho       |        Hecho         |
+| Autorizar accesos SSO (PEMTREE)           | Falta _(login embebido)_ |   Hecho _(AAL1 suficiente)_   |              Hecho              |            Hecho             |            Falta / N-A             |      Hecho       |        Hecho         |
+| Acceder a funciones de moderación         |          Falta           |             Falta             |              Falta              |            Falta             |               Falta                |      Hecho       |        Hecho         |
 
-*Nota: El acceso pleno al foro con correo personal exige la validación de carné (UX-AUTH-016). La admisión de vendedores externos no estudiantes está cubierta en UX-PRF-035.*
+_Nota: El acceso pleno al foro con correo personal exige la validación de carné (UX-AUTH-016). La admisión de vendedores externos no estudiantes está cubierta en UX-PRF-035._
 
 ---
 
@@ -95,8 +94,8 @@ si está aplicada a una base, puede rechazar escrituras aunque el login concluya
     - En encuestas: "Inicia sesión para registrar tu voto estudiantil".
     - En marketplace: "Inicia sesión para publicar en el Marketplace".
     - En grupos: "Inicia sesión para compartir un grupo de estudio".
-  - Subtítulo explicativo: "La lectura es libre para toda la comunidad USAC. Para publicar y votar protegemos las cuentas con autenticación estudiantil".
-- **Interacciones:**
+  - Subtítulo explicativo: "La lectura es libre para toda la Zanate. Para publicar y votar protegemos las cuentas con autenticación estudiantil".
+- **Interacciones:**ZanateZanate
   - El usuario puede cerrar el modal de autenticación mediante el botón de cierre (icono `Icons.close`) o deslizando hacia abajo en móvil, permaneciendo exactamente en la pantalla y posición de scroll en la que se encontraba, sin perder ningún dato de visualización.
   - Al completar el inicio de sesión o registro con éxito dentro del modal, este se cierra de inmediato y se dispara el callback `onAuthenticated()`, ejecutando o abriendo automáticamente el formulario que motivó la intercepción (p. ej. abriendo `CreatePostDialog`).
 - **Estados:**
@@ -131,12 +130,12 @@ si está aplicada a una base, puede rechazar escrituras aunque el login concluya
 - **Precondiciones:** Acceso a `AuthModal` en modo de registro (`_isSignUp = true`).
 - **UI / contenido:**
   - Encabezado: Título "Crear Cuenta Estudiantil" e icono de birrete universitario (`Icons.school_outlined`).
-  - Subtítulo: "Únete a la plataforma colaborativa e independiente de la comunidad USAC".
-  - Campo de texto para Correo: Etiqueta "Correo electrónico", texto de ayuda "tu_correo@ejemplo.com", icono prefijo `Icons.email_outlined`. Se admiten correos institucionales de la lista USAC configurable por administradores (otorgan acceso directo al foro) y correos personales (exigirán validación de carné para acceso, ver UX-AUTH-016).
+  - Subtítulo: "Únete a la plataforma colaborativa e independiente de la Zanate".
+  - Campo de texto para Correo: Etiqueta "Correo electrónico", texto de aZanateo@ejemplo.com", icono prefijo `Icons.email_outlined`. Se admiten correos institucionales de la lista USAC configurable por administradores (otorgan acceso directo al foro) y correos personales (exigirán validación de carné para acceso, ver UX-AUTH-016).
   - Campo de texto para Contraseña: Etiqueta "Contraseña (mínimo 6 caracteres)", icono prefijo `Icons.lock_outline`, botón sufijo interactivo para alternar entre ver/ocultar caracteres (`Icons.visibility` / `Icons.visibility_off`).
   - Indicador visual de seguridad de contraseña: Barra delgada reactiva que pasa de rojo (débil: < 6 caracteres), amarillo (aceptable: 6-8 caracteres) a verde (fuerte: > 8 caracteres con combinación de números y letras).
-  - Texto legal al pie: "Al registrarte aceptas las [Normas de Convivencia](rules) de la Comunidad USAC".
-  - Botón principal de acción: `ElevatedButton` ancho completo con fondo azul institucional USAC (`#004B87`), texto blanco en negrita "Registrarme".
+  - Texto legal al pie: "Al registrarte aceptas las [Normas de Convivencia](rules) de la Zanate
+  - Botón principal de acción: `ElevatedButton` ancho completo con fondo azul institucionZanateB87`), texto blanco en negrita "Registrarme".
   - Enlace de conmutación: Botón de texto inferior "¿Ya tienes cuenta? Inicia sesión aquí".
 - **Interacciones:**
   - Al escribir en los campos, la validación sintáctica (`_formKey.currentState!.validate()`) proporciona retroalimentación sin bloquear la escritura.
@@ -185,7 +184,7 @@ factor y no sustituye esa comprobación.
 - **Estado objetivo:** El estudiante con cuenta existente puede autenticarse ingresando su correo y contraseña. La pantalla maneja con empatía los errores de autenticación. La confirmación de correo está desactivada para este proyecto; si la instancia remota aún la exige, la interfaz indica que se desactive `Confirm email` en la configuración de Auth.
 - **Precondiciones:** Acceso a `AuthModal` en modo de acceso tradicional (`_isSignUp = false`).
 - **UI / contenido:**
-  - Título principal: "Iniciar Sesión en Comunidad USAC".
+  - Título principal: "Iniciar Sesión en Zanate
   - Subtítulo: "Ingresa tus credenciales para acceder a tus publicaciones y preferencias".
   - Campo Correo electrónico con validación de sintaxis básica.
   - Campo Contraseña con botón interactivo para mostrar u ocultar caracteres.
@@ -194,6 +193,7 @@ factor y no sustituye esa comprobación.
   - Separador horizontal visual con el texto "O continúa con".
   - Botón oficial de acceso con Google OAuth (`UX-AUTH-006`).
   - Enlace inferior de registro: "¿No tienes una cuenta aún? Regístrate gratis".
+
 - **Interacciones:**
   - Al presionar "Iniciar Sesión", se ejecuta `SupabaseService.signInWithEmail(email, password)`.
   - Si el inicio de sesión es exitoso, el modal se descarta y se entra a la app. No se solicita TOTP ni se evalúa un desafío después del login, aunque el usuario tenga un factor inscrito.
@@ -240,7 +240,7 @@ factor y no sustituye esa comprobación.
   - Estado de espera activo: Si el usuario pulsa el botón y la ventana externa está abierta, el modal se transforma en una tarjeta de sincronización con:
     - Indicador de progreso circular suave (`CircularProgressIndicator`).
     - Texto explicativo: "Esperando confirmación en tu navegador...".
-    - Subtítulo: "Completa el inicio de sesión en la ventana de Google para regresar a Comunidad USAC".
+    - Subtítulo: "Completa el inicio de sesión en la ventana de Google para regresar a Zanate
     - Botón secundario: "Cancelar y volver".
 - **Interacciones:**
   - Pulsar el botón ejecuta `SupabaseService.signInWithGoogle(redirectTo)`.
@@ -282,6 +282,7 @@ factor y no sustituye esa comprobación.
   - Al confirmar en el diálogo, se ejecuta `SupabaseService.signOut()`.
 
   - La aplicación redirige al usuario a la vista principal del foro en modo visitante y muestra un SnackBar informativo: "Has cerrado sesión correctamente".
+
 - **Estados:**
   - _Reposo:_ Botón disponible en la interfaz.
   - _Cerrando sesión:_ Botón con indicador de carga deshabilitado.
@@ -314,7 +315,7 @@ mediante migración y debe revisarse por separado.
 
 - **Actor / rol:** Estudiante registrado configurando su segundo factor
 - **Prioridad:** Must
-- **Estado objetivo:** Asistente paso a paso para la vinculación de un factor de autenticación TOTP. El sistema genera un nuevo secreto criptográfico emitido a nombre de "Comunidad USAC" y presenta simultáneamente: (1) Un código QR nítido de alto contraste generado localmente mediante `qr_flutter` para escaneo rápido con otro dispositivo; (2) La clave secreta alfanumérica visible en tipografía monoespaciada con botón de copiado en un clic para estudiantes que configuran el autenticador en el mismo teléfono móvil; (3) Campo para ingresar el primer código de 6 dígitos emitido por la app autenticadora para verificar la sincronización y elevar la sesión de inmediato a nivel AAL2.
+- **Estado objetivo:** Asistente paso a paso para la vinculación de un factor de autenticación TOTP. El sistema genera un nuevo secreto criptográfico emitido a nombre de "Zanate" y presenta simultáneamente: (1) Un código QR nítido de alto contraste generado localmente mediante `qr_flutter` para escaneo rápido con otro dispositivo; (2) La clave secreta alfanumérica visible en tipografía monoespaciada con botón de copiado en un clic para estudiantes que configuran el autenticador en el mismo teléfono móvil; (3) Campo para ingresar el primer código de 6 dígitos emitido por la app autenticadora para verificar la sincronización y elevar la sesión de inmediato a nivel AAL2.
 - **Precondiciones:** Sesión AAL1 activa; acceso a `TotpEnrollmentScreen`.
 - **UI / contenido:**
   - Título: "Configurar autenticador en dos pasos (TOTP)".
@@ -370,7 +371,6 @@ Un usuario puede iniciar sesión por Google sin que la app solicite su código.
 La decisión futura sobre MFA debe incluir tanto el flujo de interfaz como las
 políticas AAL2 del backend; los códigos de recuperación siguen fuera del alcance.
 
-
 ---
 
 ### UX-AUTH-012 — Desactivación voluntaria de MFA TOTP con reautenticación limpia
@@ -422,9 +422,9 @@ políticas AAL2 del backend; los códigos de recuperación siguen fuera del alca
   - En caso de violación de seguridad o URI no permitida:
     - Tarjeta central de alerta con icono de escudo vulnerado (`Icons.gpp_bad_outlined`, 64px, color rojo `#DC2626`).
     - Título: "Solicitud de acceso no segura".
-    - Explicación para el estudiante: "La aplicación que intenta conectarse solicitó enviarte a una dirección web no autorizada por la Comunidad USAC. Para evitar que tu cuenta o datos sean interceptados, hemos bloqueado la conexión".
+    - Explicación para el estudiante: "La aplicación que intenta conectarse solicitó enviarte a una dirección web no autorizada por la Zanate. Para evitar que tu cuenta o datos sean interceptados, hemos bloqueado la conexión".
     - Sección colapsable técnica: "Detalles de seguridad: Destino rechazado [URI_detectada]".
-    - Botón primario de rescate: "Volver a la Comunidad USAC" (`ElevatedButton` azul que redirige al inicio seguro del foro).
+    - Botón primario de rescate: "Volver a la Zanate" (`ElevatedButton` azul que redirige al inicio seguro del foro).
 - **Interacciones:**
   - En el estado de error de seguridad, ningún botón ni enlace permite continuar hacia la URI sospechosa.
   - La validación es síncrona y ocurre en memoria antes de evaluar cualquier sesión de usuario.
@@ -454,12 +454,12 @@ políticas AAL2 del backend; los códigos de recuperación siguen fuera del alca
 
 - **Actor / rol:** Estudiante autorizando el acceso a PEMTREE
 - **Prioridad:** Must
-- **Estado objetivo:** Pantalla de consentimiento visual con diseño institucional que expone con claridad los alcances de la integración: muestra los logos de Comunidad USAC y PEMTREE enlazados, detalla los datos específicos que se compartirán con la app satélite (identidad básica, seudónimo comunitario y correo para sincronización de materias), e identifica la cuenta del estudiante que está otorgando el acceso. Si el usuario no tiene una sesión iniciada al llegar, se ofrece el acceso embebido mediante Google sin abandonar la pantalla. Al pulsar "Autorizar y Continuar", los tokens generados (`access_token`, `refresh_token`, `state`) se transmiten de vuelta a PEMTREE exclusivamente en el **fragmento hash (`#`)** de la URL para garantizar que nunca queden registrados en historiales de servidores intermedios, incluyendo además un enlace manual de rescate si el navegador bloquea ventanas emergentes.
+- **Estado objetivo:** Pantalla de consentimiento visual con diseño institucional que expone con claridad los alcances de la integración: muestra los logos de Zanate y PEMTREE enlazados, detalla los datos específicos que se compartirán con la app satélite (identidad básica, seudónimo comunitario y correo para sincronización de materias), e identifica la cuenta del estudiante que está otorgando el acceso. Si el usuario no tiene una sesión iniciada al llegar, se ofrece el acceso embebido mediante Google sin abandonar la pantalla. Al pulsar "Autorizar y Continuar", los tokens generados (`access_token`, `refresh_token`, `state`) se transmiten de vuelta a PEMTREE exclusivamente en el **fragmento hash (`#`)** de la URL para garantizar que nunca queden registrados en historiales de servidores intermedios, incluyendo además un enlace manual de rescate si el navegador bloquea ventanas emergentes.
 - **Precondiciones:** Solicitud con parámetros válidos validados por `SsoSecurityValidator`.
 - **UI / contenido:**
-  - Encabezado con branding conjunto: Escudo Comunidad USAC e Isotipo de PEMTREE unidos por icono de vinculación (`Icons.sync_alt`).
+  - Encabezado con branding conjunto: Escudo Zanate e Isotipo de PEMTREE unidos por icono de vinculación (`Icons.sync_alt`).
   - Título: "PEMTREE solicita acceso a tu cuenta".
-  - Subtítulo: "Esta herramienta satélite de pensums y cursos utilizará tu identidad de Comunidad USAC".
+  - Subtítulo: "Esta herramienta satélite de pensums y cursos utilizará tu identidad de Zanate".
   - Lista de permisos solicitados con distintivos de verificación verdes:
     - _Identidad y seudónimo:_ Para mostrar tu perfil en PEMTREE.
     - _Correo electrónico:_ Para asociar tus avances de pensum y materias aprobadas.
@@ -500,9 +500,9 @@ políticas AAL2 del backend; los códigos de recuperación siguen fuera del alca
 
 - **Actor / rol:** Desarrollador, Tester, Estudiante en entorno de desarrollo o staging de PEMTREE
 - **Prioridad:** Should
-- **Estado objetivo:** Cuando la plataforma de Comunidad USAC se ejecuta en un host de desarrollo local (`localhost` o `127.0.0.1`), la pantalla de autorización SSO respeta la `redirect_uri` especificada por la aplicación cliente siempre que cumpla con los criterios de seguridad permitidos (por ejemplo, permitiendo que apunte a un entorno de preview en Netlify o a un puerto local específico), en lugar de sobreescribirla de manera forzada y silenciosa por `http://localhost:5173/auth/callback`. Si la aplicación detecta que se está ejecutando en un entorno local y que el destino solicitado pertenece a la nube, despliega un banner informativo transparente en el pie de la tarjeta indicando el destino exacto y ofreciendo un conmutador explícito para alternar el destino entre el servidor local Vite (`localhost:5173`) y la URL de preview, garantizando total previsibilidad al probar integraciones.
+- **Estado objetivo:** Cuando la plataforma de Zanate se ejecuta en un host de desarrollo local (`localhost` o `127.0.0.1`), la pantalla de autorización SSO respeta la `redirect_uri` especificada por la aplicación cliente siempre que cumpla con los criterios de seguridad permitidos (por ejemplo, permitiendo que apunte a un entorno de preview en Netlify o a un puerto local específico), en lugar de sobreescribirla de manera forzada y silenciosa por `http://localhost:5173/auth/callback`. Si la aplicación detecta que se está ejecutando en un entorno local y que el destino solicitado pertenece a la nube, despliega un banner informativo transparente en el pie de la tarjeta indicando el destino exacto y ofreciendo un conmutador explícito para alternar el destino entre el servidor local Vite (`localhost:5173`) y la URL de preview, garantizando total previsibilidad al probar integraciones.
 - **Problema actual [Mejora]:** En la implementación actual ([`sso_authorize_screen.dart:188-194`](../../comunidad_universitaria/lib/features/sso/screens/sso_authorize_screen.dart#L188-L194)), la propiedad `_effectiveRedirectUri` verifica si la aplicación corre en `localhost` y, si la `redirect_uri` enviada por PEMTREE contiene `netlify.app` o `pemtree.`, sobreescribe unilateralmente la URL enviando al usuario siempre a `http://localhost:5173/auth/callback`. Si un desarrollador o colaborador realiza pruebas contra un deploy de staging en Netlify desde su máquina local, la redirección falla de forma silenciosa y confusa sin retroalimentación visual alguna (detectado en Inventario UX 8.6 / Vacío 6).
-- **Precondiciones:** La aplicación Comunidad USAC se ejecuta en un navegador web local (`kIsWeb && (host == 'localhost' || host == '127.0.0.1')`) en la pantalla `SsoAuthorizeScreen`.
+- **Precondiciones:** La aplicación Zanate se ejecuta en un navegador web local (`kIsWeb && (host == 'localhost' || host == '127.0.0.1')`) en la pantalla `SsoAuthorizeScreen`.
 - **UI / contenido:**
   - Banner inferior informativo de depuración/desarrollo (con estilo de tarjeta sutil con borde punteado ámbar e icono `Icons.developer_mode_outlined`):
     - Texto explicativo: "Modo de desarrollo local detectado".
@@ -525,7 +525,7 @@ políticas AAL2 del backend; los códigos de recuperación siguen fuera del alca
 - **Responsive:**
   - El banner se integra en la parte inferior de la tarjeta central sin desbordar el contenedor.
 - **Criterios de aceptación (Gherkin):**
-  - **Given** un desarrollador ejecutando Comunidad USAC en `localhost` que recibe una solicitud SSO con `redirect_uri=https://pemtree-staging.netlify.app/auth/callback`, **When** se presenta la pantalla de consentimiento, **Then** el sistema respeta la URL de Netlify y muestra un banner informativo con la opción explícita de mantener dicho destino o conmutar al puerto 5173 local.
+  - **Given** un desarrollador ejecutando Zanate en `localhost` que recibe una solicitud SSO con `redirect_uri=https://pemtree-staging.netlify.app/auth/callback`, **When** se presenta la pantalla de consentimiento, **Then** el sistema respeta la URL de Netlify y muestra un banner informativo con la opción explícita de mantener dicho destino o conmutar al puerto 5173 local.
   - **Given** que el desarrollador elige conmutar a `http://localhost:5173/auth/callback` y pulsa "Autorizar y Continuar", **Then** la redirección se efectúa al puerto local con total retroalimentación visual previa.
 
 ---
@@ -548,24 +548,24 @@ políticas AAL2 del backend; los códigos de recuperación siguen fuera del alca
 
 ### 6.1 Mapeo de Requisitos a Código y Mecanismos de Seguridad
 
-| ID Requisito    | Componente / Archivo Dart                                  | Servicio / Trigger Supabase                                  | Nivel AAL | Tipo de Prueba                                 |
-| --------------- | ---------------------------------------------------------- | ------------------------------------------------------------ | :-------: | ---------------------------------------------- |
-| **UX-AUTH-001** | `lib/features/shared/widgets/auth_modal.dart`              | RLS Deny en Postgres para rol `anon`                         |   AAL0    | Widget test de intercepción contextual         |
-| **UX-AUTH-002** | `lib/features/shared/widgets/auth_modal.dart`              | `SupabaseService.signUp` + Trigger `handle_new_user_profile` |   AAL1    | Integration test de registro                   |
-| **UX-AUTH-003** | Retirado                                                  | Sin verificación ni envío de OTP por correo                   |   N/A     | No aplica                                      |
-| **UX-AUTH-004** | `lib/features/shared/widgets/auth_modal.dart`              | `SupabaseService.signInWithPassword`                         |   AAL1    | Unit test de mapeo de errores amigables        |
-| **UX-AUTH-005** | Aplazado                                                  | Sin recuperación de contraseña por correo                     |   N/A     | No implementado                                |
-| **UX-AUTH-006** | `lib/features/shared/widgets/auth_modal.dart`              | `SupabaseService.signInWithGoogle` (PKCE)                    |   AAL1    | Integration test de callback y deep links      |
-| **UX-AUTH-007** | `lib/features/profile/screens/profile_screen.dart`         | `SupabaseService.signOut`                                    |   AAL0    | Widget test de diálogo y revocación            |
-| **UX-AUTH-008** | `lib/features/shared/widgets/totp_session_guard.dart`      | Lógica de gracia de 7 días (`created_at + 7d`)               |   AAL1    | Widget test de pantalla formativa e inducción  |
-| **UX-AUTH-009** | `lib/features/profile/screens/totp_enrollment_screen.dart` | `beginTotpEnrollment` + `verifyTotpEnrollment`               |   AAL2    | Widget test de renderizado QR y copia manual   |
-| **UX-AUTH-010** | Aplazado                                                  | Códigos de recuperación no disponibles en Auth alojado       |   N/A     | No implementado                                |
-| **UX-AUTH-011** | `lib/features/shared/widgets/totp_session_guard.dart`      | `verifyTotpChallenge`                                        |   AAL2    | Integration test de elevación y desafío        |
-| **UX-AUTH-012** | `lib/features/profile/screens/totp_enrollment_screen.dart` | `unenrollTotpFactor` + `signOut` atómico                     |   AAL0    | Widget test de diálogo con código y baja       |
-| **UX-AUTH-013** | `lib/features/sso/sso_security_validator.dart`             | `SsoSecurityValidator.isValidRedirectUri`                    |    N/A    | Unit test exhaustivo de vectores Open Redirect |
-| **UX-AUTH-014** | `lib/features/sso/screens/sso_authorize_screen.dart`       | `buildSuccessRedirectUrl` (Tokens en fragmento `#`)          | AAL1/AAL2 | Widget test de pantalla de consentimiento      |
-| **UX-AUTH-015** | `lib/features/sso/screens/sso_authorize_screen.dart`       | Getter configurable de `effectiveRedirectUri`                |    N/A    | Widget test de banner y selector de entorno    |
-| **UX-AUTH-016** | `lib/features/shared/widgets/auth_modal.dart` (clasificación por dominio, nuevo) | Lista configurable de dominios institucionales (nuevo) | AAL1 | Widget test de acceso por dominio |
+| ID Requisito    | Componente / Archivo Dart                                                        | Servicio / Trigger Supabase                                  | Nivel AAL | Tipo de Prueba                                 |
+| --------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------ | :-------: | ---------------------------------------------- |
+| **UX-AUTH-001** | `lib/features/shared/widgets/auth_modal.dart`                                    | RLS Deny en Postgres para rol `anon`                         |   AAL0    | Widget test de intercepción contextual         |
+| **UX-AUTH-002** | `lib/features/shared/widgets/auth_modal.dart`                                    | `SupabaseService.signUp` + Trigger `handle_new_user_profile` |   AAL1    | Integration test de registro                   |
+| **UX-AUTH-003** | Retirado                                                                         | Sin verificación ni envío de OTP por correo                  |    N/A    | No aplica                                      |
+| **UX-AUTH-004** | `lib/features/shared/widgets/auth_modal.dart`                                    | `SupabaseService.signInWithPassword`                         |   AAL1    | Unit test de mapeo de errores amigables        |
+| **UX-AUTH-005** | Aplazado                                                                         | Sin recuperación de contraseña por correo                    |    N/A    | No implementado                                |
+| **UX-AUTH-006** | `lib/features/shared/widgets/auth_modal.dart`                                    | `SupabaseService.signInWithGoogle` (PKCE)                    |   AAL1    | Integration test de callback y deep links      |
+| **UX-AUTH-007** | `lib/features/profile/screens/profile_screen.dart`                               | `SupabaseService.signOut`                                    |   AAL0    | Widget test de diálogo y revocación            |
+| **UX-AUTH-008** | `lib/features/shared/widgets/totp_session_guard.dart`                            | Lógica de gracia de 7 días (`created_at + 7d`)               |   AAL1    | Widget test de pantalla formativa e inducción  |
+| **UX-AUTH-009** | `lib/features/profile/screens/totp_enrollment_screen.dart`                       | `beginTotpEnrollment` + `verifyTotpEnrollment`               |   AAL2    | Widget test de renderizado QR y copia manual   |
+| **UX-AUTH-010** | Aplazado                                                                         | Códigos de recuperación no disponibles en Auth alojado       |    N/A    | No implementado                                |
+| **UX-AUTH-011** | `lib/features/shared/widgets/totp_session_guard.dart`                            | `verifyTotpChallenge`                                        |   AAL2    | Integration test de elevación y desafío        |
+| **UX-AUTH-012** | `lib/features/profile/screens/totp_enrollment_screen.dart`                       | `unenrollTotpFactor` + `signOut` atómico                     |   AAL0    | Widget test de diálogo con código y baja       |
+| **UX-AUTH-013** | `lib/features/sso/sso_security_validator.dart`                                   | `SsoSecurityValidator.isValidRedirectUri`                    |    N/A    | Unit test exhaustivo de vectores Open Redirect |
+| **UX-AUTH-014** | `lib/features/sso/screens/sso_authorize_screen.dart`                             | `buildSuccessRedirectUrl` (Tokens en fragmento `#`)          | AAL1/AAL2 | Widget test de pantalla de consentimiento      |
+| **UX-AUTH-015** | `lib/features/sso/screens/sso_authorize_screen.dart`                             | Getter configurable de `effectiveRedirectUri`                |    N/A    | Widget test de banner y selector de entorno    |
+| **UX-AUTH-016** | `lib/features/shared/widgets/auth_modal.dart` (clasificación por dominio, nuevo) | Lista configurable de dominios institucionales (nuevo)       |   AAL1    | Widget test de acceso por dominio              |
 
 ---
 
@@ -573,12 +573,12 @@ políticas AAL2 del backend; los códigos de recuperación siguen fuera del alca
 
 Para garantizar que el estudiante no enfrente tecnicismos crípticos o mensajes en inglés, la capa de presentación implementa la siguiente correspondencia canónica de errores:
 
-| Mensaje / Excepción interna de Supabase           | Mensaje visual presentado al estudiante                                                     | Solución sugerida en interfaz                                                     |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `Invalid login credentials`                       | "Credenciales inválidas. Verifica tu correo y contraseña."                                  | Permite reintentar o usar Google si la cuenta está vinculada.                     |
-| `Email not confirmed`                             | "La confirmación de correo sigue activa en Supabase."                                       | Desactiva `Confirm email` en Authentication > Sign In / Providers > Email.          |
-| `429 Too Many Requests`                        | "Se alcanzó el límite de intentos. Por favor espera un momento antes de volver a probar."   | Muestra el tiempo de espera indicado por el servicio y bloquea temporalmente la acción. |
+| Mensaje / Excepción interna de Supabase | Mensaje visual presentado al estudiante                                                   | Solución sugerida en interfaz                                                           |
+| --------------------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `Invalid login credentials`             | "Credenciales inválidas. Verifica tu correo y contraseña."                                | Permite reintentar o usar Google si la cuenta está vinculada.                           |
+| `Email not confirmed`                   | "La confirmación de correo sigue activa en Supabase."                                     | Desactiva `Confirm email` en Authentication > Sign In / Providers > Email.              |
+| `429 Too Many Requests`                 | "Se alcanzó el límite de intentos. Por favor espera un momento antes de volver a probar." | Muestra el tiempo de espera indicado por el servicio y bloquea temporalmente la acción. |
 
-| `User already registered`                         | "Este correo ya está registrado en la comunidad. Inicia sesión o usa Google si corresponde." | Ofrece botón directo para conmutar a la pestaña de inicio de sesión.              |
-| `Password should be at least 6 characters`        | "La contraseña debe tener al menos 6 caracteres."                                           | Validación preventiva inline antes de realizar la petición de red.                |
-| `Invalid redirect uri` (SSO)                      | "Solicitud de acceso no segura: El enlace de retorno no está autorizado."                   | Despliega pantalla de advertencia roja impidiendo la redirección.                 |
+| `User already registered` | "Este correo ya está registrado en la comunidad. Inicia sesión o usa Google si corresponde." | Ofrece botón directo para conmutar a la pestaña de inicio de sesión. |
+| `Password should be at least 6 characters` | "La contraseña debe tener al menos 6 caracteres." | Validación preventiva inline antes de realizar la petición de red. |
+| `Invalid redirect uri` (SSO) | "Solicitud de acceso no segura: El enlace de retorno no está autorizado." | Despliega pantalla de advertencia roja impidiendo la redirección. |

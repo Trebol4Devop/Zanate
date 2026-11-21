@@ -1,5 +1,5 @@
 -- =============================================================================
--- PEMTREE / Comunidad USAC · pgTAP Test: Verificación y Modelo Zero-PII
+-- PEMTREE / Zanate · pgTAP Test: Verificación y Modelo Zero-PII
 -- Archivo: supabase/tests/database/zero_pii_test.sql
 -- Módulo: Endurecimiento de Seguridad Zero-PII
 -- =============================================================================

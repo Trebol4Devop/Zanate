@@ -122,7 +122,7 @@ Este documento formaliza los requisitos del área a partir del análisis del **I
   - Logotipo: Contenedor con esquinas redondeadas (8px), fondo azul `#004B87`, con icono `Icons.school` en blanco (20px).
   - Título principal adaptativo:
     - En pantallas de escritorio y tablets (ancho >= 700px): `"Comunidad Universitaria"`.
-    - En pantallas móviles (ancho < 700px): `"Comunidad USAC"`.
+    - En pantallas móviles (ancho < 700px): `"Zanate"`.
   - Distintivo `"No Oficial"`:
     - Etiqueta tipo cápsula con bordes redondeados (4px) y padding horizontal de 4px y vertical de 1px.
     - Fondo con 12% de opacidad del color primario y tipografía de 9px en negrita con el color primario institucional.
@@ -141,8 +141,8 @@ Este documento formaliza los requisitos del área a partir del análisis del **I
 - **Responsive:**
   - Conmutación automática del texto de título a 700px para garantizar que los botones de acción derechos nunca se desborden ni se solapen en pantallas móviles angostas.
 - **Criterios de aceptación (Gherkin):**
-  - **Given** un visitante que ingresa a la aplicación desde un teléfono móvil con pantalla de 375px, **When** observa el AppBar superior, **Then** lee el título "Comunidad USAC" junto con el distintivo "No Oficial", y al tocarlo se abre el diálogo de aviso comunitario.
-  - **Given** un estudiante que redimensiona la ventana de su navegador de 1024px a 650px de ancho, **When** cruza el umbral de 700px, **Then** el título conmuta fluidamente de "Comunidad Universitaria" a "Comunidad USAC" sin generar ningún desbordamiento de píxeles (overflow) en el AppBar.
+  - **Given** un visitante que ingresa a la aplicación desde un teléfono móvil con pantalla de 375px, **When** observa el AppBar superior, **Then** lee el título "Zanate" junto con el distintivo "No Oficial", y al tocarlo se abre el diálogo de aviso comunitario.
+  - **Given** un estudiante que redimensiona la ventana de su navegador de 1024px a 650px de ancho, **When** cruza el umbral de 700px, **Then** el título conmuta fluidamente de "Comunidad Universitaria" a "Zanate" sin generar ningún desbordamiento de píxeles (overflow) en el AppBar.
 
 ---
 

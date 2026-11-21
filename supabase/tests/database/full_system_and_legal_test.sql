@@ -1,5 +1,5 @@
 -- =============================================================================
--- PEMTREE / Comunidad USAC · pgTAP Test: Suite Legal Completa & Hardening
+-- PEMTREE / Zanate · pgTAP Test: Suite Legal Completa & Hardening
 -- Archivo: supabase/tests/database/full_system_and_legal_test.sql
 -- =============================================================================
 begin;

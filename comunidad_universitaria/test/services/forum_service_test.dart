@@ -42,7 +42,7 @@ void main() {
           content: '  Contenido con espacios  ',
           category: 'general',
           carrera: 'sistemas',
-          authorAlias: '  Estudiante Usac  ',
+          authorAlias: '  Estudiante Anónimo  ',
           imageUrl: '   ',
           gifUrl: '',
         );
@@ -51,14 +51,14 @@ void main() {
         expect(result!.id, 'created-post-1');
         expect(result.title, 'Título con espacios');
         expect(result.content, 'Contenido con espacios');
-        expect(result.authorAlias, 'Estudiante Usac');
+        expect(result.authorAlias, 'Estudiante Anónimo');
         expect(result.imageUrl, isNull);
         expect(result.gifUrl, isNull);
 
         expect(insertedPost, isNotNull);
         expect(insertedPost!['title'], 'Título con espacios');
         expect(insertedPost!['content'], 'Contenido con espacios');
-        expect(insertedPost!['author_alias'], 'Estudiante Usac');
+        expect(insertedPost!['author_alias'], 'Estudiante Anónimo');
         expect(insertedPost!['image_url'], isNull);
         expect(insertedPost!['gif_url'], isNull);
         expect(insertedPost!['user_id'], 'test-user-id');
@@ -163,7 +163,7 @@ void main() {
       final result = await ForumService.addComment(
         postId: 'post-1',
         content: '  Respuesta detallada  ',
-        authorAlias: '  Compañero  ',
+        authorAlias: '  Estudiante Anónimo  ',
         parentId: 'parent-123',
         gifUrl: '  https://giphy.com/sample.gif  ',
       );
@@ -171,7 +171,7 @@ void main() {
       expect(result, isNotNull);
       expect(result!.id, 'new-comment-99');
       expect(result.content, 'Respuesta detallada');
-      expect(result.authorAlias, 'Compañero');
+      expect(result.authorAlias, 'Estudiante Anónimo');
       expect(result.parentId, 'parent-123');
       expect(result.gifUrl, 'https://giphy.com/sample.gif');
 

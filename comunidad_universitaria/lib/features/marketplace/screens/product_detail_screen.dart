@@ -60,9 +60,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   void _trackViewOnce(MarketplaceItem item) {
     final currentUserId = SupabaseService.currentUserId;
-    final isMyItem = item.isMine || (item.userId != null && item.userId == currentUserId);
+    final isMyItem =
+        item.isMine || (item.userId != null && item.userId == currentUserId);
 
-    if (!isMyItem && !ProductDetailScreen._sessionViewedItemIds.contains(item.id)) {
+    if (!isMyItem &&
+        !ProductDetailScreen._sessionViewedItemIds.contains(item.id)) {
       ProductDetailScreen._sessionViewedItemIds.add(item.id);
       MarketplaceService.trackEvent(item.id, 'view');
     }
@@ -151,7 +153,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       AuthModal.show(
         context,
         title: 'Inicia sesión para guardar',
-        subtitle: 'Para guardar este producto en tus marcadores debes iniciar sesión.',
+        subtitle:
+            'Para guardar este producto en tus marcadores debes iniciar sesión.',
         onAuthenticated: _handleToggleBookmark,
       );
       return;
@@ -173,9 +176,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            result
-                ? 'Guardado en tus productos'
-                : 'Eliminado de tus guardados',
+            result ? 'Guardado en tus productos' : 'Eliminado de tus guardados',
           ),
           duration: const Duration(seconds: 2),
         ),
@@ -187,7 +188,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No se pudo actualizar el marcador. Inténtalo de nuevo.'),
+          content: Text(
+            'No se pudo actualizar el marcador. Inténtalo de nuevo.',
+          ),
         ),
       );
     }
@@ -201,7 +204,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       AuthModal.show(
         context,
         title: 'Inicia sesión para apoyar',
-        subtitle: 'Para dar un voto de utilidad a esta publicación debes iniciar sesión.',
+        subtitle:
+            'Para dar un voto de utilidad a esta publicación debes iniciar sesión.',
         onAuthenticated: _handleToggleUpvote,
       );
       return;
@@ -209,7 +213,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
     final prevUpvoted = item.isUpvotedByMe;
     final prevCount = item.upvotes;
-    final newCount = prevUpvoted ? (prevCount - 1).clamp(0, 999999) : prevCount + 1;
+    final newCount = prevUpvoted
+        ? (prevCount - 1).clamp(0, 999999)
+        : prevCount + 1;
 
     setState(() {
       _item = item.copyWith(isUpvotedByMe: !prevUpvoted, upvotes: newCount);
@@ -241,7 +247,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     MarketplaceService.trackEvent(item.id, 'share');
 
     final shareText =
-        '${item.title} - ${item.formattedPrice}\n\n${item.description}\n\nUbicación: ${item.locationDetail.isNotEmpty ? item.locationDetail : item.sede}\n— Vendedor: ${item.sellerBusinessName ?? item.authorAlias} en Comunidad USAC';
+        '${item.title} - ${item.formattedPrice}\n\n${item.description}\n\nUbicación: ${item.locationDetail.isNotEmpty ? item.locationDetail : item.sede}\n— Vendedor: ${item.sellerBusinessName ?? item.authorAlias} en Zanate';
 
     try {
       await SharePlus.instance.share(
@@ -252,7 +258,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('El enlace de la publicación se copió al portapapeles.'),
+          content: Text(
+            'El enlace de la publicación se copió al portapapeles.',
+          ),
           backgroundColor: ZanateColors.zanateBlack,
         ),
       );
@@ -291,7 +299,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   String _getCategoryLabel(String catId) {
-    final match = USACConstants.marketplaceCategories.where((c) => c.id == catId);
+    final match = USACConstants.marketplaceCategories.where(
+      (c) => c.id == catId,
+    );
     return match.isNotEmpty ? match.first.label : 'General';
   }
 
@@ -382,173 +392,205 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return MarketplaceTheme.wrap(
       context,
       Scaffold(
-      backgroundColor: ZanateColors.bg(isDark),
-      appBar: AppBar(
-        centerTitle: true,
-        leading: IconButton(
-          tooltip: 'Volver',
-          icon: PhosphorIcon(
-            PhosphorIconsBold.caretLeft,
-            size: 22,
-            color: ZanateColors.textPrimary(isDark),
-          ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text(
-          item.title,
-          style: GoogleFonts.outfit(
-            fontSize: 15.5,
-            fontWeight: FontWeight.w700,
-            color: isDark ? Colors.white : ZanateColors.zanateBlack,
-          ),
-        ),
-        actions: [
-          IconButton(
-            tooltip: item.isBookmarked ? 'Quitar de guardados' : 'Guardar publicación',
+        backgroundColor: ZanateColors.bg(isDark),
+        appBar: AppBar(
+          centerTitle: true,
+          leading: IconButton(
+            tooltip: 'Volver',
             icon: PhosphorIcon(
-              item.isBookmarked
-                  ? PhosphorIconsFill.bookmarkSimple
-                  : PhosphorIconsRegular.bookmarkSimple,
-              color: item.isBookmarked
-                  ? ZanateColors.zanateEyeYellow
-                  : (isDark ? Colors.white : ZanateColors.zanateBlack),
+              PhosphorIconsBold.caretLeft,
+              size: 22,
+              color: ZanateColors.textPrimary(isDark),
             ),
-            onPressed: _handleToggleBookmark,
+            onPressed: () => Navigator.of(context).pop(),
           ),
-          IconButton(
-            tooltip: 'Compartir publicación',
-            icon: const Icon(PhosphorIconsRegular.shareNetwork),
-            onPressed: _handleShare,
+          title: Text(
+            item.title,
+            style: GoogleFonts.outfit(
+              fontSize: 15.5,
+              fontWeight: FontWeight.w700,
+              color: isDark ? Colors.white : ZanateColors.zanateBlack,
+            ),
           ),
-          PopupMenuButton<String>(
-            tooltip: 'Más opciones',
-            onSelected: (val) {
-              if (val == 'report') _handleReport();
-            },
-            itemBuilder: (ctx) => [
-              const PopupMenuItem(
-                value: 'report',
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(PhosphorIconsRegular.flag, size: 16, color: Color(0xFFEF4444)),
-                    SizedBox(width: 8),
-                    Text('Reportar publicación'),
-                  ],
-                ),
+          actions: [
+            IconButton(
+              tooltip: item.isBookmarked
+                  ? 'Quitar de guardados'
+                  : 'Guardar publicación',
+              icon: PhosphorIcon(
+                item.isBookmarked
+                    ? PhosphorIconsFill.bookmarkSimple
+                    : PhosphorIconsRegular.bookmarkSimple,
+                color: item.isBookmarked
+                    ? ZanateColors.zanateEyeYellow
+                    : (isDark ? Colors.white : ZanateColors.zanateBlack),
               ),
-            ],
-          ),
-        ],
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: isDesktop ? 760 : double.infinity),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Notice if item is under review
-                if (item.isUnderReview)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFF59E0B)),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(PhosphorIconsBold.shieldWarning, color: Color(0xFFD97706), size: 18),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Esta publicación está en revisión por moderación comunitaria. Solo tú puedes verla por ahora.',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFB45309)),
-                          ),
-                        ),
-                      ],
-                    ),
+              onPressed: _handleToggleBookmark,
+            ),
+            IconButton(
+              tooltip: 'Compartir publicación',
+              icon: const Icon(PhosphorIconsRegular.shareNetwork),
+              onPressed: _handleShare,
+            ),
+            PopupMenuButton<String>(
+              tooltip: 'Más opciones',
+              onSelected: (val) {
+                if (val == 'report') _handleReport();
+              },
+              itemBuilder: (ctx) => [
+                const PopupMenuItem(
+                  value: 'report',
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        PhosphorIconsRegular.flag,
+                        size: 16,
+                        color: Color(0xFFEF4444),
+                      ),
+                      SizedBox(width: 8),
+                      Text('Reportar publicación'),
+                    ],
                   ),
-
-                // Notice if item is sold
-                if (item.isSold)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEF4444).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFEF4444), width: 1),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(PhosphorIconsBold.tag, color: Color(0xFFDC2626), size: 18),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Este artículo ya fue vendido.',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFFDC2626)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                // -------------------------------------------------------------
-                // BLOQUE 1: Multimedia (Galería PageView con contador 1/N y video)
-                // -------------------------------------------------------------
-                _buildBlock1Gallery(item, isDark),
-                const SizedBox(height: 18),
-
-                // -------------------------------------------------------------
-                // BLOQUE 2: Información principal (Título, precio, chips, tiempo)
-                // -------------------------------------------------------------
-                _buildBlock2MainInfo(item, isDark, theme),
-                const SizedBox(height: 20),
-
-                // -------------------------------------------------------------
-                // BLOQUE 3: Vendedor, confianza, presencia y botón Ver Tienda
-                // -------------------------------------------------------------
-                _buildBlock3Seller(item, isDark, theme),
-                const SizedBox(height: 20),
-
-                // -------------------------------------------------------------
-                // BLOQUE 4: Acciones de contacto (WhatsApp primario, secundarios, upvote)
-                // -------------------------------------------------------------
-                _buildBlock4Actions(item, isDark, theme),
-                const SizedBox(height: 24),
-
-                // -------------------------------------------------------------
-                // BLOQUE 5: Más productos de este vendedor
-                // -------------------------------------------------------------
-                if (_sellerOtherItems.isNotEmpty || _isLoadingSellerItems) ...[
-                  _buildBlock5SellerOtherItems(item, isDark, theme),
-                  const SizedBox(height: 24),
-                ],
-
-                // -------------------------------------------------------------
-                // BLOQUE 6: Productos similares de otros vendedores
-                // -------------------------------------------------------------
-                if (item.sellerPlanId != 'business_local' &&
-                    (_relatedItems.isNotEmpty || _isLoadingRelated)) ...[
-                  _buildBlock6RelatedItems(item, isDark, theme),
-                  const SizedBox(height: 32),
-                ],
+                ),
               ],
             ),
+          ],
+        ),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: isDesktop ? 760 : double.infinity,
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Notice if item is under review
+                  if (item.isUnderReview)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFF59E0B)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(
+                            PhosphorIconsBold.shieldWarning,
+                            color: Color(0xFFD97706),
+                            size: 18,
+                          ),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Esta publicación está en revisión por moderación comunitaria. Solo tú puedes verla por ahora.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFFB45309),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // Notice if item is sold
+                  if (item.isSold)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: const Color(0xFFEF4444),
+                          width: 1,
+                        ),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(
+                            PhosphorIconsBold.tag,
+                            color: Color(0xFFDC2626),
+                            size: 18,
+                          ),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Este artículo ya fue vendido.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFDC2626),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // -------------------------------------------------------------
+                  // BLOQUE 1: Multimedia (Galería PageView con contador 1/N y video)
+                  // -------------------------------------------------------------
+                  _buildBlock1Gallery(item, isDark),
+                  const SizedBox(height: 18),
+
+                  // -------------------------------------------------------------
+                  // BLOQUE 2: Información principal (Título, precio, chips, tiempo)
+                  // -------------------------------------------------------------
+                  _buildBlock2MainInfo(item, isDark, theme),
+                  const SizedBox(height: 20),
+
+                  // -------------------------------------------------------------
+                  // BLOQUE 3: Vendedor, confianza, presencia y botón Ver Tienda
+                  // -------------------------------------------------------------
+                  _buildBlock3Seller(item, isDark, theme),
+                  const SizedBox(height: 20),
+
+                  // -------------------------------------------------------------
+                  // BLOQUE 4: Acciones de contacto (WhatsApp primario, secundarios, upvote)
+                  // -------------------------------------------------------------
+                  _buildBlock4Actions(item, isDark, theme),
+                  const SizedBox(height: 24),
+
+                  // -------------------------------------------------------------
+                  // BLOQUE 5: Más productos de este vendedor
+                  // -------------------------------------------------------------
+                  if (_sellerOtherItems.isNotEmpty ||
+                      _isLoadingSellerItems) ...[
+                    _buildBlock5SellerOtherItems(item, isDark, theme),
+                    const SizedBox(height: 24),
+                  ],
+
+                  // -------------------------------------------------------------
+                  // BLOQUE 6: Productos similares de otros vendedores
+                  // -------------------------------------------------------------
+                  if (item.sellerPlanId != 'business_local' &&
+                      (_relatedItems.isNotEmpty || _isLoadingRelated)) ...[
+                    _buildBlock6RelatedItems(item, isDark, theme),
+                    const SizedBox(height: 32),
+                  ],
+                ],
+              ),
+            ),
           ),
         ),
-      ),
       ),
     );
   }
 
   // BLOQUE 1
   Widget _buildBlock1Gallery(MarketplaceItem item, bool isDark) {
-    if (item.imageUrls.isEmpty && (item.videoUrl == null || item.videoUrl!.isEmpty)) {
+    if (item.imageUrls.isEmpty &&
+        (item.videoUrl == null || item.videoUrl!.isEmpty)) {
       return Container(
         height: 200,
         decoration: BoxDecoration(
@@ -580,21 +622,28 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     color: ZanateColors.surface(isDark),
                     child: PageView.builder(
                       itemCount: item.imageUrls.length,
-                      onPageChanged: (idx) => setState(() => _currentImageIndex = idx),
+                      onPageChanged: (idx) =>
+                          setState(() => _currentImageIndex = idx),
                       itemBuilder: (ctx, i) {
                         final img = item.imageUrls[i];
                         return InkWell(
                           onTap: () => ImageViewerDialog.show(
                             context,
                             imageUrl: img,
-                            title: '${item.title} (${i + 1}/${item.imageUrls.length})',
+                            title:
+                                '${item.title} (${i + 1}/${item.imageUrls.length})',
                           ),
                           child: Image.network(
                             img,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => const Center(
-                              child: Icon(PhosphorIconsRegular.imageBroken, size: 48, color: Colors.grey),
-                            ),
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Center(
+                                  child: Icon(
+                                    PhosphorIconsRegular.imageBroken,
+                                    size: 48,
+                                    color: Colors.grey,
+                                  ),
+                                ),
                           ),
                         );
                       },
@@ -606,7 +655,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     bottom: 10,
                     right: 12,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.65),
                         borderRadius: BorderRadius.circular(10),
@@ -659,7 +711,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   // BLOQUE 2
-  Widget _buildBlock2MainInfo(MarketplaceItem item, bool isDark, ThemeData theme) {
+  Widget _buildBlock2MainInfo(
+    MarketplaceItem item,
+    bool isDark,
+    ThemeData theme,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -708,8 +764,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 color: item.isSold
                     ? const Color(0xFFEF4444).withValues(alpha: 0.15)
                     : (item.isReserved
-                        ? const Color(0xFFF59E0B).withValues(alpha: 0.15)
-                        : const Color(0xFF10B981).withValues(alpha: 0.15)),
+                          ? const Color(0xFFF59E0B).withValues(alpha: 0.15)
+                          : const Color(0xFF10B981).withValues(alpha: 0.15)),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
@@ -722,8 +778,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   color: item.isSold
                       ? const Color(0xFFDC2626)
                       : (item.isReserved
-                          ? const Color(0xFFD97706)
-                          : const Color(0xFF059669)),
+                            ? const Color(0xFFD97706)
+                            : const Color(0xFF059669)),
                 ),
               ),
             ),
@@ -732,7 +788,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               TimeUtils.timeAgo(item.createdAt),
               style: TextStyle(
                 fontSize: 11,
-                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                color: isDark
+                    ? const Color(0xFF94A3B8)
+                    : const Color(0xFF64748B),
               ),
             ),
           ],
@@ -796,7 +854,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               Expanded(
                 child: Text(
                   'Punto de entrega: ${item.locationDetail}',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ],
@@ -817,8 +878,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   // BLOQUE 3
-  Widget _buildBlock3Seller(MarketplaceItem item, bool isDark, ThemeData theme) {
-    final sellerName = (item.sellerBusinessName != null && item.sellerBusinessName!.trim().isNotEmpty)
+  Widget _buildBlock3Seller(
+    MarketplaceItem item,
+    bool isDark,
+    ThemeData theme,
+  ) {
+    final sellerName =
+        (item.sellerBusinessName != null &&
+            item.sellerBusinessName!.trim().isNotEmpty)
         ? item.sellerBusinessName!
         : item.authorAlias;
 
@@ -827,10 +894,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       decoration: BoxDecoration(
         color: ZanateColors.surface(isDark),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: ZanateColors.border(isDark),
-          width: 1.0,
-        ),
+        border: Border.all(color: ZanateColors.border(isDark), width: 1.0),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -900,7 +964,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ],
                 ),
               ),
-              if (item.sellerPublicId != null && item.sellerPublicId!.isNotEmpty)
+              if (item.sellerPublicId != null &&
+                  item.sellerPublicId!.isNotEmpty)
                 TextButton(
                   style: TextButton.styleFrom(
                     minimumSize: const Size(48, 48),
@@ -947,7 +1012,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    item.sellerBuildingCode != null && item.sellerBuildingCode!.isNotEmpty
+                    item.sellerBuildingCode != null &&
+                            item.sellerBuildingCode!.isNotEmpty
                         ? 'Entregando ahora en edificio ${item.sellerBuildingCode}'
                         : 'Entregando ahora en el campus',
                     style: const TextStyle(
@@ -966,7 +1032,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   // BLOQUE 4
-  Widget _buildBlock4Actions(MarketplaceItem item, bool isDark, ThemeData theme) {
+  Widget _buildBlock4Actions(
+    MarketplaceItem item,
+    bool isDark,
+    ThemeData theme,
+  ) {
     if (item.isSold) {
       return Container(
         padding: const EdgeInsets.all(14),
@@ -985,7 +1055,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
 
     final hasWhatsapp = item.whatsappUrl != null;
-    final hasSecondary = item.telegramUrl != null ||
+    final hasSecondary =
+        item.telegramUrl != null ||
         item.instagramUrl != null ||
         item.messengerUrl != null;
 
@@ -1012,7 +1083,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            onPressed: () => _handleContactChannel('whatsapp', item.whatsappUrl!),
+            onPressed: () =>
+                _handleContactChannel('whatsapp', item.whatsappUrl!),
           ),
 
         if (hasSecondary) ...[
@@ -1028,12 +1100,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    icon: const Icon(PhosphorIconsFill.telegramLogo, size: 16, color: Color(0xFF0088CC)),
-                    label: const Text('Telegram', style: TextStyle(fontSize: 12)),
-                    onPressed: () => _handleContactChannel('telegram', item.telegramUrl!),
+                    icon: const Icon(
+                      PhosphorIconsFill.telegramLogo,
+                      size: 16,
+                      color: Color(0xFF0088CC),
+                    ),
+                    label: const Text(
+                      'Telegram',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    onPressed: () =>
+                        _handleContactChannel('telegram', item.telegramUrl!),
                   ),
                 ),
-              if (item.telegramUrl != null && (item.instagramUrl != null || item.messengerUrl != null))
+              if (item.telegramUrl != null &&
+                  (item.instagramUrl != null || item.messengerUrl != null))
                 const SizedBox(width: 8),
               if (item.instagramUrl != null)
                 Expanded(
@@ -1044,9 +1125,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    icon: const Icon(PhosphorIconsFill.instagramLogo, size: 16, color: Color(0xFFE1306C)),
-                    label: const Text('Instagram', style: TextStyle(fontSize: 12)),
-                    onPressed: () => _handleContactChannel('instagram', item.instagramUrl!),
+                    icon: const Icon(
+                      PhosphorIconsFill.instagramLogo,
+                      size: 16,
+                      color: Color(0xFFE1306C),
+                    ),
+                    label: const Text(
+                      'Instagram',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    onPressed: () =>
+                        _handleContactChannel('instagram', item.instagramUrl!),
                   ),
                 ),
               if (item.instagramUrl != null && item.messengerUrl != null)
@@ -1060,9 +1149,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    icon: const Icon(PhosphorIconsFill.messengerLogo, size: 16, color: Color(0xFF0084FF)),
-                    label: const Text('Messenger', style: TextStyle(fontSize: 12)),
-                    onPressed: () => _handleContactChannel('messenger', item.messengerUrl!),
+                    icon: const Icon(
+                      PhosphorIconsFill.messengerLogo,
+                      size: 16,
+                      color: Color(0xFF0084FF),
+                    ),
+                    label: const Text(
+                      'Messenger',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    onPressed: () =>
+                        _handleContactChannel('messenger', item.messengerUrl!),
                   ),
                 ),
             ],
@@ -1079,11 +1176,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               onTap: _handleToggleUpvote,
               borderRadius: BorderRadius.circular(14),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: item.isUpvotedByMe
-                      ? ZanateColors.zanateEyeYellow
-                          .withValues(alpha: isDark ? 0.22 : 0.30)
+                      ? ZanateColors.zanateEyeYellow.withValues(
+                          alpha: isDark ? 0.22 : 0.30,
+                        )
                       : ZanateColors.surface(isDark),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
@@ -1152,7 +1253,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   // BLOQUE 5
-  Widget _buildBlock5SellerOtherItems(MarketplaceItem item, bool isDark, ThemeData theme) {
+  Widget _buildBlock5SellerOtherItems(
+    MarketplaceItem item,
+    bool isDark,
+    ThemeData theme,
+  ) {
     final sellerName = item.sellerBusinessName ?? item.authorAlias;
 
     return Column(
@@ -1188,7 +1293,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ),
                   );
                 },
-                child: const Text('Ver tienda completa', style: TextStyle(fontSize: 12)),
+                child: const Text(
+                  'Ver tienda completa',
+                  style: TextStyle(fontSize: 12),
+                ),
               ),
           ],
         ),
@@ -1293,7 +1401,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   // BLOQUE 6
-  Widget _buildBlock6RelatedItems(MarketplaceItem item, bool isDark, ThemeData theme) {
+  Widget _buildBlock6RelatedItems(
+    MarketplaceItem item,
+    bool isDark,
+    ThemeData theme,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1325,10 +1437,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               onTap: () {
                 Navigator.of(context).push(
                   MaterialURLRoute(
-                    builder: (_) => ProductDetailScreen(
-                      itemId: rel.id,
-                      initialItem: rel,
-                    ),
+                    builder: (_) =>
+                        ProductDetailScreen(itemId: rel.id, initialItem: rel),
                   ),
                 );
               },
@@ -1397,7 +1507,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             rel.authorAlias,
                             style: TextStyle(
                               fontSize: 10,
-                              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                              color: isDark
+                                  ? const Color(0xFF94A3B8)
+                                  : const Color(0xFF64748B),
                             ),
                           ),
                         ],
