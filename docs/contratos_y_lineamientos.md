@@ -4,7 +4,7 @@
 **Fecha:** 21 de noviembre de 2026  
 **Alcance:** App Flutter (`comunidad_universitaria/`), Backend Supabase (`supabase/`), Cloudflare Worker de verificación (`workers/verification/`) y Edge Function de moderación (`supabase/functions/moderation-worker/`).
 
-Este documento establece los contratos vinculantes y reglas de implementación para todo el equipo de desarrollo de **Zanate**. Su objetivo es eliminar el _drift_ entre cliente, base de datos, workers y el panel administrativo (`PEMTREE-admin`), previniendo discrepancias funcionales, fallos silenciosos por permisos RLS/GRANT o filtraciones de datos personales.
+Este documento establece los contratos vinculantes y reglas de implementación para todo el equipo de desarrollo de **Zanate**. Su objetivo es eliminar el _drift_ entre cliente, base de datos, workers y el panel administrativo (`Zanate-admin`), previniendo discrepancias funcionales, fallos silenciosos por permisos RLS/GRANT o filtraciones de datos personales.
 
 > **Regla fundamental:** Cualquier divergencia entre el código implementado y los contratos definidos aquí (o en `docs/verification/zero-pii.md`) se considera un **bug bloqueante** y debe corregirse antes de integrar a `develop` o `main`.
 
@@ -12,7 +12,7 @@ Este documento establece los contratos vinculantes y reglas de implementación p
 
 ## 1. Arquitectura y Fuente de Verdad
 
-El ecosistema comparte un único proyecto oficial de Supabase (`hfvsstkfqszpjrsrwhql`) con `PEMTREE-admin` (el identificador histórico `jsdshvnkbrkwobfhdysh` está formalmente deprecado y prohibido). Por ello, todo cambio de datos impacta dos clientes simultáneamente.
+El ecosistema comparte un único proyecto oficial de Supabase (`hfvsstkfqszpjrsrwhql`) con `Zanate-admin` (el identificador histórico `jsdshvnkbrkwobfhdysh` está formalmente deprecado y prohibido). Por ello, todo cambio de datos impacta dos clientes simultáneamente.
 
 | Componente                   | Ruta en el repositorio                  | Responsabilidad principal                                                                         |
 | :--------------------------- | :-------------------------------------- | :------------------------------------------------------------------------------------------------ |
@@ -35,7 +35,7 @@ El ecosistema comparte un único proyecto oficial de Supabase (`hfvsstkfqszpjrsr
 
 ### 2.1 Semántica canónica de `moderation_status`
 
-Todos los módulos con contenido generado por usuarios (`posts`, `comments`, `marketplace_items`, `student_groups`) deben respetar exactamente los mismos códigos de estado en BD, Edge Function, App Flutter y `PEMTREE-admin`:
+Todos los módulos con contenido generado por usuarios (`posts`, `comments`, `marketplace_items`, `student_groups`) deben respetar exactamente los mismos códigos de estado en BD, Edge Function, App Flutter y `Zanate-admin`:
 
 | Código | Estado                           | Visibilidad pública                               | Responsable de la transición                                             |
 | :----- | :------------------------------- | :------------------------------------------------ | :----------------------------------------------------------------------- |
@@ -193,7 +193,7 @@ El estado de arranque se centraliza en `SessionController` (`SessionPhase`: `loa
 4. **No silenciar errores de contrato:** un `catch` genérico no debe ocultar códigos `42703` (columna inexistente), `42501` (permiso denegado) o `PGRST204`/`PGRST202` convirtiéndolos en `false` o listas vacías sin registro controlado. Durante pruebas y desarrollo, estos errores deben ser visibles para detectar _drift_ inmediatamente.
 5. **Validación dual:** las reglas de contenido prohibido (ej. `_prohibitedKeywords` en `MarketplaceService`) y validaciones de formato (carné, teléfono, longitudes) se validan en cliente para UX inmediata y se hacen cumplir en servidor mediante triggers/RPCs.
 6. **Caché por namespace:** toda lectura cacheada en `CacheService` debe usar un namespace dedicado (`forum_posts`, `marketplace_items`, etc.) e invalidarse al crear, editar o eliminar elementos.
-7. **Catálogo único de canales del foro:** `public.categorias_foro` es la **única fuente de verdad** de los canales. El cliente Flutter no mantiene listas de canales hardcodeadas en runtime: `ForumService.fetchForumChannels()` lee `id, nombre, descripcion, slug, icon, sort_order, is_active, is_system` y respeta el orden del backend (las constantes locales son solo respaldo offline). Los administradores gestionan el catálogo con `admin_upsert_forum_category(jsonb)` y `admin_delete_forum_category(text)`; el canal `todos` es de sistema (editable, no eliminable ni desactivable) y el resto —incluidos `general`, `prerrequisitos`, `catedraticos`, `apuntes`, `horarios`, `desahogo` y `desmadre`— admite crear, editar y eliminar. La vista `v_forum_category_admin` expone los conteos y la política de moderación para el panel.
+7. **Catálogo único de canales del foro:** `public.categorias_foro` es la **única fuente de verdad** de los canales. El cliente Flutter no mantiene listas de canales hardcodeadas en runtime: `ForumService.fetchForumChannels()` lee `id, nombre, descripcion, slug, icon, sort_order, is_active, is_system` y respeta el orden del backend (las constantes locales son solo respaldo offline). Los administradores gestionan el catálogo con `admin_upsert_forum_category(jsonb)` y `admin_delete_forum_category(text)`; el canal `todos` es de sistema (editable, no eliminable ni desactivable) y el resto —incluidos `general`, `prerrequisitos`, `catedraticos`, `apuntes`, `horarios`, `desahogo` y `desmadre`— admite crear, editar y eliminar. La vista `v_forum_category_admin` expone los conteos y la política de moderación para el panel. **Visibilidad:** `is_active = false` es un borrado lógico; el panel PEMTREE-admin conserva el canal (con la etiqueta «Inactivo», oculto por defecto tras el interruptor «Mostrar inactivos») y la app no lo muestra. Ambos clientes ordenan por `sort_order, id`.
 
 ### 6.4 Estado, UI y Testabilidad
 
@@ -221,13 +221,13 @@ El estado de arranque se centraliza en `SessionController` (`SessionPhase`: `loa
 - [ ] **Cumplimiento Zero-PII:** cero referencias a `full_name`, `cui`/`dpi` o OCR en claro en base de datos; hashes HMAC en servidor; cero tokens o PII en logs (riesgo residual de `LocalStorageService` formalmente aceptado según ADR-002).
 - [ ] **Migraciones y pgTAP (si aplica):** migración nueva versionada e idempotente + `supabase test db --local` pasando (especialmente `marketplace_ux_test.sql` y pruebas del módulo modificado).
 - [ ] **Worker (si aplica):** pruebas `vitest` pasando en `workers/verification/` y contrato de endpoints/errores respetado.
-- [ ] **Impacto en `PEMTREE-admin`:** si se modificó una tabla, vista, trigger o RPC compartido, quedó documentado en la descripción del PR y coordinado con el equipo del panel.
+- [ ] **Impacto en `Zanate-admin`:** si se modificó una tabla, vista, trigger o RPC compartido, quedó documentado en la descripción del PR y coordinado con el equipo del panel.
 
 ### 7.3 Protocolo para Cambiar un Contrato Acordado
 
 Cuando un requerimiento nuevo exija modificar una tabla, RPC, endpoint de Worker o flujo de autenticación:
 
 1. **Proponer el cambio antes de codificar** en un PR o issue de contrato (actualizando este documento o el contrato específico en `docs/verification/`).
-2. **Versionar primero el backend** (migración SQL + pruebas pgTAP) manteniendo compatibilidad hacia atrás cuando `PEMTREE-admin` y la app no se desplieguen en el mismo instante.
-3. **Actualizar clientes y workers** (`comunidad_universitaria/`, `workers/verification/`, `PEMTREE-admin`) contra el contrato aprobado.
+2. **Versionar primero el backend** (migración SQL + pruebas pgTAP) manteniendo compatibilidad hacia atrás cuando `Zanate-admin` y la app no se desplieguen en el mismo instante.
+3. **Actualizar clientes y workers** (`comunidad_universitaria/`, `workers/verification/`, `Zanate-admin`) contra el contrato aprobado.
 4. **Registrar decisiones arquitectónicas (ADRs)** en `docs/adr/ADRS_ZANATE.md` para evitar implementaciones parciales o asunciones no acordadas.
