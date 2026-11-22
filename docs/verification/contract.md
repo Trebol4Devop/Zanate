@@ -1,17 +1,13 @@
 # Contrato — Verificación estudiantil USAC
 
-> **Actualización Zero-PII (2026-11-17):** este documento conserva el contrato histórico.
-> Desde la migración `20261117120000_zero_pii_hardening.sql` rigen los cambios descritos en
-> `docs/verification/zero-pii.md`: sin CUI/DPI, sin `full_name`, sin OCR persistido,
-> carné solo como `carne_hash` y comerciante identificado por `contact_phone_hash`.
-> El RPC vigente es `claim_student_credentials(p_carne text)`.
->
-> **Actualización 2026-11-17:** el Camino B de documentos fue retirado de la app.
-> La alternativa al flujo automático es **Contactar con soporte**
-> (`mailto:trebol4devop@proton.me`). Las referencias a OCR o documentos son históricas.
+> **Actualización de Arquitectura (2026-11-21):**
+> 1. **OCR on-device:** el OCR (`OcrService` + `CarnetPhotoValidator`) se conserva como herramienta de apoyo opcional en el dispositivo para asistir en la lectura del número de carné, **sin subida de documentos a R2/Storage ni persistencia de texto OCR en la base de datos** (ver ADR-004 en `docs/adr/ADRS_ZANATE.md`).
+> 2. **MFA / TOTP / AAL2 descartado:** la autenticación multifactor (TOTP) y los requisitos AAL2 fueron **retirados definitivamente** de la arquitectura (ver ADR-003). No es una función diferida ni pendiente.
+> 3. **Privacidad Zero-PII:** rigen las directrices de `docs/verification/zero-pii.md` y la migración `20261117120000_zero_pii_hardening.sql`: sin CUI/DPI, sin `full_name`, sin texto OCR en BD. El carné se persiste únicamente como `carne_hash` derivado en servidor con HMAC-SHA256 (`private.hash_credential`). El RPC vigente es `claim_student_credentials(p_carne text)`. El riesgo residual en cliente (`LocalStorageService`) está formalmente aceptado (ADR-002).
+> 4. **Canal alternativo sin correo institucional:** la alternativa para estudiantes sin dominio institucional es **Contactar con soporte** (`mailto:trebol4devop@proton.me`). Los flujos de carga de documentos físicos a R2 detallados abajo se mantienen como especificación y referencia histórica.
 
 > Documento normativo para los tres entregables (base de datos, Worker, Flutter).
-> Cualquier divergencia con este documento es un bug. Versión 1.0 — 2026-11-16.
+> Versión 1.1 — 2026-11-21.
 
 ## 1. Alcance
 
