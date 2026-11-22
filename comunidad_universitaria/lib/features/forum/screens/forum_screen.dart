@@ -177,9 +177,28 @@ class _ForumScreenState extends State<ForumScreen> {
           }
         });
       }
+      await _loadChannelsForServer(_activeServer);
     } catch (e) {
       debugPrint('Error cargando estructura del foro desde DB: $e');
     }
+  }
+
+  Future<void> _loadChannelsForServer(ForumServer server) async {
+    if (server.isGroups) return;
+    final channels = await ForumService.fetchServerChannels(server);
+    if (!mounted) return;
+    setState(() {
+      _channels = channels.isEmpty
+          ? List<ForumChannel>.from(ForumChannel.defaultChannels)
+          : channels;
+      if (!_channels.any((channel) => channel.id == _activeChannel.id)) {
+        _activeChannel = _channels.firstWhere(
+          (channel) => channel.id == 'todos',
+          orElse: () => _channels.first,
+        );
+      }
+    });
+    _loadPosts();
   }
 
   Future<void> _loadUserProfile() async {
@@ -313,6 +332,8 @@ class _ForumScreenState extends State<ForumScreen> {
     });
     widget.onServerChanged?.call(server);
     if (!server.isGroups) {
+      _loadChannelsForServer(server);
+    } else {
       _loadPosts();
     }
   }

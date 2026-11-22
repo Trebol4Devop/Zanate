@@ -1048,6 +1048,62 @@ class ForumService {
     }
   }
 
+  /// Obtiene los canales configurados para un servidor concreto.
+  ///
+  /// Cada servidor puede tener un catálogo distinto; si no tiene filas, se usa
+  /// la plantilla global (`categorias_foro`) y finalmente los defaults locales.
+  static Future<List<ForumChannel>> fetchServerChannels(
+    ForumServer server,
+  ) async {
+    if (server.isGroups) {
+      return List<ForumChannel>.from(ForumChannel.defaultChannels);
+    }
+    if (!SupabaseConfig.isConfigured) {
+      return List<ForumChannel>.from(ForumChannel.defaultChannels);
+    }
+
+    try {
+      final response = await SupabaseService.client
+          .from('forum_server_channels')
+          .select(
+            'id, nombre, descripcion, slug, icon, sort_order, is_active, is_system',
+          )
+          .eq('server_id', server.id)
+          .eq('is_active', true)
+          .order('sort_order')
+          .order('id')
+          .timeout(const Duration(seconds: 8));
+
+      final List<dynamic> data = response as List<dynamic>;
+      if (data.isEmpty) {
+        return await fetchForumChannels();
+      }
+
+      final channels = <ForumChannel>[];
+      for (final row in data) {
+        final id = row['id']?.toString() ?? '';
+        if (id.isEmpty) continue;
+        channels.add(
+          ForumChannel.fromDbCategory(
+            id: id,
+            nombre: row['nombre']?.toString() ?? id,
+            descripcion: row['descripcion']?.toString(),
+            slug: row['slug']?.toString(),
+            icon: row['icon']?.toString(),
+            isSystem: row['is_system'] == true,
+          ),
+        );
+      }
+
+      return channels.isEmpty
+          ? List<ForumChannel>.from(ForumChannel.defaultChannels)
+          : channels;
+    } catch (e) {
+      debugPrint('Error al obtener canales de ${server.id}: $e');
+      return fetchForumChannels();
+    }
+  }
+
   /// Obtiene el catálogo de espacios (`forum_servers`) desde Supabase.
   ///
   /// Devuelve el rail, los subservidores de Grupos y las opciones del selector
