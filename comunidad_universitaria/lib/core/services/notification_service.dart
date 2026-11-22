@@ -4,6 +4,12 @@ import '../models/notification_item.dart';
 import 'supabase_service.dart';
 
 class NotificationService {
+  static const String _userNotificationsColumns =
+      'id, user_id, type, title, body, actor_alias, post_id, comment_id, read_at, push_sent_at, created_at';
+
+  static const String _notificationPreferencesColumns =
+      'user_id, comment_enabled, reply_enabled, like_enabled, new_post_enabled, carreras, created_at, updated_at';
+
   /// Obtiene la bandeja de notificaciones del usuario autenticado actual.
   static Future<List<NotificationItem>> fetchNotifications({
     int limit = 25,
@@ -15,7 +21,7 @@ class NotificationService {
     try {
       final res = await SupabaseService.client
           .from('user_notifications')
-          .select('*')
+          .select(_userNotificationsColumns)
           .eq('user_id', uid)
           .order('created_at', ascending: false)
           .limit(limit);
@@ -100,7 +106,7 @@ class NotificationService {
     try {
       final res = await SupabaseService.client
           .from('notification_preferences')
-          .select('*')
+          .select(_notificationPreferencesColumns)
           .eq('user_id', uid)
           .maybeSingle();
 

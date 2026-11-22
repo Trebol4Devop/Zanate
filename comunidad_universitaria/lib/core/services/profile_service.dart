@@ -11,6 +11,12 @@ import 'supabase_service.dart';
 class ProfileService {
   static const String termsVersion = 'v1.0-2026';
 
+  static const String _safeStudentGroupsColumns =
+      'id, title, carrera, curso, section, link, description, author_alias, upvotes, reported_count, created_at, image_url, moderation_status, moderation_label, moderation_confidence, moderation_reason, moderated_at, moderated_by, platform, updated_at, deleted_at, is_legal_hold, is_mine';
+
+  static const String _safeMarketplaceItemsColumns =
+      'id, title, description, price, is_free, category, facultad, sede, building_code, location_detail, contact_whatsapp, contact_telegram, contact_instagram, contact_messenger, social_links, image_urls, video_url, is_sponsored, sponsor_badge_text, author_alias, upvotes, reported_count, shares_count, status, moderation_status, moderation_label, moderation_confidence, moderation_reason, moderated_at, moderated_by, created_at, updated_at, expires_at, deleted_at, is_legal_hold, seller_public_id, seller_business_name, seller_plan_id, seller_plan_name, seller_badge_text, seller_is_verified, seller_is_on_campus, seller_building_code, is_mine, is_upvoted_by_me, is_bookmarked_by_me';
+
   static Future<UserProfile> loadProfile() async {
     final local = await LocalStorageService.getUserProfile();
     try {
@@ -205,7 +211,7 @@ class ProfileService {
     try {
       final response = await SupabaseService.client
           .from('safe_student_groups')
-          .select('*')
+          .select(_safeStudentGroupsColumns)
           .eq('is_mine', true)
           .order('created_at', ascending: false)
           .limit(50);
@@ -232,7 +238,7 @@ class ProfileService {
     try {
       final response = await SupabaseService.client
           .from('safe_marketplace_items')
-          .select('*')
+          .select(_safeMarketplaceItemsColumns)
           .eq('is_mine', true)
           .order('created_at', ascending: false)
           .limit(50);
