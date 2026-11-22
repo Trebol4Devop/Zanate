@@ -147,3 +147,32 @@ Se ratifica que la columna `profiles.seller_verification_status` **sí existe en
   - Prevención de vulnerabilidades de escalada de privilegios donde un usuario regular intente auto-aprobarse como vendedor.
 - **Negativas / Riesgos Aceptados:**
   - Las consultas del cliente deben manejar adecuadamente el estado de solo lectura y cualquier fallo si una interfaz intentara actualizar el perfil completo con campos protegidos.
+
+---
+
+## ADR-006: Reconciliación del Historial de Migraciones con Producción
+
+- **Estado:** Aprobado
+- **Fecha:** 2026-11-22
+
+### Contexto
+El repositorio se había reconstruido a partir de un snapshot del proyecto remoto `hfvsstkfqszpjrsrwhql`, por lo que la carpeta `supabase/migrations/` no coincidía con el historial real de `supabase_migrations.schema_migrations`. Producción tenía 8 migraciones aplicadas (2026-11-18) que no existían en el repo, y el repo tenía 12 versiones históricas que nunca se habían ejecutado en remoto. Esto hacía que `supabase db push` intentara reaplicar DDL antiguo (incluida la exigencia AAL2) y fallara.
+
+### Decisión
+1. **Importar textualmente** las 8 migraciones remotas faltantes, tomando el SQL exacto de `supabase_migrations.schema_migrations.statements`: `20261118181141`, `20261118191854`, `20261118191855`, `20261118195350`, `20261118200501`, `20261118220937`, `20261118221048` y `20261118221645`.
+2. **Reparar el historial remoto** (`supabase migration repair` equivalente) para las 12 versiones históricas del repo cuyos efectos ya existen en producción: `20260818161401` … `20261004000000`, más `20261121000100_drop_aal2_requirements`.
+   - `20261004000000_require_aal2_and_verified_sellers.sql` queda marcada como aplicada en remoto **para que nunca se ejecute allí**: es la única fuente local de AAL2 y su efecto remoto se considera neutralizado (producción nunca tuvo AAL2).
+3. **Alinear la migración de vistas** con su versión remota oficial `20261122010714`, eliminando la numeración local `20261121000200`.
+4. **Eliminar** `20261121000300_add_campus_reviews_schema.sql`: producción ya tenía el módulo real desde `20261118191854_auditoria_04_sistema_resenas_campus`, y la versión local era un esquema divergente que rompía el contrato del cliente.
+5. **Nueva migración de reconciliación** `20261122012001_reconcile_seller_provisioning_and_legal_hold.sql`, aplicada en local y remoto, que corrige dos regresiones reales del endurecimiento de roles:
+   - `ensure_seller_profile_for_item()` ya no dispara el trigger de protección cuando el perfil del vendedor ya existe (antes bloqueaba publicar en Marketplace).
+   - `enforce_seller_admin_fields()` exime explícitamente el contexto `service_role`.
+   - `enforce_legal_hold_admin_only()` permite la retención legal automática desde triggers anidados (auto-cuarentena por reportes), manteniendo bloqueado el UPDATE directo del cliente.
+
+### Consecuencias
+- **Positivas:**
+  - `supabase db push` pasa a ser no-op: las 35 versiones locales existen en el historial remoto.
+  - El entorno local (`supabase db reset`) reproduce el esquema de producción y la suite pgTAP (608 aserciones) pasa al 100%.
+- **Trade-offs documentados:**
+  - `20261118195350_fix_grants_select_content_tables` restablece `GRANT SELECT` a nivel de tabla en `posts`, `comments`, `student_groups` y `marketplace_items`. Por tanto `user_id` es consultable por `anon`/`authenticated`; el Zero-PII se garantiza en la **capa de vistas** (`safe_*` no expone `user_id`) y en RLS. Las pruebas 20-23 de `full_system_and_legal_test.sql` se ajustaron a este contrato.
+  - El filtro de moderación dinámica marca `hp` como grosería, generando falsos positivos sobre marcas como "HP Prime"; se corrigió el fixture de pruebas y queda como mejora pendiente del diccionario.

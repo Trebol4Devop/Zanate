@@ -15,7 +15,7 @@
 -- =============================================================================
 begin;
 
-select plan(54);
+select plan(55);
 
 create extension if not exists pgtap;
 
@@ -751,10 +751,10 @@ select is(
     '53. la justificación del borrado queda registrada en la auditoría'
 );
 
--- N1: un moderador puede seguir gestionando el plan de un vendedor ya aprobado.
+-- N1: el endurecimiento de roles reserva los cambios de plan a administradores.
 select tests.authenticate_as_moderator('53000000-0000-0000-0000-000000000002');
 
-select lives_ok(
+select throws_ok(
     $$select public.admin_update_marketplace_seller(
         '53000000-0000-0000-0000-000000000008',
         'pro_student',
@@ -764,7 +764,24 @@ select lives_ok(
         null,
         'Gestión de plan por moderador sobre vendedor ya aprobado'
     )$$,
-    '54. un moderador puede cambiar el plan de un vendedor ya aprobado'
+    '42501',
+    null,
+    '54. un moderador no puede cambiar el plan de un vendedor ya aprobado (42501)'
+);
+
+select tests.authenticate_as_admin('53000000-0000-0000-0000-000000000001');
+
+select lives_ok(
+    $$select public.admin_update_marketplace_seller(
+        '53000000-0000-0000-0000-000000000008',
+        'pro_student',
+        'student',
+        'approved',
+        now() + interval '30 days',
+        null,
+        'Gestión de plan por administrador sobre vendedor ya aprobado'
+    )$$,
+    '55. un administrador sí puede cambiar el plan de un vendedor ya aprobado'
 );
 
 -- -----------------------------------------------------------------------------

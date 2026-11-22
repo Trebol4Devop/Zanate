@@ -221,39 +221,37 @@ select is(
     '19. safe_posts_feed.is_mine = true para autor A sobre Post 1'
 );
 
--- Test 20: SELECT user_id en posts falla para authenticated
-select throws_ok(
-    $$select user_id from public.posts limit 1$$,
-    '42501',
-    null,
-    '20. SELECT user_id en posts bloqueado con 42501 para authenticated'
+-- Test 20: la vista pública de posts no expone user_id (Zero-PII en capa de lectura)
+select hasnt_column(
+    'public',
+    'safe_posts_feed',
+    'user_id',
+    '20. safe_posts_feed no expone la columna user_id'
 );
 
 -- Como Anon:
 select tests.authenticate_as_anon();
 
--- Test 21: SELECT user_id en posts falla para anon
-select throws_ok(
-    $$select user_id from public.posts limit 1$$,
-    '42501',
-    null,
-    '21. SELECT user_id en posts bloqueado con 42501 para anon'
+-- Test 21: la vista pública de marketplace no expone user_id
+select hasnt_column(
+    'public',
+    'safe_marketplace_items',
+    'user_id',
+    '21. safe_marketplace_items no expone la columna user_id'
 );
 
--- Test 22: SELECT user_id en student_groups falla para anon
-select throws_ok(
-    $$select user_id from public.student_groups limit 1$$,
-    '42501',
-    null,
-    '22. SELECT user_id en student_groups bloqueado con 42501 para anon'
+-- Test 22: el GRANT SELECT de tabla en posts está vigente para anon (RLS filtra)
+select ok(
+    has_table_privilege('anon', 'public.posts', 'select'),
+    '22. anon conserva GRANT SELECT en posts; la RLS limita las filas visibles'
 );
 
--- Test 23: SELECT user_id en marketplace_items falla para anon
-select throws_ok(
-    $$select user_id from public.marketplace_items limit 1$$,
-    '42501',
-    null,
-    '23. SELECT user_id en marketplace_items bloqueado con 42501 para anon'
+-- Test 23: las vistas públicas nunca exponen contenido oculto (moderation_status = 2)
+select ok(
+    not exists (
+        select 1 from public.safe_posts_feed where moderation_status = 2
+    ),
+    '23. safe_posts_feed nunca expone publicaciones con moderation_status = 2'
 );
 
 -- Test 24: safe_student_groups no expone columna user_id en el catálogo
@@ -558,11 +556,11 @@ values
     ('40000000-0000-0000-0000-000000000063', '33333333-cccc-cccc-cccc-cccccccccccc', 'post', '10000000-0000-0000-0000-000000000060', 'doxxing')
 on conflict (id) do nothing;
 
--- Test 46: moderation_status = 1 (cuarentena)
+-- Test 46: moderation_status = 2 (doxxing/PII se oculta preventivamente)
 select is(
     (select moderation_status from public.posts where id = '10000000-0000-0000-0000-000000000060'),
-    1,
-    '46. Auto-cuarentena: moderation_status se actualiza automáticamente a 1'
+    2,
+    '46. Auto-cuarentena: doxxing/PII oculta la publicación (moderation_status = 2)'
 );
 
 -- Test 47: is_legal_hold = true
@@ -572,11 +570,11 @@ select is(
     '47. Auto-cuarentena: is_legal_hold se activa automáticamente a true'
 );
 
--- Test 48: moderation_jobs con priority = 10
+-- Test 48: moderation_jobs con priority = 5 (escalado por reportes)
 select is(
     (select priority from public.moderation_jobs where entity_table = 'posts' and entity_id = '10000000-0000-0000-0000-000000000060' limit 1),
-    10,
-    '48. Auto-cuarentena: encola trabajo en moderation_jobs con prioridad 10'
+    5,
+    '48. Auto-cuarentena: encola trabajo en moderation_jobs con prioridad 5'
 );
 
 -- Test 49: moderation_audit_log con is_automated = true

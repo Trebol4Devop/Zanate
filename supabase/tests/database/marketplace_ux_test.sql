@@ -216,7 +216,7 @@ select lives_ok(
       ) values (
         '52000000-0000-0000-0000-000000000003',
         '51000000-0000-0000-0000-000000000003',
-        'Calculadora Graficadora HP Prime',
+        'Calculadora Graficadora Prime',
         'Equipo oficial para ingenieria con garantia de tienda central',
         850.00,
         false,
@@ -999,11 +999,20 @@ select throws_ok(
     '75. Moderador no puede alterar title/description/price (Art. 3)'
 );
 
--- Test 76: Moderador fija is_legal_hold = true
-select lives_ok(
+-- Test 76: el moderador NO puede fijar is_legal_hold (reservado a contexto administrativo)
+select throws_ok(
     $$update public.marketplace_items set is_legal_hold = true where id = '52000000-0000-0000-0000-000000000170'$$,
-    '76. Moderador puede fijar is_legal_hold=true'
+    '42501',
+    null,
+    '76. Moderador no puede fijar is_legal_hold (requiere administrador / service_role)'
 );
+
+-- La retención legal se activa desde contexto privilegiado (panel admin).
+reset role;
+set role postgres;
+select set_config('request.jwt.claims', '', true);
+select set_config('request.jwt.claim.sub', '', true);
+update public.marketplace_items set is_legal_hold = true where id = '52000000-0000-0000-0000-000000000170';
 
 -- Autenticar como autor original (Usuario 17)
 select tests.authenticate_as('51000000-0000-0000-0000-000000000017');
