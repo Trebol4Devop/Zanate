@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:comunidad_universitaria/features/verification/models/verification_status.dart';
 import 'package:comunidad_universitaria/features/verification/services/merchant_verification_service.dart';

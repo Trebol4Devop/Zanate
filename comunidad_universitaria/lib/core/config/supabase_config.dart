@@ -12,6 +12,9 @@ class SupabaseConfig {
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhmdnNzdGtmcXN6cGpyc3J3aHFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1NDQzOTgsImV4cCI6MjA5OTEyMDM5OH0.Ne5vvKXWsKSv_hbYMeV9NOpiOgIcsOzYjz8xKshhn60',
   );
 
+  /// Indica si la variable SUPABASE_URL fue provista externamente vía --dart-define.
+  static const bool isSupabaseUrlProvided = bool.hasEnvironment('SUPABASE_URL');
+
   static bool _isInitialized = false;
 
   @visibleForTesting
@@ -28,6 +31,15 @@ class SupabaseConfig {
   static SupabaseClient get client => Supabase.instance.client;
 
   static Future<void> initialize() async {
+    if (kDebugMode && !isSupabaseUrlProvided) {
+      debugPrint(
+        '⚠️ [Zanate][SupabaseConfig] AVISO: SUPABASE_URL no fue provista mediante --dart-define. '
+        'Usando URL predeterminada del proyecto oficial ($supabaseUrl). '
+        'Para entornos de staging o producción personalizada, defina '
+        '--dart-define=SUPABASE_URL=... y --dart-define=SUPABASE_ANON_KEY=...',
+      );
+    }
+
     if (!hasCredentials) return;
     try {
       try {
