@@ -25,12 +25,13 @@ select tests.authenticate_as_aal1(
 
 select throws_ok(
   $$insert into public.marketplace_items (
-      title, description, author_alias, user_id
+      title, description, author_alias, user_id, contact_whatsapp
     ) values (
-      'Anuncio no verificado', 'Debe ser rechazado', 'Usuario',
-      '77777777-7777-7777-7777-777777777777'
+      'Anuncio no verificado', 'Debe ser rechazado', 'Estudiante Anónimo',
+      '77777777-7777-7777-7777-777777777777', '50255551111'
     )$$,
   '42501',
+  null,
   'Vendedor no verificado no puede publicar'
 );
 
@@ -38,12 +39,13 @@ select tests.authenticate_as_admin(
   '88888888-8888-8888-8888-888888888888'
 );
 
-select lives_ok(
-  $$update public.profiles
-       set seller_verification_status = 'verified',
-           seller_verified_at = now(),
-           seller_verified_by = '88888888-8888-8888-8888-888888888888'
-     where id = '77777777-7777-7777-7777-777777777777'$$,
+select is(
+  (public.admin_upsert_merchant_profile(
+    '77777777-7777-7777-7777-777777777777',
+    'Comercio Verificado',
+    null, null, null, 'free', 'approved', 'Verificacion admin de prueba'
+  )->>'ok')::boolean,
+  true,
   'El personal autorizado puede verificar al vendedor'
 );
 
@@ -54,14 +56,20 @@ select tests.authenticate_as(
 select lives_ok(
   $$insert into public.marketplace_items (
       title, description, author_alias, user_id, is_sponsored,
-      sponsor_badge_text, sponsor_brand_name
+      sponsor_badge_text, sponsor_brand_name, contact_whatsapp
     ) values (
-      'Anuncio regular', 'Publicación de prueba', 'Usuario',
+      'Anuncio regular', 'Publicación de prueba', 'Estudiante Anónimo',
       '77777777-7777-7777-7777-777777777777', true,
-      'Patrocinado', 'Marca falsa'
+      'Patrocinado', 'Marca falsa', '50255551111'
     )$$,
   'El vendedor verificado puede publicar pero no asignarse patrocinio'
 );
+
+-- Volver a rol postgres para verificaciones directas en la tabla marketplace_items
+reset role;
+set role postgres;
+select set_config('request.jwt.claims', '', true);
+select set_config('request.jwt.claim.sub', '', true);
 
 select is(
   (select is_sponsored from public.marketplace_items
