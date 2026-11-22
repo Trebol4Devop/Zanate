@@ -97,9 +97,8 @@ locales. No la crees ni la uses en Supabase remoto.
   destino antes de aplicar una migración.
 - Un reset local reconstruye el esquema desde las migraciones y agrega el seed;
   **no trae los datos del remoto**. Para cambios remotos, verifica el Reference
-  ID correcto y revisa un `supabase db push --dry-run` antes de cualquier push.
-  AAL2 y la verificación de vendedores siguen pendientes y no deben publicarse
-  hasta aprobar ese alcance.
+  ID oficial (`hfvsstkfqszpjrsrwhql`; el identificador histórico `jsdshvnkbrkwobfhdysh`
+  está formalmente deprecado) y revisa un `supabase db push --dry-run` antes de cualquier push.
 
 ### Flujo para agregar una migración
 
@@ -112,11 +111,11 @@ descripcion_del_cambio` y escribe el cambio en el archivo nuevo de
    reconstruir el esquema para incluir todas las migraciones y el seed, ejecuta
    `supabase db reset` solo después de respaldar o aceptar perder los datos
    locales; la advertencia anterior aplica.
-4. La publicación remota es un paso distinto. Confirma el Reference ID en el
-   Dashboard y revisa el plan con
+4. La publicación remota es un paso distinto. Confirma el Reference ID oficial en el
+   Dashboard (`hfvsstkfqszpjrsrwhql`; nota: `jsdshvnkbrkwobfhdysh` está deprecado y nunca debe usarse)
+   y revisa el plan con
    `supabase db push --dry-run --project-ref hfvsstkfqszpjrsrwhql`. No ejecutes
-   un push real sin revisión y aprobación explícitas. La migración AAL2 sigue
-   aplazada.
+   un push real sin revisión y aprobación explícitas.
 
 ## Pruebas y análisis
 
@@ -145,11 +144,14 @@ no proporciona todavía un runner equivalente para PowerShell/Windows.
 
 ## Estado actual de autenticación
 
-- La app ofrece únicamente acceso con Google OAuth; la primera autenticación
-  crea la cuenta automáticamente. No muestra login ni registro por
+- La app ofrece únicamente acceso con Google OAuth (con PKCE); la primera
+  autenticación crea la cuenta automáticamente. No muestra login ni registro por
   correo/contraseña.
-- Google nunca solicita el TOTP de Zanate. La inscripción TOTP disponible
-  en el perfil queda separada del flujo de acceso y su uso futuro está pendiente.
+- **MFA / TOTP / AAL2 retirado definitivamente:** el soporte y la exigencia de
+  MFA, TOTP y AAL2 fueron retirados definitivamente de la arquitectura (ver ADR-003).
+  La base de datos eliminó formalmente el requisito AAL2 mediante la migración
+  `20261121000100_drop_aal2_requirements.sql`. Las escrituras autenticadas operan
+  bajo nivel AAL1. No existen flujos de inscripción TOTP pendientes en el perfil.
 - La confirmación de correo está desactivada en la configuración local. Ese
   archivo no modifica la configuración Auth del proyecto alojado; además, el
   registro sin confirmación no demuestra que se controle la dirección.
@@ -157,26 +159,10 @@ no proporciona todavía un runner equivalente para PowerShell/Windows.
   no forman parte del flujo actual.
 - El código de Google OAuth requiere credenciales y redirects configurados en
   el proveedor/proyecto para probar el flujo real.
-- La migración local `20261004000000_require_aal2_and_verified_sellers.sql`
-  exige AAL2 para escrituras si está aplicada en la base. No forma parte del
-  flujo de login de la app. Su estado remoto se verificó como pendiente en el
-  dry-run del 6 de noviembre de 2026; en esa revisión no estaba aplicada.
-
-### Migración AAL2 pendiente en remoto
-
-El `dry-run` realizado el 6 de noviembre de 2026 para el proyecto
-`hfvsstkfqszpjrsrwhql` mostró como única migración pendiente
-`20261004000000_require_aal2_and_verified_sellers.sql`. No se aplicó.
-
-Además de exigir AAL2 para escrituras autenticadas en tablas con RLS, esa
-migración agrega reglas para que solo vendedores verificados publiquen en
-Marketplace y ajusta permisos del flujo de patrocinio. Debe revisarse y probarse
-antes de aprobar un `db push`; hasta entonces, la base remota no tiene esa
-política por efecto de esta migración.
-
-Un `db push` sincroniza migraciones SQL, **no** opciones de Auth como Confirm
-email ni credenciales/redirects de Google. No ejecutes operaciones remotas sin
-confirmar el Reference ID, revisar el `--dry-run` y contar con aprobación.
+- Un `db push` sincroniza migraciones SQL, **no** opciones de Auth como Confirm
+  email ni credenciales/redirects de Google. No ejecutes operaciones remotas sin
+  confirmar el Reference ID oficial (`hfvsstkfqszpjrsrwhql`), revisar el `--dry-run`
+  y contar con aprobación explícita.
 
 ## Imágenes y almacenamiento
 
@@ -187,6 +173,8 @@ remoto; no las uses como si hubiera un R2 local aislado.
 
 ## Documentación relacionada
 
+- [Contratos y lineamientos técnicos](docs/contratos_y_lineamientos.md)
+- [Registro de Decisiones de Arquitectura (ADRs)](docs/adr/ADRS_ZANATE.md)
 - [Estado de autenticación y fases](AUTENTICACION_FASES_1_A_8.md)
 - [Guía técnica de Supabase Auth](auth-supabase-login-signup.md)
 - [Google Sign-In en Escritorio (Windows / Linux)](docs/google-sign-in-desktop.md)

@@ -10,8 +10,7 @@ emisor**.
 - PEMTREE (React, `https://pemtree.netlify.app`): cliente SSO. Redirige a
   Zanate y recibe la sesión en `/auth/callback`.
 
-El proyecto `hfvsstkfqszpjrsrwhql` (_Comunidad_USAC_) **no** se usa para login.
-Sus migraciones y usuarios no están conectados a ninguna de las dos apps.
+El proyecto histórico `jsdshvnkbrkwobfhdysh` (_Comunidad_USAC_) está **deprecado** y **no** se usa para login ni migraciones. Todo el ecosistema opera de forma unificada sobre el proyecto oficial `hfvsstkfqszpjrsrwhql` (ver ADR-001).
 
 ## Flujo
 
@@ -44,6 +43,7 @@ Cloud debe ser exactamente
 El flujo actual de Zanate/PEMTREE usa únicamente Google para autenticarse.
 La configuración de confirmación de Email en Supabase no altera ese flujo; no se
 ofrece registro por correo/contraseña ni se envían códigos de confirmación.
+MFA / TOTP / AAL2 fue retirado definitivamente de la arquitectura (ver ADR-003).
 
 > El MCP de Supabase disponible en este entorno solo expone herramientas de
 > base de datos (SQL, migraciones, ramas, logs). No permite leer ni escribir la

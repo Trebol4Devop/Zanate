@@ -1,14 +1,17 @@
 # Autenticación y seguridad — Estado de las fases 1 a 8
 
+> **Aviso de Arquitectura (Actualización 2026-11-21):**
+> - **MFA / TOTP / AAL2 retirado definitivamente:** el soporte y la exigencia de autenticación multifactor (TOTP) y AAL2 han sido **descartados definitivamente** de la arquitectura de Zanate (ver ADR-003 en `docs/adr/ADRS_ZANATE.md`). No es una característica pendiente ni diferida. La migración `20261121000100_drop_aal2_requirements.sql` eliminó formalmente toda exigencia AAL2 de las políticas RLS; las escrituras autenticadas operan en nivel AAL1. Las menciones a TOTP y AAL2 en las secciones siguientes se conservan exclusivamente con carácter histórico.
+> - **OCR on-device:** el OCR (`OcrService` + `CarnetPhotoValidator`) se conserva como herramienta de apoyo opcional en el dispositivo para asistir en la lectura del número de carné, sin subida de documentos a R2 ni persistencia de texto OCR en la base de datos (ver ADR-004).
+> - **Proyecto Supabase oficial único:** `hfvsstkfqszpjrsrwhql` (el identificador histórico `jsdshvnkbrkwobfhdysh` está formalmente deprecado; ver ADR-001).
+
 Este documento registra el código y las pruebas disponibles según la propuesta
 de fases compartida. Distingue el comportamiento implementado en la app de las
-migraciones aplicadas en remoto. El desglose TOTP 5.1–5.4 se conserva como el
-plan de seguridad adicional acordado.
+migraciones aplicadas en remoto.
 
 **Decisión actual de acceso:** la app ofrece únicamente Google OAuth; el primer
 acceso crea la cuenta automáticamente. No hay login ni registro por
-correo/contraseña. Google nunca solicita el TOTP de Zanate. La
-inscripción TOTP del perfil queda separada y su uso futuro está pendiente. No se
+correo/contraseña. MFA / TOTP / AAL2 fue retirado definitivamente de la arquitectura. No se
 implementa OTP ni recuperación por correo.
 
 ## Estado general

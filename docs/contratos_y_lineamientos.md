@@ -12,7 +12,7 @@ Este documento establece los contratos vinculantes y reglas de implementación p
 
 ## 1. Arquitectura y Fuente de Verdad
 
-El ecosistema comparte un único proyecto de Supabase con `PEMTREE-admin`. Por ello, todo cambio de datos impacta dos clientes simultáneamente.
+El ecosistema comparte un único proyecto oficial de Supabase (`hfvsstkfqszpjrsrwhql`) con `PEMTREE-admin` (el identificador histórico `jsdshvnkbrkwobfhdysh` está formalmente deprecado y prohibido). Por ello, todo cambio de datos impacta dos clientes simultáneamente.
 
 | Componente                   | Ruta en el repositorio                  | Responsabilidad principal                                                                         |
 | :--------------------------- | :-------------------------------------- | :------------------------------------------------------------------------------------------------ |
@@ -53,10 +53,10 @@ Todos los módulos con contenido generado por usuarios (`posts`, `comments`, `ma
 
 La base de datos aplica seguridad a nivel de columna y triggers defensivos (`enforce_system_defaults_on_insert`, `enforce_content_immutability_and_legal_hold`, `guard_*`). El cliente **nunca** debe intentar burlar ni asumir permisos que no existen:
 
-1. **Escritura en `public.profiles` desde `authenticated`:** solo se permite `UPDATE` sobre `carrera`, `accepted_terms_version` y `accepted_terms_at`. Cualquier intento de actualizar `is_verified`, `verification_status`, `carne_hash` o campos inexistentes fallará con `42501` o `42703`.
-2. **Campos controlados por el sistema (prohibido enviarlos o mutarlos directo desde el cliente):** `moderation_status`, `is_sponsored`, `upvotes`, `reported_count`, `shares_count`, `is_legal_hold`, `moderated_at`, `moderated_by`.
+1. **Escritura en `public.profiles` desde `authenticated`:** solo se permite `UPDATE` sobre `carrera`, `accepted_terms_version` y `accepted_terms_at`. Cualquier intento de actualizar `is_verified`, `verification_status`, `seller_verification_status`, `carne_hash` o campos inexistentes fallará con `42501` o `42703`.
+2. **Campos controlados por el sistema (prohibido enviarlos o mutarlos directo desde el cliente):** `moderation_status`, `is_sponsored`, `upvotes`, `reported_count`, `shares_count`, `is_legal_hold`, `moderated_at`, `moderated_by`, `seller_verification_status`.
 3. **Preferencias de notificaciones:** las carreras seleccionadas se persisten en la tabla normalizada `notification_preference_carreras`, **nunca** como una clave `carreras` dentro de `notification_preferences`.
-4. **Columnas inexistentes o retiradas (prohibido referenciarlas en código nuevo):** `profiles.full_name`, `profiles.alias`, `profiles.seller_verification_status`, `profiles.cui`, `profiles.cui_hash`, `verification_requests.extracted_ocr_text`, `merchant_verification_requests.dpi_hash`, `dpi_front_key`, `dpi_back_key`.
+4. **Columnas inexistentes o retiradas (prohibido referenciarlas en código nuevo):** `profiles.full_name`, `profiles.alias`, `profiles.cui`, `profiles.cui_hash`, `verification_requests.extracted_ocr_text`, `merchant_verification_requests.dpi_hash`, `dpi_front_key`, `dpi_back_key`. (Nota: la columna `profiles.seller_verification_status` **sí existe** en el esquema activo desde `20261113120000_marketplace_ux_backend.sql`, configurada como columna protegida de solo lectura para `authenticated`; ver ADR-005).
 5. **Contenido bajo retención legal (`is_legal_hold = true`):** no puede editarse ni eliminarse; el cliente debe capturar y traducir el error mediante `LegalHoldException`.
 6. **Contadores locales vs. persistidos:** `shares_count` no tiene `GRANT UPDATE` para `authenticated`; el conteo de compartidos se gestiona localmente vía `ShareCountService` hasta que exista un RPC específico.
 
@@ -80,24 +80,26 @@ Toda operación privilegiada, agregada o que involucre reglas de negocio sensibl
 3. Toda tabla nueva debe activar `ENABLE ROW LEVEL SECURITY`, revocar permisos por defecto (`REVOKE ALL ... FROM PUBLIC, anon, authenticated`) y conceder explícitamente solo los `GRANT` necesarios.
 4. Agregar o actualizar pruebas pgTAP en `supabase/tests/` cubriendo permisos por rol (`anon`, `authenticated`, staff) y triggers.
 5. Validar en local con `supabase test db --local`.
-6. **Prohibido** ejecutar `supabase db reset --linked`. Para remoto, confirmar el `project-ref`, ejecutar `supabase db push --dry-run` y obtener aprobación explícita del equipo.
-7. **Migración diferida:** `20261004000000_require_aal2_and_verified_sellers.sql` permanece pendiente; **no** aplicarla en producción hasta que el flujo de MFA/TOTP esté integrado y aprobado end-to-end.
+6. **Prohibido** ejecutar `supabase db reset --linked`. Para remoto, el único proyecto oficial es `hfvsstkfqszpjrsrwhql` (`jsdshvnkbrkwobfhdysh` está formalmente deprecado y prohibido). Confirmar el `project-ref`, ejecutar `supabase db push --dry-run` y obtener aprobación explícita del equipo.
+7. **Retiro definitivo de MFA/AAL2:** el requisito de MFA / TOTP / AAL2 fue retirado definitivamente de la arquitectura (ADR-003). La migración `20261121000100_drop_aal2_requirements.sql` revoca toda restricción AAL2 en las políticas RLS; las operaciones de usuarios autenticados operan con normalidad en AAL1.
 
 ---
 
 ## 3. Contrato de Privacidad y Arquitectura Zero-PII
 
-Regido por `docs/verification/zero-pii.md` y la migración `20261117120000_zero_pii_hardening.sql`:
+Regido por `docs/verification/zero-pii.md`, la migración `20261117120000_zero_pii_hardening.sql` y el ADR-002:
 
 1. **Cero PII directa en base de datos:** prohibido almacenar nombres reales (`full_name`), CUI/DPI, fotografías de documentos de identidad civil o texto crudo de OCR.
 2. **Hashing unidireccional en servidor:** `carne_hash` y `contact_phone_hash` se calculan únicamente en PostgreSQL con `private.hash_credential` (HMAC-SHA256 con sal en `private.app_secrets`). El cliente nunca almacena ni deriva secretos de hashing.
 3. **Unicidad de credenciales:**
    - Un carné (`carne_hash`) solo puede pertenecer a un perfil activo (`profiles_carne_hash_unique`).
    - Un teléfono de comerciante (`contact_phone_hash`) es único mientras la solicitud esté `pending` o `approved` (`idx_merchant_unique_active_phone_hash`), permitiendo reintentos si fue `rejected`.
-4. **Higiene en almacenamiento local y logs (Flutter):**
-   - **Prohibido** guardar carné, nombre real o credenciales en claro en `SharedPreferences`. Cualquier dato sensible en dispositivo debe migrarse a almacenamiento cifrado (`flutter_secure_storage`) o no persistirse localmente.
-   - **Prohibido** imprimir en `debugPrint`, `print` o reportes de error URLs de redirección, excepciones que contengan `access_token`, `refresh_token`, claves o PII.
-5. **Anonimato en comunidad:** las publicaciones y comentarios exponen únicamente `author_alias` (validado contra el catálogo de alias anónimos) y `author_hash`; nunca `user_id` directo en feeds públicos.
+4. **Zero-PII en cliente y servidor (Riesgo residual formalmente aceptado):**
+   - **En base de datos:** se mantiene una estricta política Zero-PII sin `full_name`, CUI/DPI ni texto OCR, con hashes derivados exclusivamente en servidor.
+   - **En cliente:** de acuerdo con el ADR-002, el riesgo residual de no cumplir 100% Zero-PII en el almacenamiento del cliente (`LocalStorageService` sobre `SharedPreferences`) está **formalmente aceptado**. No se modifica `LocalStorageService` ni se introduce `flutter_secure_storage`.
+   - **Higiene de logs:** se prohíbe imprimir en `debugPrint`, `print` o reportes de error URLs de redirección, excepciones que contengan `access_token`, `refresh_token`, claves o PII.
+5. **OCR on-device como apoyo opcional:** `OcrService` y `CarnetPhotoValidator` se conservan en la aplicación móvil como herramientas de apoyo opcional en el dispositivo para facilitar la lectura del carné del estudiante. No se suben imágenes a R2 ni se persiste texto OCR en Supabase (ADR-004).
+6. **Anonimato en comunidad:** las publicaciones y comentarios exponen únicamente `author_alias` (validado contra el catálogo de alias anónimos) y `author_hash`; nunca `user_id` directo en feeds públicos.
 
 ---
 
@@ -124,7 +126,7 @@ El estado de arranque se centraliza en `SessionController` (`SessionPhase`: `loa
 - **Invariante obligatoria:** `verification_status = 'verified' <=> is_verified = true`.
 - **Verificación estudiantil automática:** disponible para correos `usac.edu.gt`, `*.usac.edu.gt` y dominios registrados en `facultades.allowed_domains`, completando carné vía `claim_student_credentials(p_carne)`.
 - **Alta sin correo institucional y comerciantes (flujo vigente):** se atiende mediante **Contactar con soporte** (`mailto:trebol4devop@proton.me`). La app no sube fotografías de documentos ni crea filas en `merchant_verification_requests` directamente.
-- **TOTP / AAL2:** la inscripción TOTP en perfil permanece desacoplada del login mientras `TotpSessionGuard` no esté montado globalmente ni AAL2 esté activo en RLS.
+- **Retiro definitivo de TOTP / AAL2:** la funcionalidad MFA/TOTP y los requisitos AAL2 fueron retirados definitivamente de la arquitectura (ADR-003). No existen pantallas de inscripción TOTP en la app ni exigencias de factores secundarios en las políticas de BD.
 
 ---
 
@@ -215,7 +217,7 @@ El estado de arranque se centraliza en `SessionController` (`SessionPhase`: `loa
 - [ ] **Pruebas Flutter en verde:** `flutter test` ejecutado localmente; toda nueva lógica de negocio, modelo o widget crítico incluye prueba unitaria o de widget.
 - [ ] **Coherencia con BD:** todas las tablas, columnas y RPCs usados en Flutter existen en `supabase/migrations/` y coinciden en nombre, tipo y `GRANT`.
 - [ ] **Semántica de moderación:** ningún listado público filtra `moderation_status = 0` ni intenta `UPDATE` directo de `moderation_status`.
-- [ ] **Cumplimiento Zero-PII:** cero referencias a `full_name`, `cui`/`dpi` o OCR en claro; cero tokens o PII en logs o `SharedPreferences`.
+- [ ] **Cumplimiento Zero-PII:** cero referencias a `full_name`, `cui`/`dpi` o OCR en claro en base de datos; hashes HMAC en servidor; cero tokens o PII en logs (riesgo residual de `LocalStorageService` formalmente aceptado según ADR-002).
 - [ ] **Migraciones y pgTAP (si aplica):** migración nueva versionada e idempotente + `supabase test db --local` pasando (especialmente `marketplace_ux_test.sql` y pruebas del módulo modificado).
 - [ ] **Worker (si aplica):** pruebas `vitest` pasando en `workers/verification/` y contrato de endpoints/errores respetado.
 - [ ] **Impacto en `PEMTREE-admin`:** si se modificó una tabla, vista, trigger o RPC compartido, quedó documentado en la descripción del PR y coordinado con el equipo del panel.
@@ -227,4 +229,4 @@ Cuando un requerimiento nuevo exija modificar una tabla, RPC, endpoint de Worker
 1. **Proponer el cambio antes de codificar** en un PR o issue de contrato (actualizando este documento o el contrato específico en `docs/verification/`).
 2. **Versionar primero el backend** (migración SQL + pruebas pgTAP) manteniendo compatibilidad hacia atrás cuando `PEMTREE-admin` y la app no se desplieguen en el mismo instante.
 3. **Actualizar clientes y workers** (`comunidad_universitaria/`, `workers/verification/`, `PEMTREE-admin`) contra el contrato aprobado.
-4. **Registrar decisiones y deuda técnica** explícita (como las tablas pendientes de reseñas del mapa o el encendido futuro de AAL2) para evitar implementaciones parciales no acordadas.
+4. **Registrar decisiones arquitectónicas (ADRs)** en `docs/adr/ADRS_ZANATE.md` para evitar implementaciones parciales o asunciones no acordadas.
