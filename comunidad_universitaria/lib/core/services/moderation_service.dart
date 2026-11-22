@@ -37,22 +37,6 @@ class ModerationService {
     }
   }
 
-  /// Obtiene las estadísticas generales del panel de administración (JSONB).
-  static Future<Map<String, dynamic>?> getDashboardStats() async {
-    if (!SupabaseConfig.isConfigured) return null;
-
-    try {
-      final res = await SupabaseService.client.rpc('get_admin_dashboard_stats');
-      if (res is Map) {
-        return Map<String, dynamic>.from(res);
-      }
-      return null;
-    } catch (e) {
-      debugPrint('Error al obtener estadísticas del dashboard admin: $e');
-      return null;
-    }
-  }
-
   /// Obtiene el resumen de usuarios para la consola de administración.
   static Future<List<Map<String, dynamic>>> getUsersSummary() async {
     if (!SupabaseConfig.isConfigured) return [];
@@ -66,22 +50,6 @@ class ModerationService {
     } catch (e) {
       debugPrint('Error al obtener resumen de usuarios: $e');
       return [];
-    }
-  }
-
-  /// Obtiene estadísticas de verificación de perfiles y hashes de estudiantes.
-  static Future<Map<String, dynamic>?> getVerificationStats() async {
-    if (!SupabaseConfig.isConfigured) return null;
-
-    try {
-      final res = await SupabaseService.client.rpc('get_verification_stats');
-      if (res is Map) {
-        return Map<String, dynamic>.from(res);
-      }
-      return null;
-    } catch (e) {
-      debugPrint('Error al obtener estadísticas de verificación: $e');
-      return null;
     }
   }
 
