@@ -952,7 +952,7 @@ as $function$
 declare
     v_id     uuid;
     v_secret text;
-    v_url    text := 'https://jsdshvnkbrkwobfhdysh.supabase.co/functions/v1/send-push';
+    v_url    text := 'https://hfvsstkfqszpjrsrwhql.supabase.co/functions/v1/send-push';
     v_pref   record;
     v_subs   bigint;
 begin

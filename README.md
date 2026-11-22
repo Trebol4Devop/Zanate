@@ -114,7 +114,7 @@ descripcion_del_cambio` y escribe el cambio en el archivo nuevo de
    locales; la advertencia anterior aplica.
 4. La publicación remota es un paso distinto. Confirma el Reference ID en el
    Dashboard y revisa el plan con
-   `supabase db push --dry-run --project-ref jsdshvnkbrkwobfhdysh`. No ejecutes
+   `supabase db push --dry-run --project-ref hfvsstkfqszpjrsrwhql`. No ejecutes
    un push real sin revisión y aprobación explícitas. La migración AAL2 sigue
    aplazada.
 
@@ -165,7 +165,7 @@ no proporciona todavía un runner equivalente para PowerShell/Windows.
 ### Migración AAL2 pendiente en remoto
 
 El `dry-run` realizado el 6 de noviembre de 2026 para el proyecto
-`jsdshvnkbrkwobfhdysh` mostró como única migración pendiente
+`hfvsstkfqszpjrsrwhql` mostró como única migración pendiente
 `20261004000000_require_aal2_and_verified_sellers.sql`. No se aplicó.
 
 Además de exigir AAL2 para escrituras autenticadas en tablas con RLS, esa

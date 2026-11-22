@@ -204,8 +204,8 @@ Configuración relacionada: `supabase/config.toml`, sección
 ## Migraciones y entorno remoto
 
 Estado verificado el 6 de noviembre de 2026: las seis migraciones anteriores ya
-estaban aplicadas al proyecto Comunidad_USAC (`jsdshvnkbrkwobfhdysh`). Un
-`supabase db push --dry-run --project-ref jsdshvnkbrkwobfhdysh` mostró como única
+estaban aplicadas al proyecto Comunidad_USAC (`hfvsstkfqszpjrsrwhql`). Un
+`supabase db push --dry-run --project-ref hfvsstkfqszpjrsrwhql` mostró como única
 pendiente `20261004000000_require_aal2_and_verified_sellers.sql`. El `dry-run`
 solo consultó el estado; no aplicó cambios. La migración AAL2 queda pendiente
 para después, junto con sus pruebas y la revisión de los cambios de vendedores

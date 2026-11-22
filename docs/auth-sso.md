@@ -4,13 +4,13 @@ Arquitectura elegida: **un solo backend de identidad** y **SSO con Zanate como
 emisor**.
 
 - Proyecto Supabase (identidad única): `hfvsstkfqszpjrsrwhql` (nombre en el
-  dashboard: *PEMTREE*).
+  dashboard: _PEMTREE_).
 - Zanate (Flutter web, `https://zanate.pages.dev`): pantalla de login y
   consentimiento en `/auth/authorize`.
 - PEMTREE (React, `https://pemtree.netlify.app`): cliente SSO. Redirige a
   Zanate y recibe la sesión en `/auth/callback`.
 
-El proyecto `jsdshvnkbrkwobfhdysh` (*Comunidad_USAC*) **no** se usa para login.
+El proyecto `hfvsstkfqszpjrsrwhql` (_Comunidad_USAC_) **no** se usa para login.
 Sus migraciones y usuarios no están conectados a ninguna de las dos apps.
 
 ## Flujo
@@ -26,7 +26,7 @@ Sus migraciones y usuarios no están conectados a ninguna de las dos apps.
 
 ## Configuración de Supabase Auth
 
-Dashboard → proyecto **PEMTREE** → *Authentication* → *URL Configuration*:
+Dashboard → proyecto **PEMTREE** → _Authentication_ → _URL Configuration_:
 
 - **Site URL**: `https://zanate.pages.dev`
 - **Redirect URLs**:
@@ -37,7 +37,7 @@ Dashboard → proyecto **PEMTREE** → *Authentication* → *URL Configuration*:
   - `http://localhost:5173/**` (PEMTREE local)
   - `comunidadusac://login-callback/` (app nativa)
 
-Proveedores → *Google*: ya está habilitado. El callback registrado en Google
+Proveedores → _Google_: ya está habilitado. El callback registrado en Google
 Cloud debe ser exactamente
 `https://hfvsstkfqszpjrsrwhql.supabase.co/auth/v1/callback`.
 
@@ -64,7 +64,7 @@ También acepta `SUPABASE_PROJECT_REF` si algún día cambia el proyecto.
 
 ## Variables de entorno
 
-PEMTREE (Netlify → *Site configuration* → *Environment variables*):
+PEMTREE (Netlify → _Site configuration_ → _Environment variables_):
 
 - `VITE_COMMUNITY_AUTH_URL=https://zanate.pages.dev`
 - `VITE_SUPABASE_URL=https://hfvsstkfqszpjrsrwhql.supabase.co`
