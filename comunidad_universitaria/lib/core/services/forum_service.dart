@@ -375,7 +375,9 @@ class ForumService {
     try {
       final pollsRes = await SupabaseService.client
           .from('post_polls')
-          .select('*, post_poll_options(*)')
+          .select(
+            'id, post_id, question, created_at, post_poll_options(id, poll_id, option_text, votes_count)',
+          )
           .inFilter('post_id', postIds);
 
       final pollIds = (pollsRes as List<dynamic>)
@@ -645,7 +647,7 @@ class ForumService {
               'post_id': createdPost.id,
               'question': pollQuestion.trim(),
             })
-            .select()
+            .select('id')
             .single();
 
         final pollId = pollRes['id'].toString();

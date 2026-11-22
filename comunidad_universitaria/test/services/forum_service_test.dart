@@ -457,4 +457,53 @@ void main() {
       },
     );
   });
+
+  group('ForumService.fetchPosts y política de moderación', () {
+    test('un post con moderation_status = 1 es visible en el feed', () async {
+      fakeServer.onGet('/rest/v1/posts', (req) {
+        expect(req.url.queryParameters['moderation_status'], 'neq.2');
+        return [
+          {
+            'id': 'post-approved-1',
+            'title': 'Post Aprobado por Moderación',
+            'category': 'general',
+            'content': 'Contenido del post aprobado y visible para todos',
+            'author_alias': 'Estudiante Destacado',
+            'author_hash': 'hash-autor-1',
+            'likes': 15,
+            'carrera': 'sistemas',
+            'image_url': null,
+            'gif_url': null,
+            'is_pinned': false,
+            'quoted_post_id': null,
+            'reposts_count': 2,
+            'moderation_status': 1,
+            'created_at': DateTime.now().toIso8601String(),
+            'comments_count': 3,
+            'hot_score': 15.0,
+            'expires_at': null,
+            'deleted_at': null,
+            'is_legal_hold': false,
+          },
+        ];
+      });
+
+      fakeServer.onGet('/rest/v1/post_likes', (req) => []);
+      fakeServer.onGet('/rest/v1/post_bookmarks', (req) => []);
+      fakeServer.onGet('/rest/v1/post_authors', (req) => [
+        {'post_id': 'post-approved-1'},
+      ]);
+      fakeServer.onGet('/rest/v1/post_polls', (req) => []);
+
+      final posts = await ForumService.fetchPosts();
+
+      expect(posts, isNotEmpty);
+      expect(posts.length, 1);
+      final post = posts.first;
+      expect(post.id, 'post-approved-1');
+      expect(post.title, 'Post Aprobado por Moderación');
+      expect(post.moderationStatus, 1);
+      expect(post.isMine, isTrue);
+    });
+  });
 }
