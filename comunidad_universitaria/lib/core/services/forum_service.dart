@@ -230,7 +230,9 @@ class ForumService {
       _cacheNamespace,
       cacheKey,
       (data) {
-        if (data is! List) throw const FormatException('Caché de posts inválida');
+        if (data is! List) {
+          throw const FormatException('Caché de posts inválida');
+        }
         return data
             .whereType<Map>()
             .map((item) => _postFromCacheMap(Map<String, dynamic>.from(item)))
@@ -461,7 +463,8 @@ class ForumService {
       final qId = map['quoted_post_id']?.toString();
       final quoted = (qId != null) ? quotedPostsMap[qId] : null;
 
-      final bool isMine = map['is_mine'] == true ||
+      final bool isMine =
+          map['is_mine'] == true ||
           map['is_my_post'] == true ||
           myPostIds.contains(postId);
       map['is_mine'] = isMine;
@@ -606,7 +609,9 @@ class ForumService {
         'content': content.trim(),
         'category': category,
         'carrera': carrera,
-        'author_alias': AnonymousAliasGenerator.ensureValidForBackend(authorAlias),
+        'author_alias': AnonymousAliasGenerator.ensureValidForBackend(
+          authorAlias,
+        ),
         'user_id': userId,
         'image_url': imageUrl?.trim().isEmpty == true ? null : imageUrl?.trim(),
         'gif_url': gifUrl?.trim().isEmpty == true ? null : gifUrl?.trim(),
@@ -628,9 +633,7 @@ class ForumService {
           .single();
 
       final profile = await LocalStorageService.getUserProfile();
-      final createdPost = Post.fromMap(
-        Map<String, dynamic>.from(res),
-      ).copyWith(
+      final createdPost = Post.fromMap(Map<String, dynamic>.from(res)).copyWith(
         isMine: true,
         avatarColorIndex: profile.avatarColorIndex,
         avatarIconIndex: profile.avatarIconIndex,
@@ -817,7 +820,9 @@ class ForumService {
       final commentMap = {
         'post_id': postId,
         'content': content.trim(),
-        'author_alias': AnonymousAliasGenerator.ensureValidForBackend(authorAlias),
+        'author_alias': AnonymousAliasGenerator.ensureValidForBackend(
+          authorAlias,
+        ),
         'user_id': userId,
         'parent_id': (parentId != null && parentId.trim().isNotEmpty)
             ? parentId.trim()
@@ -1010,7 +1015,7 @@ class ForumService {
       }
 
       // El backend es la fuente de verdad: se respeta el orden y los metadatos
-      // definidos desde PEMTREE-admin, incluyendo canales nuevos.
+      // definidos desde Zanate-admin, incluyendo canales nuevos.
       final List<ForumChannel> channels = [];
       for (final row in data) {
         final active = row['is_active'];
@@ -1040,6 +1045,59 @@ class ForumService {
     } catch (e) {
       debugPrint('Error al obtener canales desde categorias_foro: $e');
       return List<ForumChannel>.from(ForumChannel.defaultChannels);
+    }
+  }
+
+  /// Obtiene el catálogo de espacios (`forum_servers`) desde Supabase.
+  ///
+  /// Devuelve el rail, los subservidores de Grupos y las opciones del selector
+  /// de espacios. Si la consulta falla, retorna el catálogo local de respaldo.
+  static Future<ForumServerCatalog> fetchForumServers() async {
+    if (!SupabaseConfig.isConfigured) {
+      return ForumServerCatalog.fallback();
+    }
+
+    try {
+      final response = await SupabaseService.client
+          .from('forum_servers')
+          .select(
+            'id, nombre, short_code, descripcion, icon, color_hex, facultad_id, '
+            'facultad_nombre, carrera_id, is_groups, show_in_rail, is_active, '
+            'is_system, sort_order, logo_asset',
+          )
+          .eq('is_active', true)
+          .order('sort_order')
+          .order('id')
+          .timeout(const Duration(seconds: 8));
+
+      final List<dynamic> data = response as List<dynamic>;
+      if (data.isEmpty) return ForumServerCatalog.fallback();
+
+      final servers = data
+          .map((row) => ForumServer.fromDbServer(row as Map<String, dynamic>))
+          .where((server) => server.id.isNotEmpty)
+          .toList();
+
+      final rail = servers
+          .where((server) => server.showInRail)
+          .toList(growable: false);
+      final groups = servers
+          .where((server) => server.isGroups && !server.showInRail)
+          .toList(growable: false);
+      final picker = servers
+          .where((server) => !server.isGroups)
+          .toList(growable: false);
+
+      if (rail.isEmpty) return ForumServerCatalog.fallback();
+
+      return ForumServerCatalog(
+        rail: rail,
+        groups: groups,
+        picker: picker,
+      );
+    } catch (e) {
+      debugPrint('Error al obtener espacios desde forum_servers: $e');
+      return ForumServerCatalog.fallback();
     }
   }
 

@@ -8,16 +8,27 @@ import '../../models/discord_forum_models.dart';
 class ForumCarreraPickerDialog extends StatefulWidget {
   final Function(ForumServer server) onServerSelected;
 
-  const ForumCarreraPickerDialog({super.key, required this.onServerSelected});
+  /// Catálogo de espacios desde `forum_servers`. Si es null se usa el
+  /// catálogo académico local (respaldo offline).
+  final List<ForumServer>? servers;
+
+  const ForumCarreraPickerDialog({
+    super.key,
+    required this.onServerSelected,
+    this.servers,
+  });
 
   static Future<void> show(
     BuildContext context, {
     required Function(ForumServer server) onServerSelected,
+    List<ForumServer>? servers,
   }) {
     return showDialog(
       context: context,
-      builder: (ctx) =>
-          ForumCarreraPickerDialog(onServerSelected: onServerSelected),
+      builder: (ctx) => ForumCarreraPickerDialog(
+        onServerSelected: onServerSelected,
+        servers: servers,
+      ),
     );
   }
 
@@ -38,6 +49,26 @@ class _ForumCarreraPickerDialogState extends State<ForumCarreraPickerDialog> {
 
   List<Map<String, dynamic>> _getAllCarrerasFlat() {
     final List<Map<String, dynamic>> results = [];
+
+    // Catálogo administrado desde PEMTREE-admin: todo espacio activo.
+    final catalog = widget.servers;
+    if (catalog != null && catalog.isNotEmpty) {
+      for (final server in catalog) {
+        results.add({
+          'facultadId': server.facultadId,
+          'facultadNombre': server.facultadNombre.isEmpty
+              ? 'Espacios del foro'
+              : server.facultadNombre,
+          'carreraId': server.id,
+          'carreraNombre': server.name,
+          'codigo': server.shortCode,
+          'sede': '',
+          'server': server,
+        });
+      }
+      return results;
+    }
+
     for (var fac in USACConstants.facultades) {
       final facNombre = fac['nombre']?.toString() ?? 'Facultad';
       final facId = fac['id']?.toString() ?? 'todas';
@@ -374,6 +405,13 @@ class _ForumCarreraPickerDialogState extends State<ForumCarreraPickerDialog> {
                               final short = carreraName.length > 4
                                   ? carreraName.substring(0, 4).toUpperCase()
                                   : carreraName.toUpperCase();
+
+                              final dbServer = item['server'];
+                              if (dbServer is ForumServer) {
+                                widget.onServerSelected(dbServer);
+                                Navigator.of(context).pop();
+                                return;
+                              }
 
                               final newServer = ForumServer(
                                 id: facId == 'todas'

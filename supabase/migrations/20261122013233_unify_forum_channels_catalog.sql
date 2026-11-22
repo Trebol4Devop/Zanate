@@ -1,5 +1,5 @@
 -- =============================================================================
--- Zanate · Catálogo único de canales del foro (frontend ↔ PEMTREE-admin)
+-- Zanate · Catálogo único de canales del foro (frontend ↔ Zanate-admin)
 -- Fecha: 2026-11-22
 -- =============================================================================
 -- Objetivo:
@@ -7,7 +7,7 @@
 --      (slug, icon, is_system) para que el frontend renderice canales sin
 --      listas hardcodeadas.
 --   2) Sembrar/actualizar los canales que ya usa la app para que formen parte
---      del catálogo administrable (crear/editar/eliminar desde PEMTREE-admin).
+--      del catálogo administrable (crear/editar/eliminar desde Zanate-admin).
 --   3) Unificar los RPC de administración y la vista de administración.
 --
 -- Semántica:

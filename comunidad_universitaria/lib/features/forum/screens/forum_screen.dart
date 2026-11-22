@@ -73,6 +73,11 @@ class _ForumScreenState extends State<ForumScreen> {
   late ForumChannel _groupsActiveChannel;
   List<ForumChannel> _channels = List.from(ForumChannel.defaultChannels);
   List<ForumFaculty> _faculties = List.from(ForumFaculty.defaultFaculties);
+  List<ForumServer> _groupsSubservers =
+      List.from(ForumServer.groupsSubservers);
+  List<ForumServer> _pickerServers = List<ForumServer>.from(
+    ForumServer.defaultServers,
+  ).where((server) => !server.isGroups).toList();
 
   // Data & Search States
   List<Post> _posts = [];
@@ -105,9 +110,7 @@ class _ForumScreenState extends State<ForumScreen> {
           orElse: () => ForumChannel.defaultChannels.first,
         );
     final initialGroupsChannels = ForumChannel.groupsChannelsForSubserver(
-      _activeServer.isGroups
-          ? _activeServer
-          : ForumServer.groupsSubservers.first,
+      _activeServer.isGroups ? _activeServer : _groupsSubservers.first,
       _faculties,
     );
     _groupsActiveChannel = initialGroupsChannels.first;
@@ -138,10 +141,33 @@ class _ForumScreenState extends State<ForumScreen> {
     try {
       final channels = await ForumService.fetchForumChannels();
       final faculties = await ForumService.fetchForumFaculties();
+      final catalog = await ForumService.fetchForumServers();
       if (mounted) {
         setState(() {
           _channels = channels;
           _faculties = faculties;
+          _groupsSubservers = catalog.groups.isEmpty
+              ? List.from(ForumServer.groupsSubservers)
+              : catalog.groups;
+          _pickerServers = catalog.picker.isEmpty
+              ? List<ForumServer>.from(ForumServer.defaultServers)
+                    .where((server) => !server.isGroups)
+                    .toList()
+              : catalog.picker;
+
+          final extras = _servers
+              .where(
+                (server) =>
+                    !server.isGroups &&
+                    !catalog.rail.any((rail) => rail.id == server.id),
+              )
+              .toList();
+          final nextServers = [...catalog.rail, ...extras];
+          _servers = nextServers;
+          _activeServer = nextServers.firstWhere(
+            (server) => server.id == _activeServer.id,
+            orElse: () => nextServers.first,
+          );
           if (!_channels.any((c) => c.id == _activeChannel.id) &&
               _activeChannel.id != ForumChannel.bookmarksChannel.id) {
             _activeChannel = _channels.firstWhere(
@@ -246,6 +272,7 @@ class _ForumScreenState extends State<ForumScreen> {
     ForumServer? selectedServer;
     await ForumCarreraPickerDialog.show(
       context,
+      servers: _pickerServers,
       onServerSelected: (server) {
         selectedServer = server;
         _onAddServer(server);
