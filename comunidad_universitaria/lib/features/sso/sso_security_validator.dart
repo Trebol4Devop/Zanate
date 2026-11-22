@@ -21,6 +21,13 @@ class SsoSecurityValidator {
   static const String defaultLocalRedirectUri =
       'http://localhost:5173/auth/callback';
 
+  /// Exige que el parámetro state no sea nulo ni vacío ni contenga solo espacios.
+  /// Requisito indispensable para mitigar ataques CSRF en OAuth2 / SSO.
+  static bool isValidState(String? state) {
+    if (state == null) return false;
+    return state.trim().isNotEmpty;
+  }
+
   /// Validates that the redirectUri strictly belongs to authorized origins
   /// (Open Redirect Protection), without any asterisks or wildcards.
   static bool isValidRedirectUri(String? uriString) {
@@ -31,8 +38,18 @@ class SsoSecurityValidator {
     // Strictly reject wildcards or asterisks in the redirect URL
     if (effectiveUri.contains('*')) return false;
 
+    // Reject escape characters or control codes
+    if (effectiveUri.contains('\\') ||
+        effectiveUri.contains('\r') ||
+        effectiveUri.contains('\n')) {
+      return false;
+    }
+
     final uri = Uri.tryParse(effectiveUri);
     if (uri == null || !uri.hasScheme || !uri.hasAuthority) return false;
+
+    // Reject base redirect URIs that already contain fragments
+    if (uri.hasFragment) return false;
 
     final scheme = uri.scheme.toLowerCase();
     final host = uri.host.toLowerCase();
@@ -40,14 +57,18 @@ class SsoSecurityValidator {
     // Prevent userInfo spoofing (e.g. https://evil.com@attacker.com)
     if (uri.userInfo.isNotEmpty) return false;
 
+    // Prevent trailing dot DNS bypasses
+    if (host.endsWith('.')) return false;
+
     // 1. Localhost development (PEMTREE on local dev server: http://localhost:5173)
     if (allowedLocalhostHosts.contains(host)) {
       if (scheme != 'http' && scheme != 'https') return false;
       return uri.path == productionCallbackPath;
     }
 
-    // 2. Production / Preview domains (MUST be HTTPS)
+    // 2. Production / Preview domains (MUST be HTTPS with standard port)
     if (scheme != 'https') return false;
+    if (uri.hasPort && uri.port != 443) return false;
 
     for (final domain in allowedDomainSuffixes) {
       // Netlify publica previews como `<deploy>--pemtree.netlify.app` (guiones,
@@ -74,6 +95,12 @@ class SsoSecurityValidator {
     String tokenType = 'bearer',
     int? expiresIn,
   }) {
+    if (!isValidState(state)) {
+      throw ArgumentError(
+        'El parámetro state es obligatorio para prevenir ataques CSRF.',
+      );
+    }
+
     final cleanRedirect = redirectUri.trim().isEmpty
         ? defaultLocalRedirectUri
         : redirectUri.trim();
@@ -83,7 +110,7 @@ class SsoSecurityValidator {
       'refresh_token': refreshToken,
       'token_type': tokenType,
       if (expiresIn != null) 'expires_in': expiresIn.toString(),
-      if (state != null && state.trim().isNotEmpty) 'state': state.trim(),
+      'state': state!.trim(),
     };
 
     final hashQuery = params.entries
@@ -110,6 +137,12 @@ class SsoSecurityValidator {
     String error = 'access_denied',
     String errorDescription = 'El usuario canceló la autorización',
   }) {
+    if (!isValidState(state)) {
+      throw ArgumentError(
+        'El parámetro state es obligatorio para prevenir ataques CSRF.',
+      );
+    }
+
     final cleanRedirect = redirectUri.trim().isEmpty
         ? defaultLocalRedirectUri
         : redirectUri.trim();
@@ -117,7 +150,7 @@ class SsoSecurityValidator {
     final params = <String, String>{
       'error': error,
       'error_description': errorDescription,
-      if (state != null && state.trim().isNotEmpty) 'state': state.trim(),
+      'state': state!.trim(),
     };
 
     final hashQuery = params.entries

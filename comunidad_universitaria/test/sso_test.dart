@@ -1,7 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:comunidad_universitaria/features/sso/sso_security_validator.dart';
+import 'package:comunidad_universitaria/features/sso/sso_service.dart';
 import 'package:comunidad_universitaria/features/sso/screens/sso_authorize_screen.dart';
+
+/// Fake para pruebas unitarias y de widgets que simula el servicio SSO desacoplado.
+class FakeSsoService implements SsoService {
+  final SsoSessionData? sessionToReturn;
+  final bool configured;
+  final bool authenticated;
+  final String? emailToReturn;
+  bool getCurrentSessionCalled = false;
+
+  FakeSsoService({
+    this.sessionToReturn,
+    this.configured = true,
+    this.authenticated = true,
+    this.emailToReturn = 'estudiante@usac.edu.gt',
+  });
+
+  @override
+  bool get isConfigured => configured;
+
+  @override
+  bool get isAuthenticated => authenticated;
+
+  @override
+  String? get currentUserEmail => emailToReturn;
+
+  @override
+  Future<SsoSessionData?> getCurrentSession() async {
+    getCurrentSessionCalled = true;
+    return sessionToReturn;
+  }
+}
 
 void main() {
   group('SSO Security Validator - Open Redirect Protection', () {
@@ -158,6 +190,24 @@ void main() {
         SsoSecurityValidator.isValidRedirectUri('https://pemtree.com/auth?token=*'),
         isFalse,
       );
+
+      // Fragmentos en la URI base de retorno
+      expect(
+        SsoSecurityValidator.isValidRedirectUri('https://pemtree.com/auth/callback#token=123'),
+        isFalse,
+      );
+
+      // Caracteres de control o escape
+      expect(
+        SsoSecurityValidator.isValidRedirectUri('https://pemtree.com/auth/callback\\test'),
+        isFalse,
+      );
+
+      // Puertos no estándar en dominios remotos HTTPS
+      expect(
+        SsoSecurityValidator.isValidRedirectUri('https://pemtree.com:8080/auth/callback'),
+        isFalse,
+      );
     });
 
     test('Usa por defecto exactamente http://localhost:5173/auth/callback si redirect_uri es nula o vacía', () {
@@ -172,6 +222,59 @@ void main() {
       );
       expect(successUrl.startsWith('http://localhost:5173/auth/callback#'), isTrue);
       expect(successUrl.contains('*'), isFalse);
+    });
+  });
+
+  group('SSO Security Validator - State CSRF Protection', () {
+    test('isValidState rechaza valores nulos, vacíos o solo espacios', () {
+      expect(SsoSecurityValidator.isValidState(null), isFalse);
+      expect(SsoSecurityValidator.isValidState(''), isFalse);
+      expect(SsoSecurityValidator.isValidState('   '), isFalse);
+      expect(SsoSecurityValidator.isValidState('\t\n'), isFalse);
+    });
+
+    test('isValidState acepta valores no vacíos legítimos', () {
+      expect(SsoSecurityValidator.isValidState('csrf_state_xyz123'), isTrue);
+      expect(SsoSecurityValidator.isValidState('a'), isTrue);
+      expect(SsoSecurityValidator.isValidState('  valid_state  '), isTrue);
+    });
+
+    test('buildSuccessRedirectUrl lanza ArgumentError si state es nulo o vacío', () {
+      expect(
+        () => SsoSecurityValidator.buildSuccessRedirectUrl(
+          redirectUri: 'http://localhost:5173/auth/callback',
+          accessToken: 'tok',
+          refreshToken: 'ref',
+          state: null,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => SsoSecurityValidator.buildSuccessRedirectUrl(
+          redirectUri: 'http://localhost:5173/auth/callback',
+          accessToken: 'tok',
+          refreshToken: 'ref',
+          state: '  ',
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('buildCancelRedirectUrl lanza ArgumentError si state es nulo o vacío', () {
+      expect(
+        () => SsoSecurityValidator.buildCancelRedirectUrl(
+          redirectUri: 'http://localhost:5173/auth/callback',
+          state: null,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => SsoSecurityValidator.buildCancelRedirectUrl(
+          redirectUri: 'http://localhost:5173/auth/callback',
+          state: '',
+        ),
+        throwsArgumentError,
+      );
     });
   });
 
@@ -216,7 +319,7 @@ void main() {
     });
   });
 
-  group('SsoAuthorizeScreen UI Tests', () {
+  group('SsoAuthorizeScreen UI & Injection Tests', () {
     testWidgets('Muestra error de seguridad si el redirect_uri no está en whitelist', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
@@ -252,14 +355,53 @@ void main() {
       expect(find.text('Conectar con PEMTREE'), findsNothing);
     });
 
-    testWidgets('Renderiza pantalla de consentimiento con parámetros legítimos', (tester) async {
+    testWidgets('Muestra error de seguridad si el state es nulo o vacío (protección CSRF)', (tester) async {
+      // Caso 1: state nulo
       await tester.pumpWidget(
         const MaterialApp(
           home: SsoAuthorizeScreen(
             clientId: 'pemtree',
             redirectUri: 'http://localhost:5173/auth/callback',
+            state: null,
+            activeAlias: 'Estudiante USAC #100',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Parámetro State Requerido'), findsOneWidget);
+      expect(find.text('Conectar con PEMTREE'), findsNothing);
+
+      // Caso 2: state con solo espacios en blanco
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: SsoAuthorizeScreen(
+            clientId: 'pemtree',
+            redirectUri: 'http://localhost:5173/auth/callback',
+            state: '   ',
+            activeAlias: 'Estudiante USAC #100',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Parámetro State Requerido'), findsOneWidget);
+      expect(find.text('Conectar con PEMTREE'), findsNothing);
+    });
+
+    testWidgets('Renderiza pantalla de consentimiento con parámetros legítimos y SsoService inyectado', (tester) async {
+      final fakeService = FakeSsoService(
+        emailToReturn: 'test.alumno@ingenieria.usac.edu.gt',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SsoAuthorizeScreen(
+            clientId: 'pemtree',
+            redirectUri: 'http://localhost:5173/auth/callback',
             state: 'valid_csrf_state',
             activeAlias: 'Estudiante USAC #404',
+            ssoService: fakeService,
           ),
         ),
       );
@@ -270,6 +412,7 @@ void main() {
         find.text('PEMTREE solicita autorización para consultar tu perfil de estudiante y permitirte calificar secciones.'),
         findsOneWidget,
       );
+      expect(find.text('test.alumno@ingenieria.usac.edu.gt'), findsOneWidget);
       expect(find.text('Autorizar / Continuar'), findsOneWidget);
       expect(find.text('Cancelar / Rechazar'), findsOneWidget);
     });
@@ -292,20 +435,28 @@ void main() {
       await tester.tap(cancelBtn);
       await tester.pump();
 
-      // Debe mostrar la vista de Redirigiendo a PEMTREE...
       expect(find.text('Redirigiendo a PEMTREE...'), findsOneWidget);
       expect(find.text('Conectando de forma segura con tu cuenta de estudiante...'), findsOneWidget);
       expect(find.text('Si no eres redirigido automáticamente, haz clic aquí'), findsOneWidget);
     });
 
-    testWidgets('Al pulsar Autorizar / Continuar genera sesión e inicia redirección', (tester) async {
+    testWidgets('Al pulsar Autorizar / Continuar invoca SsoService inyectado e inicia redirección', (tester) async {
+      final fakeService = FakeSsoService(
+        sessionToReturn: const SsoSessionData(
+          accessToken: 'fake_access_token_123',
+          refreshToken: 'fake_refresh_token_456',
+          expiresIn: 3600,
+        ),
+      );
+
       await tester.pumpWidget(
-        const MaterialApp(
+        MaterialApp(
           home: SsoAuthorizeScreen(
             clientId: 'pemtree',
             redirectUri: 'http://localhost:5173/auth/callback',
             state: 'auth_csrf_state',
             activeAlias: 'Estudiante USAC #404',
+            ssoService: fakeService,
           ),
         ),
       );
@@ -316,7 +467,7 @@ void main() {
       await tester.tap(authBtn);
       await tester.pump();
 
-      // Debe mostrar la vista de Redirigiendo a PEMTREE...
+      expect(fakeService.getCurrentSessionCalled, isTrue);
       expect(find.text('Redirigiendo a PEMTREE...'), findsOneWidget);
       expect(find.text('Conectando de forma segura con tu cuenta de estudiante...'), findsOneWidget);
       expect(find.text('Si no eres redirigido automáticamente, haz clic aquí'), findsOneWidget);

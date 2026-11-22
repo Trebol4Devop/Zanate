@@ -6,12 +6,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../core/config/supabase_config.dart';
 import '../../../core/constants/zanate_colors.dart';
 import '../../../core/services/local_storage_service.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../shared/widgets/zanate_ui.dart';
 import '../sso_security_validator.dart';
+import '../sso_service.dart';
 
 class SsoAuthorizeScreen extends StatefulWidget {
   final String? clientId;
@@ -19,6 +19,7 @@ class SsoAuthorizeScreen extends StatefulWidget {
   final String? state;
   final String activeAlias;
   final Function(String newAlias)? onAliasChanged;
+  final SsoService? ssoService;
 
   const SsoAuthorizeScreen({
     super.key,
@@ -27,6 +28,7 @@ class SsoAuthorizeScreen extends StatefulWidget {
     this.state,
     required this.activeAlias,
     this.onAliasChanged,
+    this.ssoService,
   });
 
   @override
@@ -67,6 +69,8 @@ class _SsoAuthorizeScreenState extends State<SsoAuthorizeScreen> {
     }
   }
 
+  SsoService get _ssoService => widget.ssoService ?? const SupabaseSsoService();
+
   bool get _isClientValid {
     final client = widget.clientId?.trim().toLowerCase();
     return client == 'pemtree';
@@ -79,12 +83,16 @@ class _SsoAuthorizeScreenState extends State<SsoAuthorizeScreen> {
     return SsoSecurityValidator.isValidRedirectUri(widget.redirectUri);
   }
 
+  bool get _isStateValid {
+    return SsoSecurityValidator.isValidState(widget.state);
+  }
+
   bool get _isAuthenticated {
-    // If Supabase is configured, check authenticated user
-    if (SupabaseConfig.isConfigured) {
-      return SupabaseService.isAuthenticated;
+    // If backend service is configured, check authenticated user
+    if (_ssoService.isConfigured) {
+      return _ssoService.isAuthenticated;
     }
-    // If running in offline / dev mode without live Supabase, allow local test session
+    // If running in offline / dev mode without live backend, allow local test session
     return true;
   }
 
@@ -175,22 +183,22 @@ class _SsoAuthorizeScreenState extends State<SsoAuthorizeScreen> {
     String refreshToken = '';
     int? expiresIn;
 
-    if (SupabaseConfig.isConfigured) {
+    if (_ssoService.isConfigured) {
       try {
-        final session = SupabaseConfig.client.auth.currentSession;
+        final session = await _ssoService.getCurrentSession();
         if (session != null) {
           accessToken = session.accessToken;
-          refreshToken = session.refreshToken ?? '';
+          refreshToken = session.refreshToken;
           expiresIn = session.expiresIn;
         }
       } catch (e) {
-        debugPrint('Error obteniendo sesión de Supabase: $e');
+        debugPrint('[SsoAuthorizeScreen] Error obteniendo sesión: ${e.runtimeType}');
       }
     }
 
     // Fallback for local mock testing
     if (accessToken.isEmpty) {
-      if (SupabaseConfig.isConfigured) {
+      if (_ssoService.isConfigured) {
         setState(() {
           _isLoading = false;
           _authErrorMessage =
@@ -199,12 +207,12 @@ class _SsoAuthorizeScreenState extends State<SsoAuthorizeScreen> {
         return;
       }
 
-      // Sin Supabase configurado solo se permite el mock en depuración local.
+      // Sin servicio de backend configurado solo se permite el mock en depuración local.
       if (!kDebugMode) {
         setState(() {
           _isLoading = false;
           _authErrorMessage =
-              'Supabase no está configurado en esta compilación.';
+              'El servicio de autenticación no está configurado en esta compilación.';
         });
         return;
       }
@@ -315,17 +323,30 @@ class _SsoAuthorizeScreenState extends State<SsoAuthorizeScreen> {
       );
     }
 
-    // 3. If redirecting in progress
+    // 3. Check State parameter (CSRF protection)
+    if (!_isStateValid) {
+      return _buildSecurityErrorCard(
+        theme: theme,
+        isDark: isDark,
+        title: 'Parámetro State Requerido',
+        description:
+            'La solicitud no incluye un parámetro "state" válido. Este parámetro es obligatorio para proteger tu sesión contra ataques de falsificación de solicitudes entre sitios (CSRF).',
+        recommendation:
+            'Asegúrate de que la aplicación cliente envíe un parámetro state criptográficamente aleatorio y no vacío.',
+      );
+    }
+
+    // 4. If redirecting in progress
     if (_isRedirecting) {
       return _buildRedirectingCard(theme, isDark);
     }
 
-    // 4. If user not authenticated, show login form first
+    // 5. If user not authenticated, show login form first
     if (!_isAuthenticated) {
       return _buildLoginCard(theme, isDark);
     }
 
-    // 5. Consent Screen
+    // 6. Consent Screen
     return _buildConsentCard(theme, isDark);
   }
 
@@ -453,8 +474,9 @@ class _SsoAuthorizeScreenState extends State<SsoAuthorizeScreen> {
   }
 
   Widget _buildConsentCard(ThemeData theme, bool isDark) {
-    final userEmail =
-        SupabaseService.currentUser?.email ?? 'usuario@estudiante.usac.edu.gt';
+    final userEmail = _ssoService.currentUserEmail ??
+        SupabaseService.currentUser?.email ??
+        'usuario@estudiante.usac.edu.gt';
     final userAlias = _currentAlias.isNotEmpty
         ? _currentAlias
         : 'Estudiante USAC';
