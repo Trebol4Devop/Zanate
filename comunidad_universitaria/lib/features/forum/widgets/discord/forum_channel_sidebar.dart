@@ -9,6 +9,9 @@ class ForumChannelSidebar extends StatelessWidget {
   final ForumServer activeServer;
   final ForumChannel activeChannel;
   final List<ForumChannel>? channels;
+  final List<ForumServer> subservers;
+  final ForumServer? activeSubserver;
+  final Function(ForumServer)? onSelectSubserver;
   final Function(ForumChannel) onSelectChannel;
   final VoidCallback? onAddServer;
   final String? activeAlias;
@@ -20,6 +23,9 @@ class ForumChannelSidebar extends StatelessWidget {
     required this.activeServer,
     required this.activeChannel,
     this.channels,
+    this.subservers = const [],
+    this.activeSubserver,
+    this.onSelectSubserver,
     required this.onSelectChannel,
     this.onAddServer,
     this.activeAlias,
@@ -125,8 +131,24 @@ class ForumChannelSidebar extends StatelessWidget {
               primary: false,
               padding: const EdgeInsets.fromLTRB(10, 14, 10, 12),
               children: [
+                if (subservers.isNotEmpty) ...[
+                  _sectionLabel(
+                    activeServer.serverKind == 'general' ? 'TEMAS' : 'CARRERAS',
+                    isDark,
+                  ),
+                  const SizedBox(height: 6),
+                  for (final subserver in subservers)
+                    _subserverTile(
+                      subserver,
+                      activeSubserver?.id == subserver.id,
+                      isDark,
+                    ),
+                  const SizedBox(height: 18),
+                ],
                 _sectionLabel(
-                  activeServer.isGroups ? 'GRUPOS' : 'CANALES',
+                  activeServer.isGroups
+                      ? 'GRUPOS'
+                      : (subservers.isEmpty ? 'CANALES' : 'CANALES DE LA CARRERA'),
                   isDark,
                 ),
                 const SizedBox(height: 6),
@@ -245,6 +267,56 @@ class ForumChannelSidebar extends StatelessWidget {
           fontWeight: FontWeight.w800,
           letterSpacing: 0.9,
           color: isDark ? const Color(0xFF64748B) : Colors.blueGrey.shade400,
+        ),
+      ),
+    );
+  }
+
+  Widget _subserverTile(ForumServer server, bool isActive, bool isDark) {
+    final activeBg = isDark
+        ? ZanateColors.zanateEyeYellow.withValues(alpha: 0.20)
+        : ZanateColors.zanateEyeYellow.withValues(alpha: 0.28);
+    final activeTextColor = isDark ? Colors.white : ZanateColors.zanateBlack;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Material(
+        color: isActive ? activeBg : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onSelectSubserver == null
+              ? null
+              : () => onSelectSubserver!(server),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            child: Row(
+              children: [
+                Icon(
+                  server.icon,
+                  size: 16,
+                  color: isActive ? activeTextColor : server.color,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    server.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                      color: isActive
+                          ? activeTextColor
+                          : (isDark
+                                ? const Color(0xFFCBD5E1)
+                                : ZanateColors.subtleText),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

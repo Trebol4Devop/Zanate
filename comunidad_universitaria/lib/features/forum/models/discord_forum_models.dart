@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/categories.dart';
+
 class ForumServer {
   final String id;
   final String name;
@@ -12,6 +14,12 @@ class ForumServer {
   final int? memberCount;
   final bool isGroups;
   final String? logoAsset;
+  final String facultadNombre;
+  final bool showInRail;
+  final bool isSystem;
+  final String? parentId;
+  final String serverKind;
+  final String scopeKey;
 
   const ForumServer({
     required this.id,
@@ -25,7 +33,99 @@ class ForumServer {
     this.memberCount,
     this.isGroups = false,
     this.logoAsset,
+    this.facultadNombre = '',
+    this.showInRail = true,
+    this.isSystem = false,
+    this.parentId,
+    this.serverKind = 'career',
+    this.scopeKey = '',
   });
+
+  /// Construye un servidor desde un registro de `public.forum_servers`.
+  static ForumServer fromDbServer(Map<String, dynamic> row) {
+    final colorHex = (row['color_hex'] ?? '').toString();
+    return ForumServer(
+      id: row['id']?.toString() ?? '',
+      name: row['nombre']?.toString() ?? (row['id']?.toString() ?? ''),
+      shortCode: (row['short_code'] ?? '').toString(),
+      icon: serverIconForName(row['icon']?.toString()),
+      facultadId: (row['facultad_id'] ?? 'todas').toString(),
+      carreraId: (row['carrera_id'] ?? row['id'] ?? 'todas').toString(),
+      description: (row['descripcion'] ?? '').toString(),
+      color: parseHexColor(colorHex),
+      isGroups: row['is_groups'] == true,
+      logoAsset: (row['logo_asset'] as String?)?.trim().isEmpty == true
+          ? null
+          : row['logo_asset']?.toString(),
+      facultadNombre: (row['facultad_nombre'] ?? '').toString(),
+      showInRail: row['show_in_rail'] != false,
+      isSystem: row['is_system'] == true,
+      parentId: (row['parent_id'] as String?)?.trim().isEmpty == true
+          ? null
+          : row['parent_id']?.toString(),
+      serverKind: (row['server_kind'] ?? 'career').toString(),
+      scopeKey: (row['scope_key'] ?? row['id'] ?? '').toString(),
+    );
+  }
+
+  /// Mapea la clave de icono del catálogo a Material Icons.
+  static IconData serverIconForName(String? name) {
+    switch ((name ?? '').trim().toLowerCase()) {
+      case 'school':
+        return Icons.school;
+      case 'chat':
+        return Icons.chat;
+      case 'auto_stories':
+        return Icons.auto_stories;
+      case 'terminal':
+        return Icons.terminal;
+      case 'construction':
+        return Icons.construction;
+      case 'precision_manufacturing':
+        return Icons.precision_manufacturing;
+      case 'medical_services':
+        return Icons.medical_services;
+      case 'gavel':
+        return Icons.gavel;
+      case 'architecture':
+        return Icons.architecture;
+      case 'trending_up':
+        return Icons.trending_up;
+      case 'eco':
+        return Icons.eco;
+      case 'psychology':
+        return Icons.psychology;
+      case 'pets':
+        return Icons.pets;
+      case 'healing':
+        return Icons.healing;
+      case 'engineering':
+        return Icons.engineering;
+      case 'biotech':
+        return Icons.biotech;
+      case 'health_and_safety':
+        return Icons.health_and_safety;
+      case 'menu_book':
+        return Icons.menu_book;
+      case 'campaign_outlined':
+        return Icons.campaign_outlined;
+      case 'groups_outlined':
+        return Icons.groups_outlined;
+      case 'work_outline':
+        return Icons.work_outline;
+      case 'tag':
+      default:
+        return Icons.tag;
+    }
+  }
+
+  /// Convierte `#RRGGBB` a Color; cae al azul institucional si es inválido.
+  static Color parseHexColor(String hex) {
+    final value = hex.replaceAll('#', '').trim();
+    if (value.length != 6) return const Color(0xFF004B87);
+    final parsed = int.tryParse(value, radix: 16);
+    return parsed == null ? const Color(0xFF004B87) : Color(0xFF000000 | parsed);
+  }
 
   /// Resuelve la ruta del escudo o logotipo oficial de la facultad / carrera
   String? get resolvedLogoAsset {
@@ -35,8 +135,14 @@ class ForumServer {
   }
 
   /// Mapeo centralizado de logos y escudos oficiales de la USAC
-  static String? getLogoAssetFor({required String id, required String facultadId}) {
-    final normalized = id.toLowerCase().replaceAll('server_', '').replaceAll('08_', '');
+  static String? getLogoAssetFor({
+    required String id,
+    required String facultadId,
+  }) {
+    final normalized = id
+        .toLowerCase()
+        .replaceAll('server_', '')
+        .replaceAll('08_', '');
     switch (normalized) {
       case 'todas':
         return 'assets/images/facultades/USAC_General.png';
@@ -393,7 +499,7 @@ class ForumChannel {
   final String? iconKey;
 
   /// Los canales de sistema (p. ej. el agregador "Todas las áreas") no se
-  /// pueden eliminar desde PEMTREE-admin.
+  /// pueden eliminar desde Zanate-admin.
   final bool isSystem;
 
   const ForumChannel({
@@ -432,8 +538,7 @@ class ForumChannel {
       label: nombre,
       categoryId: id,
       icon: iconForName(icon) ?? base.icon,
-      description:
-          dbDescription.isNotEmpty ? dbDescription : base.description,
+      description: dbDescription.isNotEmpty ? dbDescription : base.description,
       slug: dbSlug,
       iconKey: icon,
       isSystem: isSystem,
@@ -1539,5 +1644,66 @@ class PopularServerItem {
         score: 91.0,
       ),
     ];
+  }
+}
+
+
+/// Catálogo de espacios del foro cargado desde `public.forum_servers`.
+class ForumServerCatalog {
+  final List<ForumServer> rail;
+  final List<ForumServer> groups;
+  final List<ForumServer> picker;
+  final Map<String, List<ForumServer>> children;
+
+  const ForumServerCatalog({
+    required this.rail,
+    required this.groups,
+    required this.picker,
+    this.children = const {},
+  });
+
+  static ForumServerCatalog fallback() {
+    final rail = List<ForumServer>.from(ForumServer.defaultServers);
+    final picker = <ForumServer>[
+      ...rail.where((server) => !server.isGroups),
+    ];
+    final seen = picker.map((server) => server.id).toSet();
+
+    // Respaldo offline: replica el catálogo académico que administra el panel.
+    for (final faculty in USACConstants.facultades) {
+      final facultadId = faculty['id']?.toString() ?? 'todas';
+      final facultadNombre = faculty['nombre']?.toString() ?? '';
+      final careers = faculty['carreras'] as List<dynamic>? ?? const [];
+
+      for (final career in careers) {
+        final careerId = career['id']?.toString() ?? '';
+        if (careerId.isEmpty || careerId == 'todas' || seen.contains(careerId)) {
+          continue;
+        }
+        seen.add(careerId);
+        picker.add(
+          ForumServer(
+            id: careerId,
+            name: career['nombre']?.toString() ?? careerId,
+            shortCode: (career['codigo']?.toString() ?? '').isEmpty
+                ? careerId.toUpperCase()
+                : career['codigo'].toString(),
+            icon: Icons.tag,
+            facultadId: facultadId,
+            carreraId: careerId,
+            description: 'Espacio de discusión para ${career['nombre']}.',
+            facultadNombre: facultadNombre,
+            showInRail: false,
+          ),
+        );
+      }
+    }
+
+    return ForumServerCatalog(
+      rail: rail,
+      groups: List<ForumServer>.from(ForumServer.groupsSubservers),
+      picker: picker,
+      children: const {},
+    );
   }
 }

@@ -1,5 +1,5 @@
 -- =============================================================================
--- pgTAP: catálogo único de canales del foro (frontend ↔ PEMTREE-admin)
+-- pgTAP: catálogo único de canales del foro (frontend ↔ Zanate-admin)
 -- =============================================================================
 begin;
 
