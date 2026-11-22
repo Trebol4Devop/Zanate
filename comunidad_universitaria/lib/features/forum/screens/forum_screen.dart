@@ -78,6 +78,12 @@ class _ForumScreenState extends State<ForumScreen> {
   List<ForumServer> _pickerServers = List<ForumServer>.from(
     ForumServer.defaultServers,
   ).where((server) => !server.isGroups).toList();
+  Map<String, List<ForumServer>> _subserversByParent = const {};
+  List<ForumServer> _subservers = const [];
+  ForumServer? _activeSubserver;
+
+  /// Servidor efectivo para publicar/filtrar: subservidor si existe.
+  ForumServer get _scopeServer => _activeSubserver ?? _activeServer;
 
   // Data & Search States
   List<Post> _posts = [];
@@ -164,6 +170,7 @@ class _ForumScreenState extends State<ForumScreen> {
               .toList();
           final nextServers = [...catalog.rail, ...extras];
           _servers = nextServers;
+          _subserversByParent = catalog.children;
           _activeServer = nextServers.firstWhere(
             (server) => server.id == _activeServer.id,
             orElse: () => nextServers.first,
@@ -177,7 +184,7 @@ class _ForumScreenState extends State<ForumScreen> {
           }
         });
       }
-      await _loadChannelsForServer(_activeServer);
+      await _applyServerScope();
     } catch (e) {
       debugPrint('Error cargando estructura del foro desde DB: $e');
     }
@@ -258,7 +265,7 @@ class _ForumScreenState extends State<ForumScreen> {
       final posts = await ForumService.fetchPosts(
         category: category,
         facultad: _activeServer.facultadId,
-        carrera: _activeServer.carreraId,
+        carrera: _scopeServer.carreraId,
         searchQuery: _searchQuery,
         showOnlyBookmarks: isBookmarks,
         feedMode: _feedMode,
@@ -332,10 +339,28 @@ class _ForumScreenState extends State<ForumScreen> {
     });
     widget.onServerChanged?.call(server);
     if (!server.isGroups) {
-      _loadChannelsForServer(server);
+      _applyServerScope();
     } else {
       _loadPosts();
     }
+  }
+
+  /// Selecciona el primer subservidor del servidor activo (o el indicado)
+  /// y carga sus canales. Si el servidor no tiene hijos, usa sus canales.
+  Future<void> _applyServerScope({ForumServer? subserver}) async {
+    final children = _subserversByParent[_activeServer.id] ?? const <ForumServer>[];
+    final next = subserver ?? (children.isNotEmpty ? children.first : null);
+    setState(() {
+      _subservers = List<ForumServer>.from(children);
+      _activeSubserver = next;
+    });
+    await _loadChannelsForServer(next ?? _activeServer);
+  }
+
+  Future<void> _onSelectSubserver(ForumServer subserver) async {
+    if (_activeSubserver?.id == subserver.id) return;
+    setState(() => _activeSubserver = subserver);
+    await _loadChannelsForServer(subserver);
   }
 
   void _onAddServer(ForumServer newServer) {
@@ -735,15 +760,16 @@ class _ForumScreenState extends State<ForumScreen> {
       context,
       activeAlias: effectiveAlias,
       quotedPost: post,
-      serverName: _activeServer.name,
+      serverName: _scopeServer.name,
       channelName: _activeChannel.name,
       initialCategory: _activeChannel.isSpecial
           ? 'prerrequisitos'
           : (_activeChannel.id == 'todos'
                 ? 'todos'
                 : _activeChannel.categoryId),
-      initialCarrera: _activeServer.carreraId,
-      initialFacultad: _activeServer.facultadId,
+      initialCarrera: _scopeServer.carreraId,
+      initialFacultad: _scopeServer.facultadId,
+      initialServerId: _scopeServer.id,
       onAliasChanged: widget.onAliasChanged,
       onPostCreated: (newPost) {
         setState(() {
@@ -786,13 +812,14 @@ class _ForumScreenState extends State<ForumScreen> {
     CreatePostDialog.show(
       context,
       activeAlias: effectiveAlias,
-      serverName: _activeServer.name,
+      serverName: _scopeServer.name,
       channelName: _activeChannel.name,
       initialCategory: _activeChannel.id == 'todos'
           ? 'todos'
           : _activeChannel.categoryId,
-      initialCarrera: _activeServer.carreraId,
-      initialFacultad: _activeServer.facultadId,
+      initialCarrera: _scopeServer.carreraId,
+      initialFacultad: _scopeServer.facultadId,
+      initialServerId: _scopeServer.id,
       onAliasChanged: widget.onAliasChanged,
       onPostCreated: (newPost) {
         setState(() {
@@ -848,6 +875,9 @@ class _ForumScreenState extends State<ForumScreen> {
               activeServer: _activeServer,
               activeChannel: currentChannel,
               channels: currentChannels,
+              subservers: isGroups ? const [] : _subservers,
+              activeSubserver: _activeSubserver,
+              onSelectSubserver: _onSelectSubserver,
               onSelectChannel: _onSelectChannel,
               onAddServer: _addServerFromSidebar,
               activeAlias: widget.activeAlias,

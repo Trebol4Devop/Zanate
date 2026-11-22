@@ -576,6 +576,7 @@ class ForumService {
     required String content,
     required String category,
     required String carrera,
+    String? forumServerId,
     required String authorAlias,
     String? imageUrl,
     String? gifUrl,
@@ -609,6 +610,8 @@ class ForumService {
         'content': content.trim(),
         'category': category,
         'carrera': carrera,
+        if (forumServerId != null && forumServerId.isNotEmpty)
+          'forum_server_id': forumServerId,
         'author_alias': AnonymousAliasGenerator.ensureValidForBackend(
           authorAlias,
         ),
@@ -1119,7 +1122,7 @@ class ForumService {
           .select(
             'id, nombre, short_code, descripcion, icon, color_hex, facultad_id, '
             'facultad_nombre, carrera_id, is_groups, show_in_rail, is_active, '
-            'is_system, sort_order, logo_asset',
+            'is_system, sort_order, logo_asset, parent_id, server_kind, scope_key',
           )
           .eq('is_active', true)
           .order('sort_order')
@@ -1141,8 +1144,15 @@ class ForumService {
           .where((server) => server.isGroups && !server.showInRail)
           .toList(growable: false);
       final picker = servers
-          .where((server) => !server.isGroups)
+          .where((server) => !server.isGroups && !server.showInRail)
           .toList(growable: false);
+
+      final children = <String, List<ForumServer>>{};
+      for (final server in servers) {
+        final parent = server.parentId;
+        if (parent == null || parent.isEmpty) continue;
+        children.putIfAbsent(parent, () => <ForumServer>[]).add(server);
+      }
 
       if (rail.isEmpty) return ForumServerCatalog.fallback();
 
@@ -1150,6 +1160,7 @@ class ForumService {
         rail: rail,
         groups: groups,
         picker: picker,
+        children: children,
       );
     } catch (e) {
       debugPrint('Error al obtener espacios desde forum_servers: $e');

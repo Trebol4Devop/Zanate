@@ -10,13 +10,13 @@ create extension if not exists pgtap;
 select tests.create_supabase_user('ffffffff-ffff-ffff-ffff-ffffffffffff');
 select tests.create_supabase_user('abababab-abab-abab-abab-abababababab');
 
--- 1) Servidores curados del rail
+-- 1) Rail jerárquico: General + una facultad por servidor + Grupos
 select ok(
-    (select count(*) from public.forum_servers
-      where show_in_rail and is_active
-        and id in ('todas','grupos_estudio','area_comun','sistemas','civil','industrial',
-                   'medicina','derecho','arquitectura','economicas','agronomia')) = 11,
-    '1. los 11 servidores del rail existen y están activos'
+    (select count(*) from public.forum_servers where show_in_rail and is_active) = 12
+    and exists (select 1 from public.forum_servers where id = 'general' and server_kind = 'general')
+    and exists (select 1 from public.forum_servers where id = 'fac_08' and server_kind = 'faculty')
+    and exists (select 1 from public.forum_servers where id = 'grupos_estudio' and server_kind = 'groups'),
+    '1. el rail tiene General + 10 facultades + Grupos'
 );
 
 -- 2) Subservidores de Grupos

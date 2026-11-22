@@ -17,6 +17,9 @@ class ForumServer {
   final String facultadNombre;
   final bool showInRail;
   final bool isSystem;
+  final String? parentId;
+  final String serverKind;
+  final String scopeKey;
 
   const ForumServer({
     required this.id,
@@ -33,6 +36,9 @@ class ForumServer {
     this.facultadNombre = '',
     this.showInRail = true,
     this.isSystem = false,
+    this.parentId,
+    this.serverKind = 'career',
+    this.scopeKey = '',
   });
 
   /// Construye un servidor desde un registro de `public.forum_servers`.
@@ -54,6 +60,11 @@ class ForumServer {
       facultadNombre: (row['facultad_nombre'] ?? '').toString(),
       showInRail: row['show_in_rail'] != false,
       isSystem: row['is_system'] == true,
+      parentId: (row['parent_id'] as String?)?.trim().isEmpty == true
+          ? null
+          : row['parent_id']?.toString(),
+      serverKind: (row['server_kind'] ?? 'career').toString(),
+      scopeKey: (row['scope_key'] ?? row['id'] ?? '').toString(),
     );
   }
 
@@ -1642,11 +1653,13 @@ class ForumServerCatalog {
   final List<ForumServer> rail;
   final List<ForumServer> groups;
   final List<ForumServer> picker;
+  final Map<String, List<ForumServer>> children;
 
   const ForumServerCatalog({
     required this.rail,
     required this.groups,
     required this.picker,
+    this.children = const {},
   });
 
   static ForumServerCatalog fallback() {
@@ -1690,6 +1703,7 @@ class ForumServerCatalog {
       rail: rail,
       groups: List<ForumServer>.from(ForumServer.groupsSubservers),
       picker: picker,
+      children: const {},
     );
   }
 }

@@ -26,6 +26,7 @@ class CreatePostDialog extends StatefulWidget {
   final String? initialFacultad;
   final String? serverName;
   final String? channelName;
+  final String? initialServerId;
 
   const CreatePostDialog({
     super.key,
@@ -38,6 +39,7 @@ class CreatePostDialog extends StatefulWidget {
     this.initialFacultad,
     this.serverName,
     this.channelName,
+    this.initialServerId,
   });
 
   static Future<void> show(
@@ -51,6 +53,7 @@ class CreatePostDialog extends StatefulWidget {
     String? initialFacultad,
     String? serverName,
     String? channelName,
+    String? initialServerId,
   }) {
     return Navigator.of(context).push<void>(
       MaterialPageRoute(
@@ -64,6 +67,7 @@ class CreatePostDialog extends StatefulWidget {
           initialFacultad: initialFacultad,
           serverName: serverName,
           channelName: channelName,
+          initialServerId: initialServerId,
         ),
       ),
     );
@@ -273,6 +277,7 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
         content: _contentController.text.trim(),
         category: _selectedCategory,
         carrera: _selectedCarrera,
+        forumServerId: widget.initialServerId,
         authorAlias: _authorAlias,
         imageUrl: _uploadedImageUrl,
         gifUrl: _selectedGifUrl,
