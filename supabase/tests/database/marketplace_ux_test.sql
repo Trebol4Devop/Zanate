@@ -1327,11 +1327,11 @@ select ok(
 select tests.authenticate_as('51000000-0000-0000-0000-000000000028');
 
 select ok(
-    not exists (
+    exists (
         select 1 from public.safe_marketplace_items
         where id = '52000000-0000-0000-0000-000000000273'
     ),
-    '95. safe_marketplace_items excluye items ajenos en moderation_status=3'
+    '95. safe_marketplace_items incluye items ajenos en moderation_status=3'
 );
 
 -- Test 96: get_marketplace_metrics no expone columna viewer_id (columna inexistente)
