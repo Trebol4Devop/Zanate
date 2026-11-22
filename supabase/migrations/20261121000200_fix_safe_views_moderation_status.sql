@@ -15,6 +15,12 @@
 --
 -- Criterio de visibilidad unificado:
 --   moderation_status IS DISTINCT FROM 2 (excluye únicamente el contenido rechazado/oculto)
+--
+-- APLICADA EN REMOTO (2026-11-22): proyecto hfvsstkfqszpjrsrwhql.
+-- El historial remoto la registró como version `20261122010714`
+-- (mismo `name`: fix_safe_views_moderation_status) porque se aplicó vía MCP.
+-- Verificado: safe_posts_feed devuelve 10/10 publicaciones aprobadas
+-- (antes devolvía 0 por el filtro `moderation_status = 0`).
 -- =============================================================================
 
 -- 1. Vista segura de publicaciones (safe_posts_feed)
