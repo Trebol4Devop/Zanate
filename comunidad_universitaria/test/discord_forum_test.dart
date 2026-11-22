@@ -43,11 +43,14 @@ void main() {
       'Los canales del foro están alineados con las categorías disponibles',
       () {
         final channels = ForumChannel.defaultChannels;
-        expect(channels.length, 5);
+        expect(channels.length, 8);
         expect(
           channels.any((channel) => channel.name == 'todos-los-temas'),
           isTrue,
         );
+        expect(channels.any((channel) => channel.id == 'general'), isTrue);
+        expect(channels.any((channel) => channel.id == 'desahogo'), isTrue);
+        expect(channels.any((channel) => channel.id == 'desmadre'), isTrue);
         expect(
           channels.any((channel) => channel.name == 'dudas-y-pensum'),
           isTrue,
@@ -82,6 +85,19 @@ void main() {
       );
       expect(channel.name, 'dudas-y-pensum');
       expect(channel.label, 'Prerrequisitos & Pensum');
+
+      // El backend manda: nombre visible, descripción, slug e icono desde DB.
+      final adminChannel = ForumChannel.fromDbCategory(
+        id: 'becas',
+        nombre: 'Becas y Financiamiento',
+        descripcion: 'Convocatorias y apoyo económico.',
+        slug: 'becas-y-financiamiento',
+        icon: 'campaign_outlined',
+      );
+      expect(adminChannel.id, 'becas');
+      expect(adminChannel.name, 'becas-y-financiamiento');
+      expect(adminChannel.description, 'Convocatorias y apoyo económico.');
+      expect(adminChannel.icon, Icons.campaign_outlined);
     });
 
     test(

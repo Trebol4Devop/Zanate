@@ -386,6 +386,16 @@ class ForumChannel {
   final String description;
   final bool isSpecial;
 
+  /// Slug estable provisto por el catálogo `categorias_foro` (URL/analytics).
+  final String slug;
+
+  /// Clave de icono provista por el catálogo; se mapea a Material Icons.
+  final String? iconKey;
+
+  /// Los canales de sistema (p. ej. el agregador "Todas las áreas") no se
+  /// pueden eliminar desde PEMTREE-admin.
+  final bool isSystem;
+
   const ForumChannel({
     required this.id,
     required this.name,
@@ -394,13 +404,78 @@ class ForumChannel {
     required this.icon,
     required this.description,
     this.isSpecial = false,
+    this.slug = '',
+    this.iconKey,
+    this.isSystem = false,
   });
 
-  /// Factory that builds a ForumChannel directly from a `categorias_foro` database record
+  /// Factory que construye un ForumChannel desde un registro de `categorias_foro`.
+  ///
+  /// El backend es la fuente de verdad: nombre, descripción, slug e icono
+  /// llegan desde la base de datos. Solo se usa la definición base local como
+  /// respaldo cuando el canal histórico no trae metadatos.
   static ForumChannel fromDbCategory({
     required String id,
     required String nombre,
+    String? descripcion,
+    String? slug,
+    String? icon,
+    bool isSystem = false,
   }) {
+    final base = _baseForId(id, nombre);
+    final dbSlug = (slug ?? '').trim();
+    final dbDescription = (descripcion ?? '').trim();
+
+    return ForumChannel(
+      id: id,
+      name: dbSlug.isNotEmpty ? dbSlug : base.name,
+      label: nombre,
+      categoryId: id,
+      icon: iconForName(icon) ?? base.icon,
+      description:
+          dbDescription.isNotEmpty ? dbDescription : base.description,
+      slug: dbSlug,
+      iconKey: icon,
+      isSystem: isSystem,
+    );
+  }
+
+  /// Mapea la clave de icono almacenada en `categorias_foro.icon` a Material.
+  static IconData? iconForName(String? name) {
+    switch ((name ?? '').trim().toLowerCase()) {
+      case 'tag':
+        return Icons.tag;
+      case 'chat_bubble_outline':
+        return Icons.chat_bubble_outline;
+      case 'school_outlined':
+        return Icons.school_outlined;
+      case 'record_voice_over_outlined':
+        return Icons.record_voice_over_outlined;
+      case 'folder_shared_outlined':
+        return Icons.folder_shared_outlined;
+      case 'schedule_outlined':
+        return Icons.schedule_outlined;
+      case 'sentiment_satisfied_outlined':
+        return Icons.sentiment_satisfied_outlined;
+      case 'mood_bad_outlined':
+        return Icons.mood_bad_outlined;
+      case 'terminal':
+        return Icons.terminal;
+      case 'menu_book':
+        return Icons.menu_book;
+      case 'campaign_outlined':
+        return Icons.campaign_outlined;
+      case 'groups_outlined':
+        return Icons.groups_outlined;
+      case 'work_outline':
+        return Icons.work_outline;
+      default:
+        return null;
+    }
+  }
+
+  /// Definición base para canales históricos (fallback de metadatos).
+  static ForumChannel _baseForId(String id, String nombre) {
     switch (id) {
       case 'todos':
         return ForumChannel(
@@ -411,6 +486,16 @@ class ForumChannel {
           icon: Icons.tag,
           description:
               'Visualiza todas las consultas y aportes de esta carrera en un solo lugar.',
+        );
+      case 'general':
+        return ForumChannel(
+          id: id,
+          name: 'charla-general',
+          label: nombre,
+          categoryId: id,
+          icon: Icons.chat_bubble_outline,
+          description:
+              'Cafetería estudiantil, avisos generales y vida universitaria en la carrera.',
         );
       case 'prerrequisitos':
         return ForumChannel(
@@ -452,21 +537,11 @@ class ForumChannel {
           description:
               'Información de traslapes, cupos, secciones y asignación de laboratorios.',
         );
-      case 'general':
-        return ForumChannel(
-          id: id,
-          name: 'charla-general',
-          label: nombre,
-          categoryId: id,
-          icon: Icons.chat_bubble_outline,
-          description:
-              'Cafetería estudiantil, avisos generales y vida universitaria en la carrera.',
-        );
       default:
-        final slug = id.replaceAll('_', '-').toLowerCase();
+        final generatedSlug = id.replaceAll('_', '-').toLowerCase();
         return ForumChannel(
           id: id,
-          name: slug,
+          name: generatedSlug,
           label: nombre,
           categoryId: id,
           icon: Icons.tag,
@@ -521,6 +596,33 @@ class ForumChannel {
       icon: Icons.schedule_outlined,
       description:
           'Información de traslapes, cupos, secciones y asignación de laboratorios.',
+    ),
+    ForumChannel(
+      id: 'general',
+      name: 'charla-general',
+      label: 'Consultas Generales',
+      categoryId: 'general',
+      icon: Icons.chat_bubble_outline,
+      description:
+          'Cafetería estudiantil, avisos generales y vida universitaria en la carrera.',
+    ),
+    ForumChannel(
+      id: 'desahogo',
+      name: 'desahogo',
+      label: 'Desahogo',
+      categoryId: 'desahogo',
+      icon: Icons.sentiment_satisfied_outlined,
+      description:
+          'Espacio para compartir experiencias y desahogarse de la vida universitaria.',
+    ),
+    ForumChannel(
+      id: 'desmadre',
+      name: 'desmadre',
+      label: 'Desmadre USAC',
+      categoryId: 'desmadre',
+      icon: Icons.mood_bad_outlined,
+      description:
+          'Humor pesado, memes y desahogo. Se permiten groserías y chistes fuertes, pero no acoso dirigido ni doxxing.',
     ),
   ];
 

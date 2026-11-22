@@ -142,9 +142,8 @@ class _ForumScreenState extends State<ForumScreen> {
         setState(() {
           _channels = channels;
           _faculties = faculties;
-          if (_activeChannel.id == 'general' ||
-              (!_channels.any((c) => c.id == _activeChannel.id) &&
-                  _activeChannel.id != ForumChannel.bookmarksChannel.id)) {
+          if (!_channels.any((c) => c.id == _activeChannel.id) &&
+              _activeChannel.id != ForumChannel.bookmarksChannel.id) {
             _activeChannel = _channels.firstWhere(
               (c) => c.id == 'todos',
               orElse: () => _channels.first,

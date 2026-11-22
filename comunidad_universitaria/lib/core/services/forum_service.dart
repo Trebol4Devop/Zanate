@@ -997,7 +997,10 @@ class ForumService {
     try {
       final response = await SupabaseService.client
           .from('categorias_foro')
-          .select('id, nombre')
+          .select(
+            'id, nombre, descripcion, slug, icon, sort_order, is_active, is_system',
+          )
+          .order('sort_order')
           .order('id')
           .timeout(const Duration(seconds: 8));
 
@@ -1006,32 +1009,31 @@ class ForumService {
         return List<ForumChannel>.from(ForumChannel.defaultChannels);
       }
 
-      // Orden estándar alineado con el flujo de uso del foro (sin charla-general)
-      const canonicalOrder = [
-        'todos',
-        'prerrequisitos',
-        'catedraticos',
-        'apuntes',
-        'horarios',
-      ];
-      final List<dynamic> sortedData = List.from(data);
-      sortedData.sort((a, b) {
-        final idA = a['id']?.toString() ?? '';
-        final idB = b['id']?.toString() ?? '';
-        final idxA = canonicalOrder.indexOf(idA);
-        final idxB = canonicalOrder.indexOf(idB);
-        if (idxA != -1 && idxB != -1) return idxA.compareTo(idxB);
-        if (idxA != -1) return -1;
-        if (idxB != -1) return 1;
-        return idA.compareTo(idB);
-      });
-
+      // El backend es la fuente de verdad: se respeta el orden y los metadatos
+      // definidos desde PEMTREE-admin, incluyendo canales nuevos.
       final List<ForumChannel> channels = [];
-      for (final row in sortedData) {
+      for (final row in data) {
+        final active = row['is_active'];
+        if (active is bool && !active) continue;
+
         final id = row['id']?.toString() ?? '';
-        if (id == 'general') continue;
+        if (id.isEmpty) continue;
+
         final nombre = row['nombre']?.toString() ?? id;
-        channels.add(ForumChannel.fromDbCategory(id: id, nombre: nombre));
+        channels.add(
+          ForumChannel.fromDbCategory(
+            id: id,
+            nombre: nombre,
+            descripcion: row['descripcion']?.toString(),
+            slug: row['slug']?.toString(),
+            icon: row['icon']?.toString(),
+            isSystem: row['is_system'] == true,
+          ),
+        );
+      }
+
+      if (channels.isEmpty) {
+        return List<ForumChannel>.from(ForumChannel.defaultChannels);
       }
 
       return channels;
