@@ -50,7 +50,7 @@ $$;
 -- anterior de las pruebas locales.
 drop function if exists tests.authenticate_as(uuid, text, text);
 
--- Helper: Autentica una sesión AAL2 (nivel normal para las pruebas autorizadas).
+-- Helper: Autentica una sesión estándar (nivel normal para las pruebas autorizadas).
 create or replace function tests.authenticate_as(
     p_user_id uuid,
     p_role text default 'authenticated'
@@ -68,7 +68,7 @@ begin
         'role', p_role,
         'email', v_email,
         'aud', 'authenticated',
-        'aal', 'aal2',
+        'aal', 'aal1',
         'app_metadata', json_build_object('provider', 'email'),
         'user_metadata', '{}'::jsonb
     )::text;
@@ -81,19 +81,14 @@ begin
 end;
 $$;
 
--- Helper para los casos que deben simular una sesión con solo el primer factor.
+-- Helper para mantener compatibilidad con suites que invocan tests.authenticate_as_aal1.
 create or replace function tests.authenticate_as_aal1(
     p_user_id uuid
 ) returns void
 language plpgsql
 as $$
-declare
-    v_claims jsonb;
 begin
     perform tests.authenticate_as(p_user_id);
-    v_claims := current_setting('request.jwt.claims', true)::jsonb
-        || jsonb_build_object('aal', 'aal1');
-    perform set_config('request.jwt.claims', v_claims::text, true);
 end;
 $$;
 

@@ -1,5 +1,5 @@
 -- =============================================================================
--- pgTAP: perfiles privados y escritura propia con RLS + AAL2
+-- pgTAP: perfiles privados y escritura propia con RLS
 -- =============================================================================
 begin;
 
@@ -56,7 +56,7 @@ select lives_ok(
     $$update public.profiles
          set carrera = 'quimica'
        where id = '88888888-8888-8888-8888-888888888881'$$,
-    'AAL2 permite actualizar el perfil propio'
+    'Una cuenta autenticada permite actualizar el perfil propio'
 );
 
 update public.profiles
