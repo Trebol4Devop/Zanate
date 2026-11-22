@@ -23,7 +23,7 @@ dependencies:
   usac_campus_map:
     git:
       url: https://github.com/Trebol4Devop/usac_campus_map.git
-      ref: develop
+      ref: f8a6b5398ba6bae82bb27c7bde311b177ca830ac
   connectivity_plus: ^7.3.2
   pretty_animated_text: ^3.3.0
   morphtext: ^0.2.1

@@ -18,6 +18,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # Versión fijada de Flutter SDK; sincronizada con deploy-cloudflare-pages.yml
+  FLUTTER_VERSION: '3.47.4'
+
 jobs:
   # ===========================================================================
   # Job 1: Análisis Estático, Linter y Pruebas Unitarias / Widgets con Cobertura
@@ -35,6 +39,7 @@ jobs:
       - name: Configurar Flutter SDK
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
           cache: true
           cache-key: 'flutter-:os:-:channel:-:version:-:arch:-:hash:'
@@ -46,6 +51,9 @@ jobs:
       - name: Análisis estático (Linter)
         working-directory: comunidad_universitaria
         run: flutter analyze
+
+      - name: Verificar contratos SQL vs Dart
+        run: python3 scripts/ci/check_sql_contracts.py
 
       - name: Ejecutar pruebas unitarias y de widgets con cobertura
         working-directory: comunidad_universitaria
@@ -59,7 +67,35 @@ jobs:
           retention-days: 14
 
   # ===========================================================================
-  # Job 2: Pruebas de Integración pgTAP en Base de Datos Supabase (Opcional / Gated)
+  # Job 2: Pruebas Unitarias de Cloudflare Worker (Verificación Estudiantil/Comercial)
+  # No requiere secrets. Se ejecuta en cada PR y push.
+  # ===========================================================================
+  worker-tests:
+    name: Cloudflare Worker Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: workers/verification/package-lock.json
+
+      - name: Instalar dependencias de worker
+        working-directory: workers/verification
+        run: npm ci
+
+      - name: Ejecutar pruebas unitarias de worker
+        working-directory: workers/verification
+        run: npm test
+
+  # ===========================================================================
+  # Job 3: Pruebas de Integración pgTAP en Base de Datos Supabase (Opcional / Gated)
   #
   # SECRETS Y VARIABLES REQUERIDAS:
   # - ENABLE_DB_TESTS: (Variable en GitHub Settings -> Variables) Fijada en 'true'.
@@ -89,28 +125,17 @@ jobs:
         run: |
           supabase start
 
-      - name: Ejecutar suite de marketplace pgTAP (Bloqueante)
+      - name: Ejecutar suite completa pgTAP (Bloqueante)
         run: |
           chmod +x scripts/db/run_pgtap.sh
-          ./scripts/db/run_pgtap.sh --file supabase/tests/database/marketplace_ux_test.sql
-
-      - name: Ejecutar suite completa pgTAP (Legacy con fallos documentados)
-        id: legacy_db_tests
-        continue-on-error: true
-        run: |
           ./scripts/db/run_pgtap.sh
-
-      - name: Registrar advertencia sobre fallos legacy preexistentes
-        if: steps.legacy_db_tests.outcome == 'failure'
-        run: |
-          echo "::warning title=Fallos preexistentes en suite legacy pgTAP::Se detectaron fallos en 4 archivos legacy de la suite general (anonymous_read_only_test.sql, authenticated_writes_without_otp_test.sql, rpc_moderation_test.sql, seller_verification_rls_test.sql) debido a restricciones modernas de AAL2 y contratos previos. La suite bloqueante de marketplace (marketplace_ux_test.sql) aprobó al 100%."
 
       - name: Detener stack de Supabase
         if: always()
         run: supabase stop
 
   # ===========================================================================
-  # Job 3: Pruebas E2E en Linux con integration_test (Opcional / Gated)
+  # Job 4: Pruebas E2E en Linux con integration_test (Opcional / Gated)
   #
   # SECRETS Y VARIABLES REQUERIDAS:
   # - ENABLE_E2E_TESTS: (Variable en GitHub Settings -> Variables) Fijada en 'true'.
@@ -144,6 +169,7 @@ jobs:
       - name: Configurar Flutter SDK
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
           cache: true
 
