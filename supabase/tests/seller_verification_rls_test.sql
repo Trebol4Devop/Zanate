@@ -31,7 +31,7 @@ select throws_ok(
       '77777777-7777-7777-7777-777777777777'
     )$$,
   '42501',
-  'AAL1 y vendedor no verificado no pueden publicar'
+  'Vendedor no verificado no puede publicar'
 );
 
 select tests.authenticate_as_admin(

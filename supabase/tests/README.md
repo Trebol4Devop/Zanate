@@ -64,16 +64,12 @@ Suite integral de 97 pruebas automatizadas que valida:
 
 ### Base de Datos (`supabase test db`)
 
-Al ejecutar `supabase test db`, la suite nueva de marketplace (`marketplace_ux_test.sql`) y suites centrales (`full_system_and_legal_test.sql`, `groups_marketplace_rls_test.sql`, `comments_rls_test.sql`, etc.) pasan al 100%. Existen 4 archivos de prueba legacy que fallan por expectativas desactualizadas previas a las migraciones de endurecimiento:
+Al ejecutar `supabase test db`, la suite nueva de marketplace (`marketplace_ux_test.sql`) y suites centrales (`full_system_and_legal_test.sql`, `groups_marketplace_rls_test.sql`, `comments_rls_test.sql`, etc.) pasan al 100%. Tras la migración de retiro de requerimientos de segundo factor, las políticas de autenticación quedaron normalizadas, alineando las suites de pruebas:
 
-1. **`supabase/tests/anonymous_read_only_test.sql`** (1 fallo):
-   - _Causa:_ El test espera el mensaje de error `Debes iniciar sesión con una cuenta para reportar` al invocar `report_marketplace_item`. La base de datos moderna activa la validación AAL2 (`AAL2 authentication is required to report content`), arrojando el mismo código SQLSTATE (`42501`) pero con el mensaje actualizado de segundo factor.
-2. **`supabase/tests/authenticated_writes_without_otp_test.sql`** (5 fallos):
-   - _Causa:_ Las pruebas asumen que sesiones con nivel AAL1 pueden insertar y actualizar contenido autenticado sin segundo factor OTP. La migración `20261004000000_require_aal2_and_verified_sellers.sql` implementó la obligatoriedad estricta de AAL2 para toda mutación.
-3. **`supabase/tests/rpc_moderation_test.sql`** (3 fallos):
-   - _Causa:_ Expectativas sobre el conteo de reportes y umbrales de auto-moderación que cambiaron durante la unificación de tablas y procedimientos de moderación legal.
-4. **`supabase/tests/seller_verification_rls_test.sql`** (1 fallo):
-   - _Causa:_ El helper legacy `tests.authenticate_as_admin` realiza inserciones en `public.user_roles` sin elevar previamente la sesión a nivel AAL2, siendo rechazado por el trigger `require_aal2_for_authenticated_write`.
+1. **`supabase/tests/anonymous_read_only_test.sql`**: Pasa al 100% (el RPC retorna el mensaje estándar `Debes iniciar sesión con una cuenta para reportar` para sesiones anónimas).
+2. **`supabase/tests/authenticated_writes_without_otp_test.sql`**: Pasa al 100% (las cuentas autenticadas estándar pueden insertar y actualizar contenido sin requerir factores adicionales).
+3. **`supabase/tests/seller_verification_rls_test.sql`**: Pasa al 100% (las asignaciones de roles administrativos y validaciones de vendedor verificado operan sin bloqueos de segundo factor).
+4. **`supabase/tests/rpc_moderation_test.sql`**: Ajustes históricos en umbrales de auto-moderación.
 
 ### Frontend Flutter (`flutter test --no-pub`)
 
