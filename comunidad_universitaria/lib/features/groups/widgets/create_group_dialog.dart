@@ -579,11 +579,8 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
               const SizedBox(height: 6),
 
               if (_pendingImage != null) ...[
-                ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    maxWidth: 260,
-                    maxHeight: 260,
-                  ),
+                SizedBox(
+                  width: double.infinity,
                   child: AspectRatio(
                     aspectRatio: 1,
                     child: Stack(
@@ -592,10 +589,14 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(14),
                             child: Container(
+                              width: double.infinity,
+                              height: double.infinity,
                               color: ZanateColors.surface(isDark),
                               child: Image.memory(
                                 _pendingImage!.bytes,
-                                fit: BoxFit.contain,
+                                width: double.infinity,
+                                height: double.infinity,
+                                fit: BoxFit.cover,
                               ),
                             ),
                           ),

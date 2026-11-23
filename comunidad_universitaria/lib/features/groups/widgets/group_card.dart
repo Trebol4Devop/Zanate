@@ -107,6 +107,8 @@ class GroupCard extends StatelessWidget {
               children: [
                 UserAvatarCircle(
                   authorAlias: group.authorAlias,
+                  avatarColorIndex: group.avatarColorIndex,
+                  avatarIconIndex: group.avatarIconIndex,
                   isMine: group.isMine,
                   size: 34,
                   iconSize: 16,
@@ -261,58 +263,70 @@ class GroupCard extends StatelessWidget {
               ),
             ],
 
-            // Imagen de grupo en proporción cuadrada 1:1
+            // Imagen de grupo a ancho completo disponible (1:1 en móvil, alto máx. 560)
             if (group.imageUrl != null && group.imageUrl!.isNotEmpty) ...[
               const SizedBox(height: 10),
-              ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxWidth: 260,
-                  maxHeight: 260,
-                ),
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: InkWell(
-                    onTap: () => ImageViewerDialog.show(
-                      context,
-                      imageUrl: group.imageUrl!,
-                      title: group.title,
-                    ),
-                    borderRadius: BorderRadius.circular(10),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Container(
-                        color: ZanateColors.surface(isDark),
-                        child: Stack(
-                          children: [
-                            Positioned.fill(
-                              child: Image.network(
-                                group.imageUrl!,
-                                fit: BoxFit.contain,
-                                errorBuilder: (ctx, err, stack) =>
-                                    const SizedBox.shrink(),
-                              ),
-                            ),
-                            Positioned(
-                              bottom: 6,
-                              right: 6,
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.6),
-                                  borderRadius: BorderRadius.circular(6),
+              SizedBox(
+                width: double.infinity,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final availableW = constraints.maxWidth.isFinite
+                        ? constraints.maxWidth
+                        : 360.0;
+                    final displayHeight = availableW.clamp(180.0, 560.0);
+                    return SizedBox(
+                      width: double.infinity,
+                      height: displayHeight,
+                      child: InkWell(
+                        onTap: () => ImageViewerDialog.show(
+                          context,
+                          imageUrl: group.imageUrl!,
+                          title: group.title,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: double.infinity,
+                            height: displayHeight,
+                            color: ZanateColors.surface(isDark),
+                            child: Stack(
+                              children: [
+                                Positioned.fill(
+                                  child: Image.network(
+                                    group.imageUrl!,
+                                    width: double.infinity,
+                                    height: displayHeight,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (ctx, err, stack) =>
+                                        const SizedBox.shrink(),
+                                  ),
                                 ),
-                                child: const PhosphorIcon(
-                                  PhosphorIconsRegular.magnifyingGlassPlus,
-                                  color: Colors.white,
-                                  size: 16,
+                                Positioned(
+                                  bottom: 8,
+                                  right: 8,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(5),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.65,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const PhosphorIcon(
+                                      PhosphorIconsRegular.magnifyingGlassPlus,
+                                      color: Colors.white,
+                                      size: 16,
+                                    ),
+                                  ),
                                 ),
-                              ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
               ),
             ],

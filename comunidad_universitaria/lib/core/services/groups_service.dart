@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import '../models/whatsapp_group.dart';
 import '../utils/input_sanitizer.dart';
 import 'cache_service.dart';
+import 'local_storage_service.dart';
 import 'publish_cooldown_service.dart';
 import 'supabase_service.dart';
 
@@ -12,6 +14,8 @@ class GroupsService {
       'upvotes, reported_count, created_at, image_url, moderation_status, '
       'moderation_label, moderation_confidence, moderation_reason, moderated_at, '
       'moderated_by, platform, updated_at, deleted_at, is_legal_hold';
+
+  static const String _safeGroupColumns = '$_groupColumns, is_mine';
 
   static const String _cacheNamespace = 'student_groups';
 
@@ -85,28 +89,44 @@ class GroupsService {
     }
 
     try {
-      var query = SupabaseService.client
-          .from('student_groups')
-          .select(_groupColumns)
-          .lt('moderation_status', 2);
+      Future<List<dynamic>> queryFromSource(
+        String source,
+        String columns,
+      ) async {
+        var query = SupabaseService.client
+            .from(source)
+            .select(columns)
+            .lt('moderation_status', 2);
 
-      if (carrera != 'todas') {
-        query = query.eq('carrera', carrera);
+        if (carrera != 'todas') {
+          query = query.eq('carrera', carrera);
+        }
+
+        if (searchQuery.trim().isNotEmpty) {
+          final q = InputSanitizer.sanitizePostgrestSearch(searchQuery);
+          if (q.isNotEmpty) {
+            query = query.or(
+              'title.ilike.%$q%,curso.ilike.%$q%,description.ilike.%$q%',
+            );
+          }
+        }
+
+        final response = await query
+            .order('upvotes', ascending: false)
+            .order('created_at', ascending: false);
+        return response as List<dynamic>;
       }
 
-      if (searchQuery.trim().isNotEmpty) {
-        final q = InputSanitizer.sanitizePostgrestSearch(searchQuery);
-        if (q.isNotEmpty) {
-          query = query.or(
-            'title.ilike.%$q%,curso.ilike.%$q%,description.ilike.%$q%',
-          );
+      List<dynamic> data;
+      try {
+        data = await queryFromSource('safe_student_groups', _safeGroupColumns);
+      } on PostgrestException catch (e) {
+        if (e.code == '42P01' || e.code == '42501' || e.code == '42703') {
+          data = await queryFromSource('student_groups', _groupColumns);
+        } else {
+          rethrow;
         }
       }
-
-      final response = await query
-          .order('upvotes', ascending: false)
-          .order('created_at', ascending: false);
-      final List<dynamic> data = response as List<dynamic>;
 
       // Get upvotes for current user
       final currentUserId = SupabaseService.currentUserId;
@@ -125,13 +145,33 @@ class GroupsService {
         }
       }
 
+      int? myColorIndex;
+      int? myIconIndex;
+      final hasMineGroup = data.any(
+        (item) => item is Map && item['is_mine'] == true,
+      );
+      if (hasMineGroup) {
+        try {
+          final profile = await LocalStorageService.getUserProfile();
+          myColorIndex = profile.avatarColorIndex;
+          myIconIndex = profile.avatarIconIndex;
+        } catch (_) {}
+      }
+
       var groups = data.map((item) {
         final map = Map<String, dynamic>.from(item);
         final groupId = map['id'].toString();
-        return WhatsAppGroup.fromMap(
+        final parsed = WhatsAppGroup.fromMap(
           map,
           isUpvotedByMe: upvotedGroupIds.contains(groupId),
         );
+        if (parsed.isMine && myColorIndex != null && myIconIndex != null) {
+          return parsed.copyWith(
+            avatarColorIndex: parsed.avatarColorIndex ?? myColorIndex,
+            avatarIconIndex: parsed.avatarIconIndex ?? myIconIndex,
+          );
+        }
+        return parsed;
       }).toList();
 
       if (facultad != 'todas' && carrera == 'todas') {
@@ -223,6 +263,8 @@ class GroupsService {
     map['created_at'] = group.createdAt.toIso8601String();
     map['cache_upvoted'] = group.isUpvotedByMe;
     map['is_mine'] = group.isMine;
+    map['avatar_color_index'] = group.avatarColorIndex;
+    map['avatar_icon_index'] = group.avatarIconIndex;
     return map;
   }
 
@@ -310,7 +352,7 @@ class GroupsService {
         'author_alias': authorAlias.trim(),
         'user_id': userId,
         'image_url': imageUrl?.trim().isEmpty == true ? null : imageUrl?.trim(),
-        'upvotes': 1, // Start with 1 upvote from creator
+        'upvotes': 0,
         'reported_count': 0,
         'moderation_status': 0,
       };
@@ -325,16 +367,22 @@ class GroupsService {
           .select(explicitColumns)
           .single();
 
+      int? avatarColorIndex;
+      int? avatarIconIndex;
+      try {
+        final profile = await LocalStorageService.getUserProfile();
+        avatarColorIndex = profile.avatarColorIndex;
+        avatarIconIndex = profile.avatarIconIndex;
+      } catch (_) {}
+
       final created = WhatsAppGroup.fromMap(
         Map<String, dynamic>.from(res),
-        isUpvotedByMe: true,
-      ).copyWith(isMine: true);
-
-      // Auto-upvote for creator
-      await SupabaseService.client.from('student_group_upvotes').insert({
-        'group_id': created.id,
-        'user_id': userId,
-      });
+        isUpvotedByMe: false,
+      ).copyWith(
+        isMine: true,
+        avatarColorIndex: avatarColorIndex,
+        avatarIconIndex: avatarIconIndex,
+      );
 
       await PublishCooldownService.recordPublish('group');
       await CacheService.invalidateAll(_cacheNamespace);
