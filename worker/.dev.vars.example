@@ -1,0 +1,4 @@
+SUPABASE_ANON_KEY=tu_anon_key_de_supabase
+UPLOAD_SIGNING_SECRET=genera_un_secreto_largo_aleatorio
+# Opcional: solo necesario para la limpieza periódica de huérfanos cada 6 horas
+SUPABASE_SERVICE_ROLE_KEY=tu_service_role_key_de_supabase

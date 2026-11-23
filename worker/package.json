@@ -1,0 +1,12 @@
+{
+  "name": "comunidad-usac-storage",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare Worker R2 autenticado para medios de Comunidad USAC",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node --test test/storage-worker.test.mjs"
+  }
+}
