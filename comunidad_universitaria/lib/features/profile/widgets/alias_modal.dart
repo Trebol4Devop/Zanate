@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
-import '../../../core/constants/zanate_colors.dart';
 import '../../../core/constants/anonymous_aliases.dart';
-import '../../../core/services/local_storage_service.dart';
+import '../../../core/constants/zanate_colors.dart';
+import '../../../core/services/profile_service.dart';
 
 class AliasModal extends StatefulWidget {
   final String currentAlias;
@@ -32,27 +32,56 @@ class AliasModal extends StatefulWidget {
 }
 
 class _AliasModalState extends State<AliasModal> {
-  late String _alias;
+  late final TextEditingController _controller;
+  bool _isSaving = false;
+  String? _errorText;
 
   @override
   void initState() {
     super.initState();
-    _alias = widget.currentAlias;
+    _controller = TextEditingController(text: widget.currentAlias);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   void _generateRandomAlias() {
     setState(() {
-      _alias = AnonymousAliasGenerator.generate();
+      _controller.text = AnonymousAliasGenerator.generate();
+      _errorText = null;
     });
   }
 
   Future<void> _save() async {
-    final text = _alias.trim();
-    if (text.isEmpty) return;
+    if (_isSaving) return;
 
-    await LocalStorageService.saveAlias(text);
-    widget.onAliasSaved(text);
-    if (mounted) Navigator.of(context).pop();
+    setState(() {
+      _isSaving = true;
+      _errorText = null;
+    });
+
+    try {
+      final saved = await ProfileService.saveAccountAlias(_controller.text);
+      widget.onAliasSaved(saved);
+      if (mounted) Navigator.of(context).pop();
+    } on AliasException catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+          _errorText = e.message;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+          _errorText = 'No se pudo guardar el alias en este momento.';
+        });
+      }
+    }
   }
 
   @override
@@ -131,9 +160,26 @@ class _AliasModalState extends State<AliasModal> {
                 ),
               ),
               const SizedBox(height: 18),
-              InputDecorator(
+              TextField(
+                controller: _controller,
+                enabled: !_isSaving,
+                maxLength: AnonymousAliasGenerator.maxAliasLength,
+                textInputAction: TextInputAction.done,
+                onChanged: (_) {
+                  if (_errorText != null) {
+                    setState(() => _errorText = null);
+                  }
+                },
+                onSubmitted: (_) => _save(),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                  color: titleColor,
+                ),
                 decoration: InputDecoration(
-                  labelText: 'Alias visible',
+                  labelText: 'Alias único',
+                  hintText: 'Ej. Anonymus',
+                  errorText: _errorText,
                   labelStyle: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
@@ -170,21 +216,13 @@ class _AliasModalState extends State<AliasModal> {
                       color: titleColor,
                     ),
                     tooltip: 'Generar alias anónimo',
-                    onPressed: _generateRandomAlias,
-                  ),
-                ),
-                child: Text(
-                  _alias,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                    color: titleColor,
+                    onPressed: _isSaving ? null : _generateRandomAlias,
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Text(
-                'Nota: Tu seudónimo protege tu privacidad frente a otros estudiantes. Los alias son generados y verificados para evitar suplantación (Art. 12).',
+                'Elige cualquier nombre único para tu cuenta. Nadie más podrá usar el mismo alias.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   fontSize: 11.5,
                   height: 1.35,
@@ -206,7 +244,9 @@ class _AliasModalState extends State<AliasModal> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: _isSaving
+                          ? null
+                          : () => Navigator.of(context).pop(),
                       child: const Text(
                         'Cancelar',
                         style: TextStyle(fontWeight: FontWeight.w600),
@@ -225,11 +265,17 @@ class _AliasModalState extends State<AliasModal> {
                           vertical: 12,
                         ),
                       ),
-                      onPressed: _save,
-                      child: const Text(
-                        'Guardar Alias',
-                        style: TextStyle(fontWeight: FontWeight.w700),
-                      ),
+                      onPressed: _isSaving ? null : _save,
+                      child: _isSaving
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text(
+                              'Guardar Alias',
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
                     ),
                   ],
                 ),

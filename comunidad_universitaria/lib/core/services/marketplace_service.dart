@@ -7,7 +7,9 @@ import '../models/marketplace_metrics.dart';
 import '../models/marketplace_plan.dart';
 import '../models/marketplace_seller_status.dart';
 import '../models/seller_profile.dart';
+import '../utils/input_sanitizer.dart';
 import 'cache_service.dart';
+import 'publish_cooldown_service.dart';
 import 'supabase_service.dart';
 
 export '../models/marketplace_exception.dart';
@@ -247,10 +249,12 @@ class MarketplaceService {
       }
 
       if (searchQuery.trim().isNotEmpty) {
-        final q = searchQuery.trim();
-        query = query.or(
-          'title.ilike.%$q%,description.ilike.%$q%,building_code.ilike.%$q%',
-        );
+        final q = InputSanitizer.sanitizePostgrestSearch(searchQuery);
+        if (q.isNotEmpty) {
+          query = query.or(
+            'title.ilike.%$q%,description.ilike.%$q%,building_code.ilike.%$q%',
+          );
+        }
       }
 
       final response = await query
@@ -942,6 +946,16 @@ class MarketplaceService {
       throw StateError('Debes iniciar sesión para publicar en el marketplace.');
     }
 
+    final cooldownRemaining = await PublishCooldownService.remainingCooldown(
+      'listing',
+    );
+    if (cooldownRemaining != null) {
+      throw MarketplaceException(
+        PublishCooldownService.formatCooldownMessage(cooldownRemaining),
+        code: 'rate_limited',
+      );
+    }
+
     if (!await canCreateListing()) {
       throw StateError(
         'Publicar requiere que el equipo autorizado verifique tu identidad. '
@@ -996,6 +1010,7 @@ class MarketplaceService {
         Map<String, dynamic>.from(res),
         isUpvotedByMe: true,
       ).copyWith(isMine: true);
+      await PublishCooldownService.recordPublish('listing');
       await CacheService.invalidateAll(_cacheNamespace);
       return created;
     } on PostgrestException catch (e) {

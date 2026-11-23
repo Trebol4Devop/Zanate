@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import '../config/supabase_config.dart';
 import '../models/whatsapp_group.dart';
+import '../utils/input_sanitizer.dart';
 import 'cache_service.dart';
+import 'publish_cooldown_service.dart';
 import 'supabase_service.dart';
 
 class GroupsService {
@@ -93,10 +95,12 @@ class GroupsService {
       }
 
       if (searchQuery.trim().isNotEmpty) {
-        final q = searchQuery.trim();
-        query = query.or(
-          'title.ilike.%$q%,curso.ilike.%$q%,description.ilike.%$q%',
-        );
+        final q = InputSanitizer.sanitizePostgrestSearch(searchQuery);
+        if (q.isNotEmpty) {
+          query = query.or(
+            'title.ilike.%$q%,curso.ilike.%$q%,description.ilike.%$q%',
+          );
+        }
       }
 
       final response = await query
@@ -284,6 +288,15 @@ class GroupsService {
       );
     }
 
+    final cooldownRemaining = await PublishCooldownService.remainingCooldown(
+      'group',
+    );
+    if (cooldownRemaining != null) {
+      throw Exception(
+        PublishCooldownService.formatCooldownMessage(cooldownRemaining),
+      );
+    }
+
     try {
       final platform = WhatsAppGroup.stringToPlatform(null, link);
       final groupMap = {
@@ -323,6 +336,7 @@ class GroupsService {
         'user_id': userId,
       });
 
+      await PublishCooldownService.recordPublish('group');
       await CacheService.invalidateAll(_cacheNamespace);
       return created;
     } catch (e) {

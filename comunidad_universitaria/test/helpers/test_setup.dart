@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:comunidad_universitaria/core/services/cache_service.dart';
+import 'package:comunidad_universitaria/core/services/publish_cooldown_service.dart';
 import 'package:comunidad_universitaria/core/services/supabase_service.dart';
 
 /// Namespaces conocidos de CacheService utilizados en la aplicación.
@@ -20,6 +21,7 @@ Future<void> resetTestState({Map<String, Object> initialPrefs = const {}}) async
     CacheService.invalidate(ns);
     await CacheService.invalidateAll(ns);
   }
+  await PublishCooldownService.clearForTest();
   SupabaseService.resetForTests();
 }
 
