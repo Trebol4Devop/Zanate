@@ -1054,8 +1054,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               imageUrl: _post.gifUrl!,
                               title: _post.title,
                               isGif: true,
-                              maxHeight: 340,
-                              maxWidth: 580,
+                              maxHeight: 480,
                             ),
                           ],
 
@@ -1067,8 +1066,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               imageUrl: _post.imageUrl!,
                               title: _post.title,
                               isGif: false,
-                              maxHeight: 420,
-                              maxWidth: 620,
+                              maxHeight: 680,
                             ),
                           ],
 
@@ -1078,8 +1076,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             const SizedBox(height: 14),
                             DiscordVideoAttachment(
                               videoUrl: _post.videoUrl!,
-                              maxHeight: 360,
-                              maxWidth: 620,
+                              maxHeight: 480,
                             ),
                           ],
 
