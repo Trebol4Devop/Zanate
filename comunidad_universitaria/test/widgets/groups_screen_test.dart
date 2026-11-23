@@ -164,7 +164,11 @@ void main() {
 
         expect(find.byType(ListView), findsWidgets);
         expect(find.byType(GroupCard), findsOneWidget);
-        expect(find.text('Física 1 - Sección B'), findsOneWidget);
+        expect(find.text('Física 1'), findsOneWidget);
+        expect(find.text('Sección B'), findsOneWidget);
+        expect(find.text('Física 1 - Sección B'), findsNothing);
+        expect(find.text('Enlace Web'), findsNothing);
+        expect(find.text('WhatsApp'), findsNothing);
         expect(find.text('15'), findsOneWidget);
         final voteButton = find.ancestor(
           of: find.text('15'),
@@ -195,6 +199,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('El enlace del grupo no es válido.'), findsOneWidget);
+      expect(find.text('Enlace Web'), findsNothing);
     });
 
     testWidgets('Abre CreateGroupDialog al hacer click en compartir grupo', (

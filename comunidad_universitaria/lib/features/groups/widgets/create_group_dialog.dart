@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import '../../../core/constants/zanate_colors.dart';
-import 'package:image_picker/image_picker.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/constants/categories.dart';
 import '../../../core/models/whatsapp_group.dart';
 import '../../../core/services/groups_service.dart';
+import '../../../core/services/publish_cooldown_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../core/utils/square_image_crop.dart';
 import '../../shared/widgets/auth_modal.dart';
+import '../../shared/widgets/square_image_crop_dialog.dart';
 
 class CreateGroupDialog extends StatefulWidget {
   final String activeAlias;
@@ -61,8 +63,9 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
   final _linkController = TextEditingController();
   final _descriptionController = TextEditingController();
 
-  String? _uploadedImageUrl;
-  bool _isUploadingImage = false;
+  PickedImageData? _originalPendingImage;
+  PickedImageData? _pendingImage;
+  bool _isPickingImage = false;
 
   String _groupType =
       'curso'; // 'curso', 'objetos_perdidos', 'comunidad', 'deportes', 'avisos', 'otro'
@@ -100,31 +103,76 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
     return list.map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
-  Future<void> _pickAndUploadImage() async {
-    setState(() => _isUploadingImage = true);
+  Future<void> _pickImage() async {
+    setState(() => _isPickingImage = true);
 
     try {
-      final XFile? file = await StorageService.pickSingleImage();
-      if (file != null) {
-        final url = await StorageService.uploadImageFile(
-          file,
-          folder: 'groups',
+      final picked = await StorageService.pickSingleImageWithPreview();
+      if (picked == null || !mounted) return;
+
+      final dims = SquareImageCrop.readImageDimensions(picked.bytes);
+      PickedImageData finalImage = picked;
+
+      if (dims != null && dims.width != dims.height) {
+        final croppedBytes = await SquareImageCropDialog.show(
+          context,
+          imageBytes: picked.bytes,
+          imageWidth: dims.width,
+          imageHeight: dims.height,
         );
-        if (url != null && mounted) {
-          setState(() {
-            _uploadedImageUrl = url;
-          });
-        }
+        if (croppedBytes == null || !mounted) return;
+        finalImage = PickedImageData(
+          file: picked.file,
+          bytes: croppedBytes,
+          name: picked.name,
+        );
       }
-    } catch (e) {
+
+      if (mounted) {
+        setState(() {
+          _originalPendingImage = picked;
+          _pendingImage = finalImage;
+        });
+      }
+    } on StorageUploadException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error al subir imagen: $e')));
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo cargar la imagen.')),
+        );
       }
     } finally {
-      if (mounted) setState(() => _isUploadingImage = false);
+      if (mounted) setState(() => _isPickingImage = false);
     }
+  }
+
+  Future<void> _recropPendingImage() async {
+    final source = _originalPendingImage ?? _pendingImage;
+    if (source == null || _isSubmitting) return;
+
+    final dims = SquareImageCrop.readImageDimensions(source.bytes);
+    if (dims == null) return;
+
+    final croppedBytes = await SquareImageCropDialog.show(
+      context,
+      imageBytes: source.bytes,
+      imageWidth: dims.width,
+      imageHeight: dims.height,
+    );
+    if (croppedBytes == null || !mounted) return;
+
+    setState(() {
+      _pendingImage = PickedImageData(
+        file: source.file,
+        bytes: croppedBytes,
+        name: source.name,
+      );
+    });
   }
 
   Future<void> _submit() async {
@@ -138,6 +186,22 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
             'Para compartir enlaces de grupos estudiantiles, debes iniciar sesión.',
         onAuthenticated: () => _submit(),
       );
+      return;
+    }
+
+    final cooldownRemaining = await PublishCooldownService.remainingCooldown(
+      'group',
+    );
+    if (cooldownRemaining != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              PublishCooldownService.formatCooldownMessage(cooldownRemaining),
+            ),
+          ),
+        );
+      }
       return;
     }
 
@@ -180,6 +244,16 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
         : _selectedCarrera;
 
     try {
+      String? uploadedImageUrl;
+      if (_pendingImage != null) {
+        uploadedImageUrl = await StorageService.uploadImageFile(
+          _pendingImage!.file,
+          folder: 'groups',
+          preloadedBytes: _pendingImage!.bytes,
+          throwOnError: true,
+        );
+      }
+
       final created = await GroupsService.createGroup(
         title: title,
         carrera: carreraToSave,
@@ -188,7 +262,7 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
         link: _linkController.text.trim(),
         description: _descriptionController.text.trim(),
         authorAlias: widget.activeAlias,
-        imageUrl: _uploadedImageUrl,
+        imageUrl: uploadedImageUrl,
       );
 
       if (mounted) {
@@ -504,48 +578,92 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
               ),
               const SizedBox(height: 6),
 
-              if (_uploadedImageUrl != null) ...[
-                Stack(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(14),
-                      child: Image.network(
-                        _uploadedImageUrl!,
-                        width: double.infinity,
-                        height: 130,
-                        fit: BoxFit.cover,
-                        errorBuilder: (ctx, err, stack) => Container(
-                          height: 130,
-                          color: ZanateColors.surface(isDark),
-                          child: Center(
-                            child: PhosphorIcon(
-                              PhosphorIconsRegular.imageBroken,
-                              color: secondaryTextColor,
+              if (_pendingImage != null) ...[
+                ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: 260,
+                    maxHeight: 260,
+                  ),
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(14),
+                            child: Container(
+                              color: ZanateColors.surface(isDark),
+                              child: Image.memory(
+                                _pendingImage!.bytes,
+                                fit: BoxFit.contain,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: InkWell(
-                        onTap: () => setState(() => _uploadedImageUrl = null),
-                        child: Container(
-                          padding: const EdgeInsets.all(5),
-                          decoration: const BoxDecoration(
-                            color: Colors.black54,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const PhosphorIcon(
-                            PhosphorIconsRegular.x,
-                            size: 16,
-                            color: Colors.white,
+                        Positioned(
+                          bottom: 8,
+                          left: 8,
+                          child: InkWell(
+                            onTap: _isSubmitting ? null : _recropPendingImage,
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.72),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  PhosphorIcon(
+                                    PhosphorIconsRegular.crop,
+                                    size: 14,
+                                    color: Colors.white,
+                                  ),
+                                  SizedBox(width: 5),
+                                  Text(
+                                    'Recortar',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: InkWell(
+                            onTap: _isSubmitting
+                                ? null
+                                : () => setState(() {
+                                    _originalPendingImage = null;
+                                    _pendingImage = null;
+                                  }),
+                            child: Container(
+                              padding: const EdgeInsets.all(5),
+                              decoration: const BoxDecoration(
+                                color: Colors.black54,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const PhosphorIcon(
+                                PhosphorIconsRegular.x,
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ] else ...[
                 OutlinedButton.icon(
@@ -561,8 +679,10 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
                       vertical: 12,
                     ),
                   ),
-                  onPressed: _isUploadingImage ? null : _pickAndUploadImage,
-                  icon: _isUploadingImage
+                  onPressed: (_isPickingImage || _isSubmitting)
+                      ? null
+                      : _pickImage,
+                  icon: _isPickingImage
                       ? const SizedBox(
                           width: 14,
                           height: 14,
@@ -574,9 +694,7 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
                           color: primaryTextColor,
                         ),
                   label: Text(
-                    _isUploadingImage
-                        ? 'Subiendo imagen...'
-                        : 'Subir Imagen / Logotipo',
+                    _isPickingImage ? 'Cargando imagen...' : 'Elegir Imagen',
                   ),
                 ),
               ],
