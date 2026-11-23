@@ -10,6 +10,7 @@ import 'package:comunidad_universitaria/features/groups/screens/groups_screen.da
 import 'package:comunidad_universitaria/features/groups/widgets/create_group_dialog.dart';
 import 'package:comunidad_universitaria/features/groups/widgets/group_card.dart';
 import 'package:comunidad_universitaria/features/shared/widgets/empty_state_widget.dart';
+import 'package:comunidad_universitaria/features/shared/widgets/user_avatar_circle.dart';
 import '../helpers/fixtures.dart';
 import '../helpers/test_setup.dart';
 
@@ -152,6 +153,10 @@ void main() {
           carrera: 'sistemas',
           upvotes: 15,
           link: 'https://chat.whatsapp.com/TestGroup123',
+        ).copyWith(
+          isMine: true,
+          avatarColorIndex: 2,
+          avatarIconIndex: 4,
         );
 
         // Sembramos la caché para la carrera default y contexto del usuario (08 - sistemas)
@@ -164,6 +169,12 @@ void main() {
 
         expect(find.byType(ListView), findsWidgets);
         expect(find.byType(GroupCard), findsOneWidget);
+        final avatarWidget = tester.widget<UserAvatarCircle>(
+          find.byType(UserAvatarCircle),
+        );
+        expect(avatarWidget.isMine, isTrue);
+        expect(avatarWidget.avatarColorIndex, 2);
+        expect(avatarWidget.avatarIconIndex, 4);
         expect(find.text('Física 1'), findsOneWidget);
         expect(find.text('Sección B'), findsOneWidget);
         expect(find.text('Física 1 - Sección B'), findsNothing);
