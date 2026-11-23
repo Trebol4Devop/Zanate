@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import '../../../core/constants/zanate_colors.dart';
-import 'package:image_picker/image_picker.dart';
 import '../../../core/constants/categories.dart';
 import '../../../core/models/marketplace_item.dart';
 import '../../../core/services/local_storage_service.dart';
 import '../../../core/services/marketplace_service.dart';
+import '../../../core/services/publish_cooldown_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../core/utils/responsive.dart';
 import '../../profile/screens/profile_screen.dart';
@@ -64,8 +64,8 @@ class _CreateListingDialogState extends State<CreateListingDialog> {
   final _socialLinkInputController = TextEditingController();
   final List<String> _socialLinks = [];
 
-  // Uploaded images & video
-  final List<String> _imageUrls = [];
+  // Pending images & video link
+  final List<PickedImageData> _pendingImages = [];
   final _videoUrlController = TextEditingController();
 
   String _selectedCategory = 'comida_postres';
@@ -75,7 +75,7 @@ class _CreateListingDialogState extends State<CreateListingDialog> {
 
   bool _isFree = false;
   bool _isSubmitting = false;
-  bool _isUploadingImage = false;
+  bool _isPickingImage = false;
   bool _isLoadingProfile = true;
   UserProfile? _userProfile;
   MarketplaceSellerStatus? _sellerStatus;
@@ -128,40 +128,43 @@ class _CreateListingDialogState extends State<CreateListingDialog> {
       !_sellerStatus!.isUnlimited &&
       _sellerStatus!.activeItems >= _sellerStatus!.maxActiveItems;
 
-  Future<void> _pickAndUploadImage() async {
-    if (_imageUrls.length >= _maxImages) {
+  Future<void> _pickImage() async {
+    if (_pendingImages.length >= _maxImages) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             widget.isSponsored
-                ? 'Límite de 3 imágenes alcanzado para patrocinadores.'
-                : 'Límite de 1 imagen alcanzado para publicaciones regulares.',
+                ? 'Límite de $_maxImages imágenes alcanzado para patrocinadores.'
+                : 'Límite de $_maxImages imágenes alcanzado para publicaciones regulares.',
           ),
         ),
       );
       return;
     }
 
-    setState(() => _isUploadingImage = true);
+    setState(() => _isPickingImage = true);
 
     try {
-      final XFile? file = await StorageService.pickSingleImage();
-      if (file != null) {
-        final url = await StorageService.uploadImageFile(file);
-        if (url != null && mounted) {
-          setState(() {
-            _imageUrls.add(url);
-          });
-        }
+      final picked = await StorageService.pickSingleImageWithPreview();
+      if (picked != null && mounted) {
+        setState(() {
+          _pendingImages.add(picked);
+        });
       }
-    } catch (e) {
+    } on StorageUploadException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error al subir imagen: $e')));
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo cargar la imagen.')),
+        );
       }
     } finally {
-      if (mounted) setState(() => _isUploadingImage = false);
+      if (mounted) setState(() => _isPickingImage = false);
     }
   }
 
@@ -206,6 +209,23 @@ class _CreateListingDialogState extends State<CreateListingDialog> {
       return;
     }
 
+    final cooldownRemaining = await PublishCooldownService.remainingCooldown(
+      'listing',
+    );
+    if (cooldownRemaining != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              PublishCooldownService.formatCooldownMessage(cooldownRemaining),
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
     setState(() => _isSubmitting = true);
 
     final priceVal = _isFree
@@ -213,6 +233,19 @@ class _CreateListingDialogState extends State<CreateListingDialog> {
         : (double.tryParse(_priceController.text.trim()) ?? 0.0);
 
     try {
+      final List<String> uploadedUrls = [];
+      for (final item in _pendingImages) {
+        final url = await StorageService.uploadImageFile(
+          item.file,
+          folder: 'listings',
+          preloadedBytes: item.bytes,
+          throwOnError: true,
+        );
+        if (url != null && url.isNotEmpty) {
+          uploadedUrls.add(url);
+        }
+      }
+
       final created = await MarketplaceService.createListing(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
@@ -228,7 +261,7 @@ class _CreateListingDialogState extends State<CreateListingDialog> {
         contactMessenger: hasMessenger ? messenger : null,
         contactTelegram: hasTelegram ? telegram : null,
         socialLinks: _socialLinks,
-        imageUrls: _imageUrls,
+        imageUrls: uploadedUrls,
         videoUrl: _videoUrlController.text.trim().isNotEmpty
             ? _videoUrlController.text.trim()
             : null,
@@ -753,25 +786,20 @@ class _CreateListingDialogState extends State<CreateListingDialog> {
                 runSpacing: 8,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  ..._imageUrls.map(
-                    (url) => Stack(
+                  ..._pendingImages.map(
+                    (item) => Stack(
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child: Image.network(
-                            url,
+                          child: Container(
                             width: 70,
                             height: 70,
-                            fit: BoxFit.cover,
-                            errorBuilder: (ctx, err, stack) => Container(
+                            color: ZanateColors.surface(isDark),
+                            child: Image.memory(
+                              item.bytes,
                               width: 70,
                               height: 70,
-                              color: ZanateColors.surface(isDark),
-                              child: PhosphorIcon(
-                                PhosphorIconsRegular.imageBroken,
-                                size: 24,
-                                color: secondaryText,
-                              ),
+                              fit: BoxFit.cover,
                             ),
                           ),
                         ),
@@ -779,7 +807,11 @@ class _CreateListingDialogState extends State<CreateListingDialog> {
                           top: 2,
                           right: 2,
                           child: InkWell(
-                            onTap: () => setState(() => _imageUrls.remove(url)),
+                            onTap: _isSubmitting
+                                ? null
+                                : () => setState(
+                                      () => _pendingImages.remove(item),
+                                    ),
                             child: Container(
                               padding: const EdgeInsets.all(3),
                               decoration: const BoxDecoration(
@@ -797,7 +829,7 @@ class _CreateListingDialogState extends State<CreateListingDialog> {
                       ],
                     ),
                   ),
-                  if (_imageUrls.length < _maxImages)
+                  if (_pendingImages.length < _maxImages)
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: primaryText,
@@ -811,8 +843,10 @@ class _CreateListingDialogState extends State<CreateListingDialog> {
                           vertical: 11,
                         ),
                       ),
-                      onPressed: _isUploadingImage ? null : _pickAndUploadImage,
-                      icon: _isUploadingImage
+                      onPressed: (_isPickingImage || _isSubmitting)
+                          ? null
+                          : _pickImage,
+                      icon: _isPickingImage
                           ? const SizedBox(
                               width: 14,
                               height: 14,
@@ -824,7 +858,7 @@ class _CreateListingDialogState extends State<CreateListingDialog> {
                               color: primaryText,
                             ),
                       label: Text(
-                        _isUploadingImage ? 'Subiendo...' : 'Subir Foto',
+                        _isPickingImage ? 'Cargando...' : 'Elegir Foto',
                       ),
                     ),
                 ],

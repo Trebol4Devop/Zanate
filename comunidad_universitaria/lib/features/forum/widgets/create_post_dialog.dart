@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import '../../../core/config/supabase_config.dart';
@@ -7,6 +6,7 @@ import '../../../core/constants/categories.dart';
 import '../../../core/constants/zanate_colors.dart';
 import '../../../core/models/post.dart';
 import '../../../core/services/forum_service.dart';
+import '../../../core/services/publish_cooldown_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/responsive.dart';
@@ -82,9 +82,10 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
 
-  String? _uploadedImageUrl;
+  PickedImageData? _pendingImage;
+  PickedVideoData? _pendingVideo;
   String? _selectedGifUrl;
-  bool _isUploadingImage = false;
+  bool _isPickingMedia = false;
 
   bool _showPollForm = false;
   final _pollQuestionController = TextEditingController();
@@ -192,28 +193,61 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
     return 'Campus Central';
   }
 
-  Future<void> _pickAndUploadImage() async {
-    setState(() => _isUploadingImage = true);
+  Future<void> _pickImage() async {
+    setState(() => _isPickingMedia = true);
 
     try {
-      final XFile? file = await StorageService.pickSingleImage();
-      if (file != null) {
-        final url = await StorageService.uploadImageFile(file, folder: 'forum');
-        if (url != null && mounted) {
-          setState(() {
-            _uploadedImageUrl = url;
-            _selectedGifUrl = null;
-          });
-        }
+      final picked = await StorageService.pickSingleImageWithPreview();
+      if (picked != null && mounted) {
+        setState(() {
+          _pendingImage = picked;
+          _pendingVideo = null;
+          _selectedGifUrl = null;
+        });
       }
-    } catch (e) {
+    } on StorageUploadException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error al subir imagen: $e')));
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo cargar la imagen.')),
+        );
       }
     } finally {
-      if (mounted) setState(() => _isUploadingImage = false);
+      if (mounted) setState(() => _isPickingMedia = false);
+    }
+  }
+
+  Future<void> _pickVideo() async {
+    setState(() => _isPickingMedia = true);
+
+    try {
+      final picked = await StorageService.pickSingleVideo();
+      if (picked != null && mounted) {
+        setState(() {
+          _pendingVideo = picked;
+          _pendingImage = null;
+          _selectedGifUrl = null;
+        });
+      }
+    } on StorageUploadException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo cargar el video.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isPickingMedia = false);
     }
   }
 
@@ -256,9 +290,42 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
       }
     }
 
+    final cooldownRemaining = await PublishCooldownService.remainingCooldown(
+      'post',
+    );
+    if (cooldownRemaining != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              PublishCooldownService.formatCooldownMessage(cooldownRemaining),
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
     setState(() => _isSubmitting = true);
 
     try {
+      String? uploadedImageUrl;
+      String? uploadedVideoUrl;
+
+      if (_pendingImage != null) {
+        uploadedImageUrl = await StorageService.uploadImageFile(
+          _pendingImage!.file,
+          folder: 'forum',
+          preloadedBytes: _pendingImage!.bytes,
+          throwOnError: true,
+        );
+      } else if (_pendingVideo != null) {
+        uploadedVideoUrl = await StorageService.uploadVideoFile(
+          _pendingVideo!.file,
+          folder: 'forum_videos',
+        );
+      }
+
       String? pollQuestion;
       List<String>? pollOptions;
 
@@ -279,8 +346,9 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
         carrera: _selectedCarrera,
         forumServerId: widget.initialServerId,
         authorAlias: _authorAlias,
-        imageUrl: _uploadedImageUrl,
+        imageUrl: uploadedImageUrl,
         gifUrl: _selectedGifUrl,
+        videoUrl: uploadedVideoUrl,
         quotedPostId: widget.quotedPost?.id,
         pollQuestion: _showPollForm ? pollQuestion : null,
         pollOptions: _showPollForm ? pollOptions : null,
@@ -700,7 +768,10 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
               const SizedBox(height: 16),
 
               // Media & Poll toolbar
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
@@ -715,15 +786,19 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
                         vertical: 8,
                       ),
                     ),
-                    onPressed: _isUploadingImage ? null : _pickAndUploadImage,
+                    onPressed: (_isPickingMedia || _isSubmitting)
+                        ? null
+                        : _pickImage,
                     icon: PhosphorIcon(
                       PhosphorIconsRegular.image,
                       size: 17,
                       color: focusColor,
                     ),
-                    label: const Text('Foto', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    label: const Text(
+                      'Foto',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
                   ),
-                  const SizedBox(width: 8),
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       foregroundColor: primaryTextColor,
@@ -737,25 +812,56 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
                         vertical: 8,
                       ),
                     ),
-                    onPressed: () {
-                      GifPickerModal.show(
-                        context,
-                        onGifSelected: (url) {
-                          setState(() {
-                            _selectedGifUrl = url;
-                            _uploadedImageUrl = null;
-                          });
-                        },
-                      );
-                    },
+                    onPressed: (_isPickingMedia || _isSubmitting)
+                        ? null
+                        : _pickVideo,
+                    icon: PhosphorIcon(
+                      PhosphorIconsRegular.videoCamera,
+                      size: 17,
+                      color: focusColor,
+                    ),
+                    label: const Text(
+                      'Video',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: primaryTextColor,
+                      side: BorderSide(color: borderColor),
+                      backgroundColor: bgFill,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                    ),
+                    onPressed: _isSubmitting
+                        ? null
+                        : () {
+                            GifPickerModal.show(
+                              context,
+                              onGifSelected: (url) {
+                                setState(() {
+                                  _selectedGifUrl = url;
+                                  _pendingImage = null;
+                                  _pendingVideo = null;
+                                });
+                              },
+                            );
+                          },
                     icon: PhosphorIcon(
                       PhosphorIconsRegular.gif,
                       size: 17,
                       color: focusColor,
                     ),
-                    label: const Text('GIF', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    label: const Text(
+                      'GIF',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
                   ),
-                  const SizedBox(width: 8),
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       foregroundColor: _showPollForm
@@ -1011,54 +1117,121 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
                 ),
               ],
 
-              // Attached Image Preview
-              if (_uploadedImageUrl != null) ...[
+              // Attached Local Image Preview (cualquier proporción sin recorte forzado)
+              if (_pendingImage != null) ...[
                 const SizedBox(height: 14),
-                Stack(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(14),
-                      child: Image.network(
-                        _uploadedImageUrl!,
-                        width: double.infinity,
-                        height: 160,
-                        fit: BoxFit.cover,
-                        errorBuilder: (ctx, err, stack) => Container(
-                          height: 160,
-                          decoration: BoxDecoration(
-                            color: bgFill,
-                            borderRadius: BorderRadius.circular(14),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: 480,
+                    maxHeight: 260,
+                  ),
+                  child: Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          width: double.infinity,
+                          color: ZanateColors.surface(isDark),
+                          child: Image.memory(
+                            _pendingImage!.bytes,
+                            fit: BoxFit.contain,
                           ),
-                          child: Center(
-                            child: Icon(
-                              PhosphorIconsRegular.imageBroken,
-                              size: 32,
-                              color: secondaryTextColor,
+                        ),
+                      ),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: InkWell(
+                          onTap: _isSubmitting
+                              ? null
+                              : () => setState(() => _pendingImage = null),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.65),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const PhosphorIcon(
+                              PhosphorIconsRegular.x,
+                              size: 16,
+                              color: Colors.white,
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: InkWell(
-                        onTap: () => setState(() => _uploadedImageUrl = null),
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.65),
-                            shape: BoxShape.circle,
+                    ],
+                  ),
+                ),
+              ],
+
+              // Attached Local Video Preview
+              if (_pendingVideo != null) ...[
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: bgFill,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: borderColor),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: ZanateColors.zanateEyeYellow.withValues(
+                            alpha: 0.25,
                           ),
-                          child: PhosphorIcon(
-                            PhosphorIconsRegular.x,
-                            size: 16,
-                            color: Colors.white,
-                          ),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: PhosphorIcon(
+                          PhosphorIconsRegular.filmSlate,
+                          size: 20,
+                          color: primaryTextColor,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _pendingVideo!.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: primaryTextColor,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${(_pendingVideo!.sizeBytes / (1024 * 1024)).toStringAsFixed(1)} MB · Video listo para publicar',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: secondaryTextColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: _isSubmitting
+                            ? null
+                            : () => setState(() => _pendingVideo = null),
+                        icon: PhosphorIcon(
+                          PhosphorIconsRegular.x,
+                          size: 18,
+                          color: secondaryTextColor,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
 

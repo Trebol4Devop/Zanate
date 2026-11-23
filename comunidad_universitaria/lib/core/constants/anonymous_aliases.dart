@@ -131,26 +131,33 @@ class AnonymousAliasGenerator {
     return false;
   }
 
-  /// Normaliza y valida el alias contra las reglas estrictas del trigger Art. 12 en Supabase.
-  /// Si el alias actual no cumple, genera uno válido del catálogo oficial.
+  static const int minAliasLength = 2;
+  static const int maxAliasLength = 32;
+
+  /// Normaliza un alias personalizado colapsando espacios y saltos de línea.
+  static String normalizeCustomAlias(String alias) {
+    return alias
+        .replaceAll(RegExp(r'[\r\n\t]+'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
+  /// Valida la longitud de un alias libre personalizado por cuenta.
+  static bool isValidCustomAlias(String alias) {
+    final norm = normalizeCustomAlias(alias);
+    return norm.length >= minAliasLength && norm.length <= maxAliasLength;
+  }
+
+  /// Normaliza el alias libre para enviarlo al backend sin reemplazar
+  /// seudónimos personalizados por alias aleatorios del catálogo.
   static String ensureValidForBackend(String alias) {
-    final norm = alias.trim().replaceAll(RegExp(r'\s+'), ' ');
-    if (norm == 'Estudiante Anónimo' ||
-        norm == 'Estudiante Emprendedor' ||
-        norm == 'Estudiante') {
-      return norm;
+    final norm = normalizeCustomAlias(alias);
+    if (norm.length < minAliasLength) {
+      return generate();
     }
-    if (RegExp(r'^Estudiante [A-Za-zÁÉÍÓÚÑáéíóúñ]+ #[0-9]{1,4}$').hasMatch(norm)) {
-      return norm;
+    if (norm.length > maxAliasLength) {
+      return norm.substring(0, maxAliasLength).trim();
     }
-    for (final noun in nouns) {
-      if (norm.startsWith('$noun ')) {
-        final remaining = norm.substring(noun.length + 1);
-        if (adjectives.contains(remaining)) {
-          return norm;
-        }
-      }
-    }
-    return generate();
+    return norm;
   }
 }

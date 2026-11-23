@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'core/config/app_theme.dart';
 import 'core/config/supabase_config.dart';
 import 'core/services/local_storage_service.dart';
+import 'core/services/profile_service.dart';
 import 'features/navigation/app_shell.dart';
 import 'features/onboarding/state/session_controller.dart';
 import 'features/onboarding/widgets/auth_gate.dart';
@@ -57,6 +58,19 @@ class _ComunidadUSACAppState extends State<ComunidadUSACApp> {
     _themeMode = widget.initialIsDarkMode ? ThemeMode.dark : ThemeMode.light;
     _sessionController = SessionController()..bootstrap();
     _verificationController = VerificationController()..loadStatus();
+    _syncAccountAlias();
+  }
+
+  Future<void> _syncAccountAlias() async {
+    final remoteAlias = await ProfileService.fetchAccountAlias();
+    if (mounted &&
+        remoteAlias != null &&
+        remoteAlias.isNotEmpty &&
+        remoteAlias != _activeAlias) {
+      setState(() {
+        _activeAlias = remoteAlias;
+      });
+    }
   }
 
   @override

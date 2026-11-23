@@ -99,6 +99,7 @@ class Post {
   final String carrera;
   final String? imageUrl;
   final String? gifUrl;
+  final String? videoUrl;
   final String? quotedPostId;
   final Post? quotedPost;
   final PostPoll? poll;
@@ -134,6 +135,7 @@ class Post {
     this.carrera = 'todas',
     this.imageUrl,
     this.gifUrl,
+    this.videoUrl,
     this.quotedPostId,
     this.quotedPost,
     this.poll,
@@ -169,6 +171,7 @@ class Post {
     String? carrera,
     String? imageUrl,
     String? gifUrl,
+    String? videoUrl,
     String? quotedPostId,
     Post? quotedPost,
     PostPoll? poll,
@@ -202,6 +205,7 @@ class Post {
       carrera: carrera ?? this.carrera,
       imageUrl: imageUrl ?? this.imageUrl,
       gifUrl: gifUrl ?? this.gifUrl,
+      videoUrl: videoUrl ?? this.videoUrl,
       quotedPostId: quotedPostId ?? this.quotedPostId,
       quotedPost: quotedPost ?? this.quotedPost,
       poll: poll ?? this.poll,
@@ -279,6 +283,7 @@ class Post {
       carrera: map['carrera'] ?? 'todas',
       imageUrl: map['image_url'],
       gifUrl: map['gif_url'],
+      videoUrl: map['video_url']?.toString(),
       quotedPostId: map['quoted_post_id']?.toString(),
       quotedPost: quotedPost,
       poll: poll,
@@ -322,6 +327,8 @@ class Post {
       'carrera': carrera,
       'image_url': imageUrl,
       'gif_url': gifUrl,
+      if (videoUrl != null && videoUrl!.trim().isNotEmpty)
+        'video_url': videoUrl!.trim(),
       'quoted_post_id': quotedPostId,
       'is_pinned': isPinned,
       'likes': likes,

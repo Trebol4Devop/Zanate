@@ -1,12 +1,23 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
+import '../constants/anonymous_aliases.dart';
 import '../models/marketplace_item.dart';
 import '../models/post.dart';
 import '../models/user_profile.dart';
 import '../models/whatsapp_group.dart';
 import 'local_storage_service.dart';
 import 'supabase_service.dart';
+
+class AliasException implements Exception {
+  final String message;
+  final String code;
+
+  const AliasException(this.message, {this.code = 'error'});
+
+  @override
+  String toString() => message;
+}
 
 class ProfileService {
   static const String termsVersion = 'v1.0-2026';
@@ -19,20 +30,135 @@ class ProfileService {
 
   static Future<UserProfile> loadProfile() async {
     final local = await LocalStorageService.getUserProfile();
+    String? remoteAlias;
+    try {
+      remoteAlias = await fetchAccountAlias();
+    } catch (_) {}
+
+    var result = remoteAlias != null
+        ? local.copyWith(alias: remoteAlias)
+        : local;
+
     try {
       final statusMap = await fetchVerificationStatus();
       if (statusMap != null) {
         final isVerified = statusMap['is_verified'] == true;
-        return local.copyWith(isCarneVerified: isVerified);
+        result = result.copyWith(isCarneVerified: isVerified);
       }
     } catch (e) {
       debugPrint('Aviso best-effort cargando verificación en profile: $e');
     }
-    return local;
+    return result;
+  }
+
+  /// Obtiene el alias único guardado en la cuenta del usuario en `profiles`.
+  static Future<String?> fetchAccountAlias() async {
+    if (!SupabaseConfig.isConfigured || !SupabaseService.isAuthenticated) {
+      return null;
+    }
+    final uid = SupabaseService.currentUserId;
+    if (uid == null) return null;
+
+    try {
+      final res = await SupabaseService.client
+          .from('profiles')
+          .select('alias')
+          .eq('id', uid)
+          .maybeSingle();
+
+      final alias = res?['alias']?.toString().trim();
+      if (alias != null && alias.isNotEmpty) {
+        await LocalStorageService.saveAlias(alias);
+        return alias;
+      }
+      return null;
+    } on PostgrestException catch (e) {
+      debugPrint('Aviso consultando alias de cuenta (${e.code}): ${e.message}');
+      return null;
+    } catch (e) {
+      debugPrint('Error consultando alias de cuenta: $e');
+      return null;
+    }
+  }
+
+  /// Valida y reclama un alias único libre para la cuenta actual.
+  static Future<String> saveAccountAlias(String rawAlias) async {
+    final normalized = AnonymousAliasGenerator.normalizeCustomAlias(rawAlias);
+    if (!AnonymousAliasGenerator.isValidCustomAlias(normalized)) {
+      throw const AliasException(
+        'El alias debe tener entre 2 y 32 caracteres.',
+        code: 'invalid_alias',
+      );
+    }
+
+    var finalAlias = normalized;
+
+    if (SupabaseConfig.isConfigured && SupabaseService.isAuthenticated) {
+      final uid = SupabaseService.currentUserId;
+      if (uid != null) {
+        try {
+          final dynamic res = await SupabaseService.client.rpc(
+            'claim_unique_alias',
+            params: {'p_alias': normalized},
+          );
+          if (res is Map) {
+            if (res['ok'] == true) {
+              final claimed = res['alias']?.toString().trim();
+              if (claimed != null && claimed.isNotEmpty) {
+                finalAlias = claimed;
+              }
+            } else if (res['code'] == 'alias_taken') {
+              throw const AliasException(
+                'Ese alias ya está en uso por otra cuenta. Elige uno diferente.',
+                code: 'alias_taken',
+              );
+            } else {
+              throw AliasException(
+                res['message']?.toString() ?? 'No se pudo guardar el alias.',
+                code: res['code']?.toString() ?? 'error',
+              );
+            }
+          }
+        } on PostgrestException catch (e) {
+          if (e.code == '23505') {
+            throw const AliasException(
+              'Ese alias ya está en uso por otra cuenta. Elige uno diferente.',
+              code: 'alias_taken',
+            );
+          }
+          if (e.code == 'PGRST202' || e.code == '42883') {
+            try {
+              await SupabaseService.client
+                  .from('profiles')
+                  .update({'alias': normalized})
+                  .eq('id', uid);
+            } on PostgrestException catch (e2) {
+              if (e2.code == '23505') {
+                throw const AliasException(
+                  'Ese alias ya está en uso por otra cuenta. Elige uno diferente.',
+                  code: 'alias_taken',
+                );
+              }
+              if (e2.code != '42703') {
+                throw AliasException(e2.message, code: e2.code ?? 'error');
+              }
+            }
+          } else {
+            throw AliasException(e.message, code: e.code ?? 'error');
+          }
+        }
+      }
+    }
+
+    await LocalStorageService.saveAlias(finalAlias);
+    return finalAlias;
   }
 
   static Future<void> saveProfile(UserProfile profile) async {
-    await LocalStorageService.saveUserProfile(profile);
+    final savedAlias = await saveAccountAlias(profile.alias);
+    await LocalStorageService.saveUserProfile(
+      profile.copyWith(alias: savedAlias),
+    );
   }
 
   /// Verifica si el usuario actual ha aceptado la versión vigente de términos y condiciones.
@@ -138,7 +264,7 @@ class ProfileService {
       var query = SupabaseService.client
           .from('posts')
           .select(
-            'id, title, category, content, author_alias, author_hash, likes, carrera, image_url, gif_url, is_pinned, quoted_post_id, reposts_count, moderation_status, created_at, comments_count, hot_score, expires_at, deleted_at, is_legal_hold',
+            'id, title, category, content, author_alias, author_hash, likes, carrera, image_url, gif_url, video_url, is_pinned, quoted_post_id, reposts_count, moderation_status, created_at, comments_count, hot_score, expires_at, deleted_at, is_legal_hold',
           )
           .isFilter('deleted_at', null)
           .neq('moderation_status', 2);
@@ -173,7 +299,7 @@ class ProfileService {
           var fallbackQuery = SupabaseService.client
               .from('posts')
               .select(
-                'id, title, category, content, author_alias, author_hash, likes, carrera, image_url, gif_url, is_pinned, quoted_post_id, reposts_count, moderation_status, created_at, comments_count, hot_score, expires_at, deleted_at, is_legal_hold',
+                'id, title, category, content, author_alias, author_hash, likes, carrera, image_url, gif_url, video_url, is_pinned, quoted_post_id, reposts_count, moderation_status, created_at, comments_count, hot_score, expires_at, deleted_at, is_legal_hold',
               )
               .isFilter('deleted_at', null)
               .neq('moderation_status', 2);

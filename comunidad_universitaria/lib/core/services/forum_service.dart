@@ -5,8 +5,10 @@ import '../config/supabase_config.dart';
 import '../constants/anonymous_aliases.dart';
 import '../constants/categories.dart';
 import '../models/post.dart';
+import '../utils/input_sanitizer.dart';
 import 'cache_service.dart';
 import 'local_storage_service.dart';
+import 'publish_cooldown_service.dart';
 import 'supabase_service.dart';
 
 enum FeedMode { hot, recent }
@@ -26,7 +28,7 @@ class ForumService {
   static const String _cacheNamespace = 'forum_posts';
 
   static const String _postFallbackColumns =
-      'id, title, category, content, author_alias, author_hash, likes, carrera, image_url, gif_url, is_pinned, quoted_post_id, reposts_count, moderation_status, created_at, comments_count, hot_score, expires_at, deleted_at, is_legal_hold';
+      'id, title, category, content, author_alias, author_hash, likes, carrera, image_url, gif_url, video_url, is_pinned, quoted_post_id, reposts_count, moderation_status, created_at, comments_count, hot_score, expires_at, deleted_at, is_legal_hold';
 
   static const String _commentFallbackColumns =
       'id, post_id, parent_id, content, author_alias, author_hash, gif_url, created_at, moderation_status, is_op, likes_count, deleted_at';
@@ -131,10 +133,12 @@ class ForumService {
         }
 
         if (searchQuery.trim().isNotEmpty) {
-          final q = searchQuery.trim();
-          bookmarksQuery = bookmarksQuery.or(
-            'title.ilike.%$q%,content.ilike.%$q%',
-          );
+          final q = InputSanitizer.sanitizePostgrestSearch(searchQuery);
+          if (q.isNotEmpty) {
+            bookmarksQuery = bookmarksQuery.or(
+              'title.ilike.%$q%,content.ilike.%$q%',
+            );
+          }
         }
 
         final PostgrestTransformBuilder<List<Map<String, dynamic>>>
@@ -180,8 +184,10 @@ class ForumService {
       }
 
       if (searchQuery.trim().isNotEmpty) {
-        final q = searchQuery.trim();
-        query = query.or('title.ilike.%$q%,content.ilike.%$q%');
+        final q = InputSanitizer.sanitizePostgrestSearch(searchQuery);
+        if (q.isNotEmpty) {
+          query = query.or('title.ilike.%$q%,content.ilike.%$q%');
+        }
       }
 
       final PostgrestTransformBuilder<List<Map<String, dynamic>>> orderedQuery;
@@ -261,6 +267,7 @@ class ForumService {
       'carrera': post.carrera,
       'image_url': post.imageUrl,
       'gif_url': post.gifUrl,
+      'video_url': post.videoUrl,
       'quoted_post_id': post.quotedPostId,
       'reposts_count': post.repostsCount,
       'is_pinned': post.isPinned,
@@ -580,6 +587,7 @@ class ForumService {
     required String authorAlias,
     String? imageUrl,
     String? gifUrl,
+    String? videoUrl,
     String? quotedPostId,
     String? pollQuestion,
     List<String>? pollOptions,
@@ -594,6 +602,15 @@ class ForumService {
     if (userId == null) {
       throw Exception(
         'Debes iniciar sesión para publicar en el foro estudiantil.',
+      );
+    }
+
+    final cooldownRemaining = await PublishCooldownService.remainingCooldown(
+      'post',
+    );
+    if (cooldownRemaining != null) {
+      throw Exception(
+        PublishCooldownService.formatCooldownMessage(cooldownRemaining),
       );
     }
 
@@ -618,6 +635,8 @@ class ForumService {
         'user_id': userId,
         'image_url': imageUrl?.trim().isEmpty == true ? null : imageUrl?.trim(),
         'gif_url': gifUrl?.trim().isEmpty == true ? null : gifUrl?.trim(),
+        if (videoUrl != null && videoUrl.trim().isNotEmpty)
+          'video_url': videoUrl.trim(),
         'quoted_post_id': quotedPostId,
         'likes': 0,
         'reposts_count': 0,
@@ -628,12 +647,34 @@ class ForumService {
 
       const selectColumns =
           'id, title, category, content, author_alias, author_hash, likes, carrera, image_url, gif_url, is_pinned, quoted_post_id, reposts_count, moderation_status, created_at, comments_count, hot_score, expires_at, deleted_at, is_legal_hold';
+      final selectWithVideo = '$selectColumns, video_url';
 
-      final res = await SupabaseService.client
-          .from('posts')
-          .insert(postMap)
-          .select(selectColumns)
-          .single();
+      Map<String, dynamic> res;
+      if (videoUrl != null && videoUrl.trim().isNotEmpty) {
+        res = await SupabaseService.client
+            .from('posts')
+            .insert(postMap)
+            .select(selectWithVideo)
+            .single();
+      } else {
+        try {
+          res = await SupabaseService.client
+              .from('posts')
+              .insert(postMap)
+              .select(selectWithVideo)
+              .single();
+        } on PostgrestException catch (e) {
+          if (e.code == '42703' || e.message.contains('video_url')) {
+            res = await SupabaseService.client
+                .from('posts')
+                .insert(postMap)
+                .select(selectColumns)
+                .single();
+          } else {
+            rethrow;
+          }
+        }
+      }
 
       final profile = await LocalStorageService.getUserProfile();
       final createdPost = Post.fromMap(Map<String, dynamic>.from(res)).copyWith(
@@ -669,6 +710,7 @@ class ForumService {
         }
       }
 
+      await PublishCooldownService.recordPublish('post');
       await CacheService.invalidateAll(_cacheNamespace);
       return createdPost;
     } catch (e) {
