@@ -22,6 +22,7 @@ import '../../shared/widgets/gif_picker_modal.dart';
 import '../../shared/widgets/report_dialog.dart';
 import '../../shared/widgets/user_avatar_circle.dart';
 import '../widgets/discord/discord_media_attachment.dart';
+import '../widgets/discord/discord_video_attachment.dart';
 
 class PostDetailScreen extends StatefulWidget {
   final Post initialPost;
@@ -1067,6 +1068,17 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               title: _post.title,
                               isGif: false,
                               maxHeight: 420,
+                              maxWidth: 620,
+                            ),
+                          ],
+
+                          // Video if present
+                          if (_post.videoUrl != null &&
+                              _post.videoUrl!.isNotEmpty) ...[
+                            const SizedBox(height: 14),
+                            DiscordVideoAttachment(
+                              videoUrl: _post.videoUrl!,
+                              maxHeight: 360,
                               maxWidth: 620,
                             ),
                           ],

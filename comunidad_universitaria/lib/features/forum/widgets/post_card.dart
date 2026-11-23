@@ -8,6 +8,7 @@ import '../../../core/utils/time_utils.dart';
 import '../../shared/widgets/report_dialog.dart';
 import '../../shared/widgets/user_avatar_circle.dart';
 import 'discord/discord_media_attachment.dart';
+import 'discord/discord_video_attachment.dart';
 
 class PostCard extends StatelessWidget {
   final Post post;
@@ -590,6 +591,16 @@ class PostCard extends StatelessWidget {
                   imageUrl: post.imageUrl!,
                   title: post.title,
                   isGif: false,
+                  maxHeight: 280,
+                  maxWidth: 480,
+                ),
+              ],
+
+              // Video Preview if available
+              if (post.videoUrl != null && post.videoUrl!.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                DiscordVideoAttachment(
+                  videoUrl: post.videoUrl!,
                   maxHeight: 280,
                   maxWidth: 480,
                 ),
