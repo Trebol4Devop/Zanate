@@ -7,6 +7,7 @@ import '../../../core/utils/time_utils.dart';
 import '../../../core/utils/url_utils.dart';
 import '../../shared/widgets/image_viewer_dialog.dart';
 import '../../shared/widgets/report_dialog.dart';
+import '../../shared/widgets/user_avatar_circle.dart';
 
 class GroupCard extends StatelessWidget {
   final WhatsAppGroup group;
@@ -19,21 +20,6 @@ class GroupCard extends StatelessWidget {
     required this.onUpvote,
     this.onReport,
   });
-
-  String _getPlatformLabel(GroupPlatform platform) {
-    switch (platform) {
-      case GroupPlatform.whatsApp:
-        return 'WhatsApp';
-      case GroupPlatform.telegram:
-        return 'Telegram';
-      case GroupPlatform.discord:
-        return 'Discord';
-      case GroupPlatform.drive:
-        return 'Drive';
-      case GroupPlatform.other:
-        return 'Enlace Web';
-    }
-  }
 
   IconData _getPlatformIcon(GroupPlatform platform) {
     switch (platform) {
@@ -115,37 +101,44 @@ class GroupCard extends StatelessWidget {
           child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top row: Course badge, Section badge, Platform badge, More options
+            // Cabecera en una sola línea: avatar circular, nombre y fecha
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Platform and section details
-                Icon(
-                  _getPlatformIcon(platform),
-                  size: 14,
-                  color: isDark ? Colors.white70 : Colors.black54,
+                UserAvatarCircle(
+                  authorAlias: group.authorAlias,
+                  isMine: group.isMine,
+                  size: 34,
+                  iconSize: 16,
                 ),
-                const SizedBox(width: 5),
-                Text(
-                  _getPlatformLabel(platform),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          group.authorAlias,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                            color: isDark
+                                ? Colors.white
+                                : ZanateColors.zanateDark,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        ' · ${TimeUtils.timeAgo(group.createdAt)}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: ZanateColors.textMuted(isDark),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 8),
-
-                // Section tag
-                Flexible(
-                  child: Text(
-                    '· ${group.section}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontSize: 11,
-                      color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                    ),
-                  ),
-                ),
-
-                const Spacer(),
 
                 if (onReport != null)
                   PopupMenuButton<String>(
@@ -204,43 +197,36 @@ class GroupCard extends StatelessWidget {
               ],
             ),
 
+            // Sección debajo del nombre del autor
+            if (group.section.trim().isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 2.5,
+                ),
+                decoration: BoxDecoration(
+                  color: ZanateColors.surface(isDark),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: ZanateColors.border(isDark),
+                    width: 0.8,
+                  ),
+                ),
+                child: Text(
+                  group.section.trim(),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: ZanateColors.textMuted(isDark),
+                  ),
+                ),
+              ),
+            ],
+
             const SizedBox(height: 8),
 
-            // Creator and time
-            Row(
-              children: [
-                PhosphorIcon(
-                  PhosphorIconsRegular.user,
-                  size: 15,
-                  color: isDark
-                      ? const Color(0xFF94A3B8)
-                      : ZanateColors.mutedText,
-                ),
-                const SizedBox(width: 5),
-                Flexible(
-                  child: Text(
-                    group.authorAlias,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isDark
-                          ? const Color(0xFFCBD5E1)
-                          : ZanateColors.subtleText,
-                    ),
-                  ),
-                ),
-                Text(
-                  ' · ${TimeUtils.timeAgo(group.createdAt)}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    fontSize: 11,
-                    color: ZanateColors.mutedText,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-
-            // Course Name (Big)
+            // Nombre del curso debajo de la sección (sin duplicar curso - sección)
             Text(
               group.curso.isNotEmpty ? group.curso : group.title,
               style: GoogleFonts.outfit(
@@ -251,8 +237,11 @@ class GroupCard extends StatelessWidget {
               ),
             ),
 
-            // Group Subtitle / Description
-            if (group.title != group.curso && group.title.isNotEmpty) ...[
+            // Subtítulo solo cuando aporta nombre distinto a "curso - sección"
+            if (group.title.trim().isNotEmpty &&
+                group.title.trim() != group.curso.trim() &&
+                group.title.trim().toLowerCase() !=
+                    '${group.curso.trim().toLowerCase()} - ${group.section.trim().toLowerCase()}') ...[
               const SizedBox(height: 2),
               Text(
                 group.title,
@@ -272,45 +261,57 @@ class GroupCard extends StatelessWidget {
               ),
             ],
 
-            // Optional Image / Banner Preview
+            // Imagen de grupo en proporción cuadrada 1:1
             if (group.imageUrl != null && group.imageUrl!.isNotEmpty) ...[
               const SizedBox(height: 10),
-              InkWell(
-                onTap: () => ImageViewerDialog.show(
-                  context,
-                  imageUrl: group.imageUrl!,
-                  title: group.title,
+              ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: 260,
+                  maxHeight: 260,
                 ),
-                borderRadius: BorderRadius.circular(8),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Stack(
-                    children: [
-                      Image.network(
-                        group.imageUrl!,
-                        width: double.infinity,
-                        height: 140,
-                        fit: BoxFit.cover,
-                        errorBuilder: (ctx, err, stack) =>
-                            const SizedBox.shrink(),
-                      ),
-                      Positioned(
-                        bottom: 6,
-                        right: 6,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.6),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const PhosphorIcon(
-                            PhosphorIconsRegular.magnifyingGlassPlus,
-                            color: Colors.white,
-                            size: 16,
-                          ),
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: InkWell(
+                    onTap: () => ImageViewerDialog.show(
+                      context,
+                      imageUrl: group.imageUrl!,
+                      title: group.title,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        color: ZanateColors.surface(isDark),
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: Image.network(
+                                group.imageUrl!,
+                                fit: BoxFit.contain,
+                                errorBuilder: (ctx, err, stack) =>
+                                    const SizedBox.shrink(),
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 6,
+                              right: 6,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.6),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const PhosphorIcon(
+                                  PhosphorIconsRegular.magnifyingGlassPlus,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
