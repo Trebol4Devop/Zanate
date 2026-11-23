@@ -1117,49 +1117,53 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
                 ),
               ],
 
-              // Attached Local Image Preview (cualquier proporción sin recorte forzado)
+              // Attached Local Image Preview (ancho completo manteniendo proporción)
               if (_pendingImage != null) ...[
                 const SizedBox(height: 14),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    maxWidth: 480,
-                    maxHeight: 260,
-                  ),
-                  child: Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: Container(
+                SizedBox(
+                  width: double.infinity,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 480),
+                    child: Stack(
+                      children: [
+                        SizedBox(
                           width: double.infinity,
-                          color: ZanateColors.surface(isDark),
-                          child: Image.memory(
-                            _pendingImage!.bytes,
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: InkWell(
-                          onTap: _isSubmitting
-                              ? null
-                              : () => setState(() => _pendingImage = null),
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.65),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const PhosphorIcon(
-                              PhosphorIconsRegular.x,
-                              size: 16,
-                              color: Colors.white,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(14),
+                            child: Container(
+                              width: double.infinity,
+                              color: ZanateColors.surface(isDark),
+                              child: Image.memory(
+                                _pendingImage!.bytes,
+                                width: double.infinity,
+                                fit: BoxFit.fitWidth,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: InkWell(
+                            onTap: _isSubmitting
+                                ? null
+                                : () => setState(() => _pendingImage = null),
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.65),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const PhosphorIcon(
+                                PhosphorIconsRegular.x,
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],

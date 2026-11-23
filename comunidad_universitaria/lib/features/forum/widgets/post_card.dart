@@ -579,8 +579,7 @@ class PostCard extends StatelessWidget {
                   imageUrl: post.gifUrl!,
                   title: post.title,
                   isGif: true,
-                  maxHeight: 240,
-                  maxWidth: 460,
+                  maxHeight: 420,
                 ),
               ],
 
@@ -591,8 +590,7 @@ class PostCard extends StatelessWidget {
                   imageUrl: post.imageUrl!,
                   title: post.title,
                   isGif: false,
-                  maxHeight: 280,
-                  maxWidth: 480,
+                  maxHeight: 560,
                 ),
               ],
 
@@ -601,8 +599,7 @@ class PostCard extends StatelessWidget {
                 const SizedBox(height: 10),
                 DiscordVideoAttachment(
                   videoUrl: post.videoUrl!,
-                  maxHeight: 280,
-                  maxWidth: 480,
+                  maxHeight: 420,
                 ),
               ],
 

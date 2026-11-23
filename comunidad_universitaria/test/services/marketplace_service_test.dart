@@ -90,6 +90,8 @@ void main() {
         expect(created, isNotNull);
         expect(created!.price, 0.0);
         expect(created.isFree, isTrue);
+        expect(created.upvotes, 0);
+        expect(created.isUpvotedByMe, isFalse);
         expect(created.contactWhatsapp, isNull);
         expect(created.contactInstagram, isNull);
         expect(created.contactMessenger, isNull);

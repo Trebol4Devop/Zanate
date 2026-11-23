@@ -25,10 +25,10 @@ void main() {
 
   group('GroupsService.createGroup', () {
     test(
-      'crea grupo con sección default "Sección Única", plataforma por link, upvotes=1 y auto-upvote',
+      'crea grupo con sección default "Sección Única", plataforma por link, upvotes=0 y sin auto-upvote',
       () async {
         Map<String, dynamic>? insertedGroup;
-        Map<String, dynamic>? insertedUpvote;
+        bool autoUpvoteCalled = false;
 
         fakeServer.onPost('/rest/v1/student_groups', (req) {
           insertedGroup = jsonDecode(req.body) as Map<String, dynamic>;
@@ -40,7 +40,7 @@ void main() {
         });
 
         fakeServer.onPost('/rest/v1/student_group_upvotes', (req) {
-          insertedUpvote = jsonDecode(req.body) as Map<String, dynamic>;
+          autoUpvoteCalled = true;
           return [];
         });
 
@@ -58,17 +58,15 @@ void main() {
         expect(created!.id, 'new-group-10');
         expect(created.section, 'Sección Única');
         expect(created.platform, GroupPlatform.telegram);
-        expect(created.upvotes, 1);
-        expect(created.isUpvotedByMe, isTrue);
+        expect(created.upvotes, 0);
+        expect(created.isUpvotedByMe, isFalse);
+        expect(created.isMine, isTrue);
 
         expect(insertedGroup, isNotNull);
         expect(insertedGroup!['section'], 'Sección Única');
         expect(insertedGroup!['platform'], 'telegram');
-        expect(insertedGroup!['upvotes'], 1);
-
-        expect(insertedUpvote, isNotNull);
-        expect(insertedUpvote!['group_id'], 'new-group-10');
-        expect(insertedUpvote!['user_id'], 'group-creator-id');
+        expect(insertedGroup!['upvotes'], 0);
+        expect(autoUpvoteCalled, isFalse);
       },
     );
   });
@@ -169,6 +167,10 @@ void main() {
           ),
         ];
 
+        fakeServer.onGet(
+          '/rest/v1/safe_student_groups',
+          (req) => mockGroups.map((g) => {...g, 'is_mine': g['id'] == 'g-ing-1'}).toList(),
+        );
         fakeServer.onGet('/rest/v1/student_groups', (req) => mockGroups);
 
         // Consulta canal #todos-los-grupos de Ingeniería (08)
@@ -178,6 +180,7 @@ void main() {
         );
         final ingIds = ingGroups.map((g) => g.id).toList();
         expect(ingIds, contains('g-ing-1'));
+        expect(ingGroups.firstWhere((g) => g.id == 'g-ing-1').isMine, isTrue);
         expect(ingIds, contains('g-ing-2'));
         expect(ingIds, isNot(contains('g-med-1')));
         expect(ingIds, isNot(contains('g-der-1')));

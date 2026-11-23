@@ -10,6 +10,8 @@ class WhatsAppGroup {
   final String description;
   final String? userId;
   final String authorAlias;
+  final int? avatarColorIndex;
+  final int? avatarIconIndex;
   final int upvotes;
   final int reportedCount;
   final DateTime createdAt;
@@ -28,6 +30,8 @@ class WhatsAppGroup {
     required this.description,
     this.userId,
     required this.authorAlias,
+    this.avatarColorIndex,
+    this.avatarIconIndex,
     required this.upvotes,
     required this.reportedCount,
     required this.createdAt,
@@ -96,6 +100,8 @@ class WhatsAppGroup {
     String? description,
     String? userId,
     String? authorAlias,
+    int? avatarColorIndex,
+    int? avatarIconIndex,
     int? upvotes,
     int? reportedCount,
     DateTime? createdAt,
@@ -114,6 +120,8 @@ class WhatsAppGroup {
       description: description ?? this.description,
       userId: userId ?? this.userId,
       authorAlias: authorAlias ?? this.authorAlias,
+      avatarColorIndex: avatarColorIndex ?? this.avatarColorIndex,
+      avatarIconIndex: avatarIconIndex ?? this.avatarIconIndex,
       upvotes: upvotes ?? this.upvotes,
       reportedCount: reportedCount ?? this.reportedCount,
       createdAt: createdAt ?? this.createdAt,
@@ -138,6 +146,12 @@ class WhatsAppGroup {
       description: map['description'] ?? '',
       userId: null,
       authorAlias: map['author_alias'] ?? 'Estudiante USAC',
+      avatarColorIndex: map['avatar_color_index'] is int
+          ? map['avatar_color_index'] as int
+          : int.tryParse(map['avatar_color_index']?.toString() ?? ''),
+      avatarIconIndex: map['avatar_icon_index'] is int
+          ? map['avatar_icon_index'] as int
+          : int.tryParse(map['avatar_icon_index']?.toString() ?? ''),
       upvotes: (map['upvotes'] is int)
           ? map['upvotes']
           : int.tryParse(map['upvotes']?.toString() ?? '0') ?? 0,

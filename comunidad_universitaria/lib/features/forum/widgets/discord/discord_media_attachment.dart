@@ -4,8 +4,8 @@ import '../../../../core/constants/zanate_colors.dart';
 import '../../../shared/widgets/image_viewer_dialog.dart';
 
 /// Un componente de medios con estilo Discord para adjuntos de imagen y GIF.
-/// Controla estrictamente las dimensiones (ancho y alto máximos) para evitar
-/// que las imágenes se vean desproporcionadas, excesivamente anchas o recortadas.
+/// Ocupa el 100% del ancho disponible (salvo que se indique `maxWidth`),
+/// escalando la imagen para aprovechar todo el espacio horizontal sin recortar.
 class DiscordMediaAttachment extends StatelessWidget {
   final String imageUrl;
   final String? title;
@@ -21,8 +21,8 @@ class DiscordMediaAttachment extends StatelessWidget {
     required this.imageUrl,
     this.title,
     this.isGif = false,
-    this.maxWidth = 500,
-    this.maxHeight = 300,
+    this.maxWidth,
+    this.maxHeight = 560,
     this.minHeight = 120,
     this.borderRadius,
     this.onTap,
@@ -39,142 +39,152 @@ class DiscordMediaAttachment extends StatelessWidget {
     final containerBg = ZanateColors.surface(isDark);
     final borderColor = ZanateColors.border(isDark);
 
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: maxWidth ?? 500,
-          maxHeight: maxHeight,
-          minHeight: minHeight,
-        ),
-        child: ClipRRect(
-          borderRadius: radius,
-          child: Container(
-            decoration: BoxDecoration(
-              color: containerBg,
-              borderRadius: radius,
-              border: Border.all(color: borderColor, width: 1),
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap:
-                    onTap ??
-                    () => ImageViewerDialog.show(
-                      context,
-                      imageUrl: imageUrl,
-                      title: title,
-                    ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Image.network(
+    final mediaCard = ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: maxWidth ?? double.infinity,
+        maxHeight: maxHeight,
+      ),
+      child: ClipRRect(
+        borderRadius: radius,
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: containerBg,
+            borderRadius: radius,
+            border: Border.all(color: borderColor, width: 1),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap:
+                  onTap ??
+                  () => ImageViewerDialog.show(
+                    context,
+                    imageUrl: imageUrl,
+                    title: title,
+                  ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: Image.network(
                       imageUrl,
-                      fit: BoxFit.contain,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Container(
-                          height: minHeight,
-                          color: containerBg,
-                          alignment: Alignment.center,
-                          child: SizedBox(
-                            width: 28,
-                            height: 28,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded /
-                                        loadingProgress.expectedTotalBytes!
-                                  : null,
-                              color: theme.colorScheme.primary,
+                      width: double.infinity,
+                      fit: BoxFit.fitWidth,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(
+                        width: double.infinity,
+                        height: minHeight,
+                        color: containerBg,
+                        alignment: Alignment.center,
+                        child: SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                : null,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: double.infinity,
+                        height: minHeight,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        color: containerBg,
+                        alignment: Alignment.center,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              PhosphorIconsRegular.imageBroken,
+                              size: 20,
+                              color: Colors.blueGrey.shade400,
                             ),
-                          ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          height: minHeight,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          color: containerBg,
-                          alignment: Alignment.center,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                PhosphorIconsRegular.imageBroken,
-                                size: 20,
-                                color: Colors.blueGrey.shade400,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
                                 'No se pudo cargar la imagen',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: ZanateColors.textMuted(isDark),
                                 ),
                               ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-
-                    // Badge GIF or Zoom Pill
-                    Positioned(
-                      bottom: 8,
-                      right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.72),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (isGif) ...[
-                              const Text(
-                                'GIF',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ] else ...[
-                              const Icon(
-                                PhosphorIconsRegular.magnifyingGlassPlus,
-                                color: Colors.white,
-                                size: 13,
-                              ),
-                              const SizedBox(width: 4),
-                              const Text(
-                                'Ampliar',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
+                            ),
                           ],
                         ),
+                      );
+                    },
+                  ),
+                  ),
+
+                  // Badge GIF or Zoom Pill
+                  Positioned(
+                    bottom: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.72),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isGif) ...[
+                            const Text(
+                              'GIF',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ] else ...[
+                            const Icon(
+                              PhosphorIconsRegular.magnifyingGlassPlus,
+                              color: Colors.white,
+                              size: 13,
+                            ),
+                            const SizedBox(width: 4),
+                            const Text(
+                              'Ampliar',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
         ),
       ),
     );
+
+    if (maxWidth != null) {
+      return Align(alignment: Alignment.centerLeft, child: mediaCard);
+    }
+    return SizedBox(width: double.infinity, child: mediaCard);
   }
 }

@@ -1008,7 +1008,7 @@ class MarketplaceService {
 
       final created = MarketplaceItem.fromMap(
         Map<String, dynamic>.from(res),
-        isUpvotedByMe: true,
+        isUpvotedByMe: false,
       ).copyWith(isMine: true);
       await PublishCooldownService.recordPublish('listing');
       await CacheService.invalidateAll(_cacheNamespace);

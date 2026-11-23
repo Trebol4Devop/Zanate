@@ -14,8 +14,11 @@ import 'package:comunidad_universitaria/core/services/storage_service.dart';
 import 'package:comunidad_universitaria/core/services/supabase_service.dart';
 import 'package:comunidad_universitaria/core/utils/input_sanitizer.dart';
 import 'package:comunidad_universitaria/core/utils/square_image_crop.dart';
+import 'package:comunidad_universitaria/features/forum/widgets/discord/discord_media_attachment.dart';
+import 'package:comunidad_universitaria/features/groups/widgets/group_card.dart';
 import 'package:comunidad_universitaria/features/shared/widgets/square_image_crop_dialog.dart';
 import 'helpers/fake_postgrest.dart';
+import 'helpers/fixtures.dart';
 import 'helpers/test_setup.dart';
 
 void main() {
@@ -298,5 +301,96 @@ void main() {
       expect(decoded, isNotNull);
       expect(decoded!.width, decoded.height);
     });
+  });
+
+  group('Imágenes a ancho completo disponible en Foro y Grupos', () {
+    testWidgets(
+      'DiscordMediaAttachment sin maxWidth ocupa todo el ancho y usa fitWidth',
+      (tester) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+        GoogleFonts.config.allowRuntimeFetching = false;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: const Scaffold(
+              body: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    DiscordMediaAttachment(
+                      imageUrl: 'https://example.com/foto.jpg',
+                      title: 'Prueba foro',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final boxSize = tester.getSize(find.byType(DiscordMediaAttachment));
+        expect(boxSize.width, 368.0);
+
+        final imageSize = tester.getSize(find.byType(Image));
+        expect(imageSize.width, 366.0);
+
+        final imageWidget = tester.widget<Image>(find.byType(Image));
+        expect(imageWidget.width, double.infinity);
+        expect(imageWidget.fit, BoxFit.fitWidth);
+      },
+    );
+
+    testWidgets(
+      'GroupCard con imagen ocupa todo el ancho disponible en relación 1:1',
+      (tester) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+        GoogleFonts.config.allowRuntimeFetching = false;
+
+        final group = TestFixtures.whatsAppGroup(
+          id: 'grp-img-1',
+          title: 'Sistemas 1 - Sección A',
+          curso: 'Sistemas 1',
+          section: 'Sección A',
+          imageUrl: 'https://example.com/grupo.jpg',
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: GroupCard(group: group, onUpvote: () {}),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final imageClip = find.descendant(
+          of: find.byType(GroupCard),
+          matching: find.byType(ClipRRect),
+        );
+        expect(imageClip, findsOneWidget);
+        final renderedSize = tester.getSize(imageClip);
+        expect(renderedSize.width, 368.0);
+        expect(renderedSize.height, 368.0);
+
+        final imageWidget = tester.widget<Image>(
+          find.descendant(
+            of: find.byType(GroupCard),
+            matching: find.byType(Image),
+          ),
+        );
+        expect(imageWidget.width, double.infinity);
+        expect(imageWidget.fit, BoxFit.cover);
+      },
+    );
   });
 }
