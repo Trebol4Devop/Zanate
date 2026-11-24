@@ -17,8 +17,10 @@ void main() {
         WhatsAppGroup.stringToPlatform('discord', ''),
         GroupPlatform.discord,
       );
-      expect(WhatsAppGroup.stringToPlatform('drive', ''), GroupPlatform.drive);
-      expect(WhatsAppGroup.stringToPlatform('otro', ''), GroupPlatform.other);
+      expect(
+        WhatsAppGroup.stringToPlatform('otro', ''),
+        GroupPlatform.whatsApp,
+      );
     });
 
     test('stringToPlatform resuelve plataforma según la URL del enlace', () {
@@ -53,25 +55,10 @@ void main() {
         GroupPlatform.discord,
       );
       expect(
-        WhatsAppGroup.stringToPlatform(
-          null,
-          'https://drive.google.com/drive/folders/xyz',
-        ),
-        GroupPlatform.drive,
-      );
-      expect(
-        WhatsAppGroup.stringToPlatform(
-          null,
-          'https://docs.google.com/document/d/xyz',
-        ),
-        GroupPlatform.drive,
-      );
-      expect(
-        WhatsAppGroup.stringToPlatform(
-          null,
+        WhatsAppGroup.detectPlatformFromLink(
           'https://facebook.com/groups/usac',
         ),
-        GroupPlatform.other,
+        isNull,
       );
     });
 
@@ -90,8 +77,6 @@ void main() {
           WhatsAppGroup.platformToString(GroupPlatform.discord),
           'discord',
         );
-        expect(WhatsAppGroup.platformToString(GroupPlatform.drive), 'drive');
-        expect(WhatsAppGroup.platformToString(GroupPlatform.other), 'otro');
       },
     );
 

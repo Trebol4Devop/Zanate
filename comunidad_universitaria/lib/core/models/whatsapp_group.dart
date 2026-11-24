@@ -1,11 +1,7 @@
 enum GroupPlatform {
   whatsApp,
-  messenger,
   telegram,
   discord,
-  twitch,
-  drive,
-  other,
 }
 
 class WhatsAppGroup {
@@ -57,48 +53,17 @@ class WhatsAppGroup {
     switch (p) {
       case GroupPlatform.whatsApp:
         return 'whatsapp';
-      case GroupPlatform.messenger:
-        return 'messenger';
       case GroupPlatform.telegram:
         return 'telegram';
       case GroupPlatform.discord:
         return 'discord';
-      case GroupPlatform.twitch:
-        return 'twitch';
-      case GroupPlatform.drive:
-        return 'drive';
-      case GroupPlatform.other:
-        return 'otro';
     }
   }
 
-  static GroupPlatform stringToPlatform(String? p, String link) {
-    if (p != null && p.isNotEmpty) {
-      switch (p.toLowerCase()) {
-        case 'whatsapp':
-          return GroupPlatform.whatsApp;
-        case 'messenger':
-          return GroupPlatform.messenger;
-        case 'telegram':
-          return GroupPlatform.telegram;
-        case 'discord':
-          return GroupPlatform.discord;
-        case 'twitch':
-          return GroupPlatform.twitch;
-        case 'drive':
-          return GroupPlatform.drive;
-        case 'otro':
-          return GroupPlatform.other;
-      }
-    }
-    final lower = link.toLowerCase();
+  static GroupPlatform? detectPlatformFromLink(String link) {
+    final lower = link.trim().toLowerCase();
     if (lower.contains('chat.whatsapp.com') || lower.contains('wa.me')) {
       return GroupPlatform.whatsApp;
-    }
-    if (lower.contains('://m.me/') ||
-        lower.contains('://www.m.me/') ||
-        lower.contains('messenger.com')) {
-      return GroupPlatform.messenger;
     }
     if (lower.contains('t.me') || lower.contains('telegram.me')) {
       return GroupPlatform.telegram;
@@ -106,14 +71,21 @@ class WhatsAppGroup {
     if (lower.contains('discord.gg') || lower.contains('discord.com')) {
       return GroupPlatform.discord;
     }
-    if (lower.contains('twitch.tv')) {
-      return GroupPlatform.twitch;
+    return null;
+  }
+
+  static GroupPlatform stringToPlatform(String? p, String link) {
+    if (p != null && p.isNotEmpty) {
+      switch (p.toLowerCase()) {
+        case 'whatsapp':
+          return GroupPlatform.whatsApp;
+        case 'telegram':
+          return GroupPlatform.telegram;
+        case 'discord':
+          return GroupPlatform.discord;
+      }
     }
-    if (lower.contains('drive.google.com') ||
-        lower.contains('docs.google.com')) {
-      return GroupPlatform.drive;
-    }
-    return GroupPlatform.other;
+    return detectPlatformFromLink(link) ?? GroupPlatform.whatsApp;
   }
 
   GroupPlatform get platform => explicitPlatform ?? stringToPlatform(null, link);
@@ -138,6 +110,7 @@ class WhatsAppGroup {
     int? moderationStatus,
     bool? isUpvotedByMe,
     bool? isMine,
+    GroupPlatform? explicitPlatform,
   }) {
     return WhatsAppGroup(
       id: id ?? this.id,
@@ -159,6 +132,7 @@ class WhatsAppGroup {
       moderationStatus: moderationStatus ?? this.moderationStatus,
       isUpvotedByMe: isUpvotedByMe ?? this.isUpvotedByMe,
       isMine: isMine ?? this.isMine,
+      explicitPlatform: explicitPlatform ?? this.explicitPlatform,
     );
   }
 

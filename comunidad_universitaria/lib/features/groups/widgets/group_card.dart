@@ -31,18 +31,10 @@ class GroupCard extends StatelessWidget {
     switch (platform) {
       case GroupPlatform.whatsApp:
         return 'WhatsApp';
-      case GroupPlatform.messenger:
-        return 'Messenger';
       case GroupPlatform.telegram:
         return 'Telegram';
       case GroupPlatform.discord:
         return 'Discord';
-      case GroupPlatform.twitch:
-        return 'Twitch';
-      case GroupPlatform.drive:
-        return 'Drive';
-      case GroupPlatform.other:
-        return 'Enlace';
     }
   }
 
@@ -230,7 +222,15 @@ class GroupCard extends StatelessWidget {
                       final availableW = constraints.maxWidth.isFinite
                           ? constraints.maxWidth
                           : 360.0;
-                      final displayHeight = availableW.clamp(180.0, 560.0);
+                      final viewportCap =
+                          (MediaQuery.sizeOf(context).height * 0.52).clamp(
+                            180.0,
+                            440.0,
+                          );
+                      final displayHeight = availableW.clamp(
+                        180.0,
+                        viewportCap,
+                      );
                       return SizedBox(
                         width: double.infinity,
                         height: displayHeight,

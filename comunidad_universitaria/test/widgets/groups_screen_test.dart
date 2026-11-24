@@ -136,7 +136,46 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Filtrar por Facultad'), findsOneWidget);
+      // En modo PC el menú de filtro es lateral (no abre ModalBottomSheet)
+      expect(find.byType(BottomSheet), findsNothing);
     });
+
+    testWidgets(
+      'En modo PC muestra barra lateral con buscador, filtro lateral desplegable y configuración',
+      (tester) async {
+        tester.view.physicalSize = const Size(1200, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+
+        await tester.pumpWidget(buildTestScreen());
+        await tester.pumpAndSettle();
+
+        expect(find.byType(TextField), findsOneWidget);
+        expect(find.text('Configuración'), findsOneWidget);
+        expect(find.byTooltip('Configuración y Perfil'), findsOneWidget);
+        expect(find.text('Filtrar por Facultad'), findsNothing);
+
+        await tester.tap(find.text('Facultad'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Filtrar por Facultad'), findsOneWidget);
+        expect(find.text('Facultad de Agronomía'), findsOneWidget);
+
+        await tester.tap(find.text('Facultad de Agronomía'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Restablecer'), findsOneWidget);
+        expect(find.byType(BottomSheet), findsNothing);
+
+        // Se puede contraer y expandir la barra lateral en PC
+        await tester.tap(find.byTooltip('Contraer barra lateral'));
+        await tester.pumpAndSettle();
+        expect(find.text('Configuración'), findsNothing);
+        await tester.tap(find.byTooltip('Expandir barra lateral'));
+        await tester.pumpAndSettle();
+        expect(find.text('Configuración'), findsOneWidget);
+      },
+    );
 
     testWidgets(
       'Renderiza la lista de Grupos en tableta con datos en caché',
