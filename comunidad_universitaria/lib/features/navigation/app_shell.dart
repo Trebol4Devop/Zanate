@@ -38,8 +38,9 @@ class _AppShellState extends State<AppShell> {
   final Set<int> _visitedTabs = {0};
   final GlobalKey<GroupsScreenState> _groupsScreenKey =
       GlobalKey<GroupsScreenState>();
+  static const List<int> _desktopScreenIndices = [0, 2];
   final List<FocusNode> _desktopTabFocusNodes = List.generate(
-    4,
+    2,
     (index) => FocusNode(debugLabel: 'Desktop tab $index'),
   );
 
@@ -51,14 +52,15 @@ class _AppShellState extends State<AppShell> {
     super.dispose();
   }
 
-  void _selectDesktopTab(int index) {
-    if (_currentIndex != index || !_visitedTabs.contains(index)) {
+  void _selectDesktopTab(int navigationIndex) {
+    final screenIndex = _desktopScreenIndices[navigationIndex];
+    if (_currentIndex != screenIndex || !_visitedTabs.contains(screenIndex)) {
       setState(() {
-        _currentIndex = index;
-        _visitedTabs.add(index);
+        _currentIndex = screenIndex;
+        _visitedTabs.add(screenIndex);
       });
     }
-    _desktopTabFocusNodes[index].requestFocus();
+    _desktopTabFocusNodes[navigationIndex].requestFocus();
   }
 
   KeyEventResult _handleDesktopTabKey(int index, KeyEvent event) {
@@ -251,6 +253,8 @@ class _AppShellState extends State<AppShell> {
                                   ),
                                 ),
                               ),
+                              const SizedBox(width: 8),
+                              _buildBetaBadge(),
                             ],
                           ),
                           Text(
@@ -314,21 +318,9 @@ class _AppShellState extends State<AppShell> {
                               ),
                               _buildNavTab(
                                 index: 1,
-                                label: 'Marketplace & Tutorías',
-                                activeIcon: PhosphorIconsFill.shoppingBag,
-                                inactiveIcon: PhosphorIconsRegular.shoppingBag,
-                              ),
-                              _buildNavTab(
-                                index: 2,
                                 label: 'Grupos de Estudio',
                                 activeIcon: PhosphorIconsFill.usersThree,
                                 inactiveIcon: PhosphorIconsRegular.usersThree,
-                              ),
-                              _buildNavTab(
-                                index: 3,
-                                label: 'Mapa',
-                                activeIcon: PhosphorIconsFill.mapTrifold,
-                                inactiveIcon: PhosphorIconsRegular.mapTrifold,
                               ),
                             ],
                           ),
@@ -440,18 +432,6 @@ class _AppShellState extends State<AppShell> {
                               activeIcon: PhosphorIconsFill.usersThree,
                               inactiveIcon: PhosphorIconsRegular.usersThree,
                             ),
-                            _buildBottomNavItem(
-                              navIndex: 2,
-                              label: 'Mapa',
-                              activeIcon: PhosphorIconsFill.mapTrifold,
-                              inactiveIcon: PhosphorIconsRegular.mapTrifold,
-                            ),
-                            _buildBottomNavItem(
-                              navIndex: 3,
-                              label: 'Marketplace',
-                              activeIcon: PhosphorIconsFill.shoppingBag,
-                              inactiveIcon: PhosphorIconsRegular.shoppingBag,
-                            ),
                           ],
                         ),
                       )
@@ -559,6 +539,8 @@ class _AppShellState extends State<AppShell> {
                 color: ZanateColors.textPrimary(isDark),
               ),
             ),
+            const SizedBox(width: 8),
+            _buildBetaBadge(),
           ],
         ),
       ),
@@ -621,6 +603,24 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
+  Widget _buildBetaBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: ZanateColors.zanateEyeYellow,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        'Beta',
+        style: GoogleFonts.outfit(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: ZanateColors.zanateBlack,
+        ),
+      ),
+    );
+  }
+
   Widget _buildBrandMark() {
     return SizedBox(
       width: 48,
@@ -639,7 +639,7 @@ class _AppShellState extends State<AppShell> {
     required IconData activeIcon,
     required IconData inactiveIcon,
   }) {
-    final isSelected = _currentIndex == index;
+    final isSelected = _currentIndex == _desktopScreenIndices[index];
     final activeColor = ZanateColors.textPrimary(widget.isDarkMode);
     final inactiveColor = ZanateColors.textMuted(widget.isDarkMode);
 

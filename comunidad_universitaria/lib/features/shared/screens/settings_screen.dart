@@ -4,7 +4,7 @@ import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import '../../../core/constants/zanate_colors.dart';
 import '../../../core/services/local_storage_service.dart';
 import '../../../core/services/supabase_service.dart';
-import '../../onboarding/screens/merchant_support_screen.dart';
+
 import '../../onboarding/state/session_controller.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../rules/screens/rules_screen.dart';
@@ -63,12 +63,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required IconData icon,
     required String title,
     String? subtitle,
-    required VoidCallback onTap,
+    VoidCallback? onTap,
     Color? iconColor,
     Color? titleColor,
     Widget? trailing,
   }) {
-    final defaultFg = ZanateColors.textPrimary(isDark);
+    final defaultFg = onTap == null
+        ? ZanateColors.textMuted(isDark)
+        : ZanateColors.textPrimary(isDark);
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: onTap,
@@ -243,16 +245,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             isDark: isDark,
                             icon: PhosphorIconsRegular.storefront,
                             title: 'Quiero vender',
-                            subtitle:
-                                'Contacta con soporte para registrar tu negocio.',
-                            trailing: trailingCaret,
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const MerchantSupportScreen(),
-                                ),
-                              );
-                            },
+                            subtitle: 'Disponible próximamente.',
+                            onTap: null,
                           ),
                         ],
 
