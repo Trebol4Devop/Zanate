@@ -15,6 +15,7 @@ import '../../../core/utils/responsive.dart';
 import '../marketplace_theme.dart';
 import '../widgets/create_listing_dialog.dart';
 import '../widgets/marketplace_card.dart';
+import '../widgets/marketplace_location_picker_dialog.dart';
 import '../widgets/marketplace_plans_sheet.dart';
 import '../widgets/sponsor_carousel.dart';
 import '../widgets/sponsor_request_dialog.dart';
@@ -58,10 +59,40 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   String _selectedSede = 'todas';
   String _selectedFacultad = 'todas';
   String _selectedBuilding = 'todos';
+  String? _selectedLocationLabel;
   bool _onlyFree = false;
   String _searchQuery = '';
+  String _sortBy = 'recent';
+  bool _isDesktopSidebarCollapsed = false;
 
   final TextEditingController _searchController = TextEditingController();
+
+  List<MarketplaceItem> get _sortedListings {
+    final items = List<MarketplaceItem>.from(_listings);
+    switch (_sortBy) {
+      case 'price_asc':
+        items.sort((a, b) {
+          final pa = a.isFree ? 0.0 : a.price;
+          final pb = b.isFree ? 0.0 : b.price;
+          return pa.compareTo(pb);
+        });
+        break;
+      case 'price_desc':
+        items.sort((a, b) {
+          final pa = a.isFree ? 0.0 : a.price;
+          final pb = b.isFree ? 0.0 : b.price;
+          return pb.compareTo(pa);
+        });
+        break;
+      case 'popular':
+        items.sort((a, b) => b.upvotes.compareTo(a.upvotes));
+        break;
+      case 'recent':
+      default:
+        break;
+    }
+    return items;
+  }
 
   @override
   void initState() {
@@ -137,6 +168,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     });
 
     await ShareCountService.incrementShare(item.id);
+    MarketplaceService.trackEvent(item.id, 'share');
 
     final shareText =
         '${item.title} - ${item.formattedPrice}\n\n${item.description}\n\nUbicación: ${item.locationDetail.isNotEmpty ? item.locationDetail : item.sede}\n— Publicado por ${item.authorAlias} en Zanate';
@@ -679,31 +711,6 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   }
 
   // Top Squared Header with Settings, Navigation Actions & Publish
-  InputDecoration _zanateFilterDecoration(String hintText, bool isDark) {
-    final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(color: ZanateColors.border(isDark), width: 1.2),
-    );
-    final focusedBorder = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(
-        color: ZanateColors.focusBorder(isDark),
-        width: 1.6,
-      ),
-    );
-    return InputDecoration(
-      hintText: hintText,
-      hintStyle: TextStyle(fontSize: 12, color: ZanateColors.textMuted(isDark)),
-      filled: true,
-      fillColor: ZanateColors.surface(isDark),
-      isDense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-      border: border,
-      enabledBorder: border,
-      focusedBorder: focusedBorder,
-    );
-  }
-
   Widget _buildSquaredHeader(bool isDark) {
     final textPrimary = ZanateColors.textPrimary(isDark);
     return Container(
@@ -799,18 +806,26 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     final textPrimary = ZanateColors.textPrimary(isDark);
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: isDesktop
+          ? const EdgeInsets.fromLTRB(16, 14, 16, 4)
+          : EdgeInsets.zero,
+      padding: EdgeInsets.symmetric(
+        horizontal: isDesktop ? 20 : 16,
+        vertical: isDesktop ? 16 : 12,
+      ),
       decoration: BoxDecoration(
         color: ZanateColors.card(isDark),
-        border: Border(bottom: BorderSide(color: ZanateColors.border(isDark))),
+        borderRadius: isDesktop ? BorderRadius.circular(16) : null,
+        border: isDesktop
+            ? Border.all(color: ZanateColors.border(isDark))
+            : Border(bottom: BorderSide(color: ZanateColors.border(isDark))),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
             width: 4,
             height: 44,
-            margin: const EdgeInsets.only(top: 2),
             decoration: BoxDecoration(
               color: ZanateColors.zanateEyeYellow,
               borderRadius: BorderRadius.circular(999),
@@ -827,33 +842,36 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                   child: Text(
                     'Marketplace Estudiantil',
                     style: GoogleFonts.outfit(
-                      fontSize: 14.5,
+                      fontSize: isDesktop ? 16 : 14.5,
                       fontWeight: FontWeight.w700,
                       color: textPrimary,
                     ),
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'Espacio libre para emprendimientos sancarlistas: comidas, postres, tutorías de cursos y materiales universitarios. Trato directo, sin comisiones.',
-                  style: TextStyle(
-                    color: ZanateColors.textSecondary(isDark),
-                    fontSize: 12,
-                    height: 1.35,
+                if (!isDesktop) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    'Espacio libre para emprendimientos sancarlistas: comidas, postres, tutorías de cursos y materiales universitarios. Trato directo, sin comisiones.',
+                    style: TextStyle(
+                      color: ZanateColors.textSecondary(isDark),
+                      fontSize: 12,
+                      height: 1.35,
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
           if (isDesktop) ...[
+            const SizedBox(width: 12),
             TextButton(
               style: TextButton.styleFrom(
                 foregroundColor: textPrimary,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(999),
                 ),
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
+                  horizontal: 14,
                   vertical: 10,
                 ),
               ),
@@ -870,10 +888,10 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                 foregroundColor: ZanateColors.ctaFg(isDark),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(999),
                 ),
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
+                  horizontal: 16,
                   vertical: 11,
                 ),
               ),
@@ -910,207 +928,234 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     final textPrimary = ZanateColors.textPrimary(isDark);
     final textSecondary = ZanateColors.textSecondary(isDark);
     final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(color: borderColor, width: 1.2),
+      borderRadius: BorderRadius.circular(999),
+      borderSide: BorderSide(color: borderColor, width: 1.4),
     );
     final focusedBorder = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(999),
       borderSide: BorderSide(
         color: ZanateColors.focusBorder(isDark),
-        width: 1.6,
+        width: 1.8,
       ),
+    );
+
+    final searchField = TextField(
+      controller: _searchController,
+      style: TextStyle(fontSize: 13.5, color: textPrimary),
+      decoration: InputDecoration(
+        hintText: 'Buscar postres, almuerzos, tutorías o libros...',
+        hintStyle: TextStyle(
+          fontSize: 13,
+          color: ZanateColors.textMuted(isDark),
+        ),
+        prefixIcon: Icon(
+          PhosphorIconsRegular.magnifyingGlass,
+          size: 18,
+          color: textSecondary,
+        ),
+        suffixIcon: _searchQuery.isNotEmpty
+            ? IconButton(
+                icon: Icon(
+                  PhosphorIconsRegular.x,
+                  size: 16,
+                  color: textSecondary,
+                ),
+                splashRadius: 16,
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() => _searchQuery = '');
+                  _loadData();
+                },
+              )
+            : null,
+        filled: true,
+        fillColor: ZanateColors.surface(isDark),
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+        border: border,
+        enabledBorder: border,
+        focusedBorder: focusedBorder,
+      ),
+      onSubmitted: (val) {
+        setState(() => _searchQuery = val.trim());
+        _loadData();
+      },
     );
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: ZanateColors.card(isDark),
         border: Border(bottom: BorderSide(color: borderColor)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Campo de búsqueda
-          TextField(
-            controller: _searchController,
-            style: TextStyle(fontSize: 13.5, color: textPrimary),
-            decoration: InputDecoration(
-              hintText: 'Buscar postres, almuerzos, tutorías o libros...',
-              hintStyle: TextStyle(
-                fontSize: 13,
-                color: ZanateColors.textMuted(isDark),
-              ),
-              prefixIcon: Icon(
-                PhosphorIconsRegular.magnifyingGlass,
-                size: 18,
-                color: textSecondary,
-              ),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: Icon(
-                        PhosphorIconsRegular.x,
-                        size: 16,
-                        color: textSecondary,
-                      ),
-                      splashRadius: 16,
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() => _searchQuery = '');
-                        _loadData();
-                      },
-                    )
-                  : null,
-              filled: true,
-              fillColor: ZanateColors.surface(isDark),
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 12,
-              ),
-              border: border,
-              enabledBorder: border,
-              focusedBorder: focusedBorder,
-            ),
-            onSubmitted: (val) {
-              setState(() => _searchQuery = val.trim());
-              _loadData();
-            },
+      child: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: isDesktop ? 1280 : double.infinity,
           ),
-          const SizedBox(height: 8),
-
-          // Filtros: Sede, Facultad y Edificio
-          if (isDesktop)
-            Row(
-              children: [
-                Expanded(child: _buildSedeDropdown(isDark)),
-                const SizedBox(width: 8),
-                Expanded(child: _buildFacultadDropdown(isDark)),
-                const SizedBox(width: 8),
-                Expanded(child: _buildBuildingDropdown(isDark)),
-              ],
-            )
-          else
-            Column(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildSedeDropdown(isDark),
-                const SizedBox(height: 8),
-                _buildFacultadDropdown(isDark),
-                const SizedBox(height: 8),
-                _buildBuildingDropdown(isDark),
+                if (isDesktop)
+                  Row(
+                    children: [
+                      Expanded(child: searchField),
+                      const SizedBox(width: 10),
+                      SizedBox(
+                        height: 44,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: ZanateColors.ctaBg(isDark),
+                            foregroundColor: ZanateColors.ctaFg(isDark),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                          ),
+                          onPressed: () {
+                            setState(
+                              () => _searchQuery = _searchController.text.trim(),
+                            );
+                            _loadData();
+                          },
+                          child: const Text(
+                            'Buscar',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  searchField,
+                const SizedBox(height: 10),
+
+                // Ubicación en el mapa (reemplaza selectores de Sede, Facultad y Edificio)
+                _buildLocationMapPickerButton(isDark),
               ],
             ),
-        ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildSedeDropdown(bool isDark) {
-    final textPrimary = ZanateColors.textPrimary(isDark);
-    return DropdownButtonFormField<String>(
-      key: ValueKey('sede_$_selectedSede'),
-      initialValue: _selectedSede,
-      isExpanded: true,
-      itemHeight: null,
-      dropdownColor: ZanateColors.card(isDark),
-      borderRadius: BorderRadius.circular(14),
-      decoration: _zanateFilterDecoration('Sede / Campus', isDark),
-      style: TextStyle(fontSize: 12, color: textPrimary),
-      items: USACConstants.sedes
-          .map(
-            (s) => DropdownMenuItem<String>(
-              value: s['id']!,
-              child: Text(
-                s['nombre']!,
-                style: TextStyle(fontSize: 12, color: textPrimary),
-              ),
-            ),
-          )
-          .toList(),
-      onChanged: (val) {
-        setState(() {
-          _selectedSede = val ?? 'todas';
-          if (_selectedBuilding != 'todos' && _selectedSede != 'todas') {
-            final validBuildings = USACConstants.campusBuildings
-                .where((b) => b['sede_id'] == _selectedSede)
-                .map((b) => b['building_code']?.toString());
-            if (!validBuildings.contains(_selectedBuilding)) {
-              _selectedBuilding = 'todos';
-            }
-          }
-        });
-        _loadData();
-      },
-    );
+  bool get _hasActiveLocationFilter =>
+      _selectedSede != 'todas' ||
+      _selectedFacultad != 'todas' ||
+      _selectedBuilding != 'todos';
+
+  String get _resolvedLocationLabel {
+    if (_selectedLocationLabel != null && _selectedLocationLabel!.isNotEmpty) {
+      return _selectedLocationLabel!;
+    }
+    if (!_hasActiveLocationFilter) return 'Todas las ubicaciones';
+    if (_selectedBuilding != 'todos') return _selectedBuilding;
+    final sedeMatch = USACConstants.sedes.where((s) => s['id'] == _selectedSede);
+    if (sedeMatch.isNotEmpty) return sedeMatch.first['nombre']!;
+    return 'Ubicación en mapa';
   }
 
-  Widget _buildFacultadDropdown(bool isDark) {
-    final textPrimary = ZanateColors.textPrimary(isDark);
-    return DropdownButtonFormField<String>(
-      key: ValueKey('facultad_$_selectedFacultad'),
-      initialValue: _selectedFacultad,
-      isExpanded: true,
-      itemHeight: null,
-      dropdownColor: ZanateColors.card(isDark),
-      borderRadius: BorderRadius.circular(14),
-      decoration: _zanateFilterDecoration('Facultad / Unidad', isDark),
-      style: TextStyle(fontSize: 12, color: textPrimary),
-      items: USACConstants.facultades
-          .map(
-            (f) => DropdownMenuItem<String>(
-              value: f['id'].toString(),
-              child: Text(
-                f['nombre'].toString(),
-                style: TextStyle(fontSize: 12, color: textPrimary),
-              ),
-            ),
-          )
-          .toList(),
-      onChanged: (val) {
-        setState(() => _selectedFacultad = val ?? 'todas');
-        _loadData();
-      },
+  Future<void> _openLocationMapPicker() async {
+    final selection = await MarketplaceLocationPickerDialog.show(
+      context,
+      initialSedeId: _selectedSede,
+      initialFacultadId: _selectedFacultad,
+      initialBuildingCode: _selectedBuilding,
+      allowClearAll: true,
     );
+    if (selection != null && mounted) {
+      setState(() {
+        _selectedSede = selection.sedeId;
+        _selectedFacultad = selection.facultadId;
+        _selectedBuilding = selection.buildingCode;
+        _selectedLocationLabel = selection.label;
+      });
+      _loadData();
+    }
   }
 
-  Widget _buildBuildingDropdown(bool isDark) {
-    final textPrimary = ZanateColors.textPrimary(isDark);
-    final buildings = USACConstants.campusBuildings
-        .where((b) => _selectedSede == 'todas' || b['sede_id'] == _selectedSede)
-        .toList();
+  void _clearLocationFilter() {
+    setState(() {
+      _selectedSede = 'todas';
+      _selectedFacultad = 'todas';
+      _selectedBuilding = 'todos';
+      _selectedLocationLabel = null;
+    });
+    _loadData();
+  }
 
-    return DropdownButtonFormField<String>(
-      key: ValueKey('building_${_selectedSede}_$_selectedBuilding'),
-      initialValue: _selectedBuilding,
-      isExpanded: true,
-      itemHeight: null,
-      dropdownColor: ZanateColors.card(isDark),
-      borderRadius: BorderRadius.circular(14),
-      decoration: _zanateFilterDecoration('Edificio / Inmueble', isDark),
-      style: TextStyle(fontSize: 12, color: textPrimary),
-      items: [
-        DropdownMenuItem<String>(
-          value: 'todos',
-          child: Text(
-            'Todos los edificios',
-            style: TextStyle(fontSize: 12, color: textPrimary),
-          ),
+  Widget _buildLocationMapPickerButton(bool isDark) {
+    final textPrimary = ZanateColors.textPrimary(isDark);
+    final borderColor = ZanateColors.border(isDark);
+    final active = _hasActiveLocationFilter;
+
+    return InkWell(
+      onTap: _openLocationMapPicker,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        height: 42,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: active
+              ? ZanateColors.zanateEyeYellow
+              : ZanateColors.surface(isDark),
+          borderRadius: BorderRadius.circular(12),
+          border: active ? null : Border.all(color: borderColor, width: 1.2),
         ),
-        ...buildings.map(
-          (b) => DropdownMenuItem<String>(
-            value: b['building_code']?.toString() ?? '',
-            child: Text(
-              '${b['building_code']} · ${b['nombre']}',
-              style: TextStyle(fontSize: 12, color: textPrimary),
+        child: Row(
+          children: [
+            Icon(
+              active
+                  ? PhosphorIconsFill.mapPin
+                  : PhosphorIconsRegular.mapTrifold,
+              size: 16,
+              color: active ? ZanateColors.zanateBlack : textPrimary,
             ),
-          ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                active ? _resolvedLocationLabel : 'Elegir ubicación en el mapa',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                  color: active ? ZanateColors.zanateBlack : textPrimary,
+                ),
+              ),
+            ),
+            if (active)
+              InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: _clearLocationFilter,
+                child: const Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Icon(
+                    PhosphorIconsBold.x,
+                    size: 13,
+                    color: ZanateColors.zanateBlack,
+                  ),
+                ),
+              )
+            else
+              Icon(
+                PhosphorIconsRegular.caretRight,
+                size: 14,
+                color: ZanateColors.textMuted(isDark),
+              ),
+          ],
         ),
-      ],
-      onChanged: (val) {
-        setState(() => _selectedBuilding = val ?? 'todos');
-        _loadData();
-      },
+      ),
     );
   }
 
@@ -1148,19 +1193,18 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     }
   }
 
-  // Sección "Compra por Categorías".
+  // Sección "Compra por Categorías" estilo eBay (íconos circulares).
   Widget _buildEbayCategoriesSection(bool isDark) {
     final categories = USACConstants.marketplaceCategories
         .map((c) => (id: c.id, label: c.label))
         .toList();
     final textPrimary = ZanateColors.textPrimary(isDark);
-    final textSecondary = ZanateColors.textSecondary(isDark);
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
-        color: ZanateColors.card(isDark),
+        color: ZanateColors.bg(isDark),
         border: Border(bottom: BorderSide(color: ZanateColors.border(isDark))),
       ),
       child: Column(
@@ -1169,79 +1213,73 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
           Text(
             'Compra por Categorías',
             style: GoogleFonts.outfit(
-              fontSize: 15,
+              fontSize: 16,
               fontWeight: FontWeight.w700,
               color: textPrimary,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: categories.map((cat) {
                 final isSelected = _selectedCategory == cat.id;
                 final visuals = _getCategoryVisuals(cat.id);
 
                 return Padding(
-                  padding: const EdgeInsets.only(right: 10),
+                  padding: const EdgeInsets.only(right: 16),
                   child: InkWell(
                     onTap: () {
                       setState(() => _selectedCategory = cat.id);
                       _loadData();
                     },
-                    borderRadius: BorderRadius.circular(12),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      constraints: const BoxConstraints(
-                        minWidth: 140,
-                        maxWidth: 185,
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 11,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? ZanateColors.zanateEyeYellow
-                            : ZanateColors.pill(isDark),
-                        borderRadius: BorderRadius.circular(12),
-                        border: isSelected
-                            ? null
-                            : Border.all(color: ZanateColors.border(isDark)),
-                      ),
+                    borderRadius: BorderRadius.circular(14),
+                    child: SizedBox(
+                      width: 92,
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            visuals.icon,
-                            size: 20,
-                            color: isSelected
-                                ? ZanateColors.zanateBlack
-                                : textPrimary,
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            width: 72,
+                            height: 72,
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? ZanateColors.zanateEyeYellow
+                                  : ZanateColors.card(isDark),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isSelected
+                                    ? ZanateColors.zanateBlack
+                                    : ZanateColors.border(isDark),
+                                width: isSelected ? 2.0 : 1.2,
+                              ),
+                            ),
+                            child: Center(
+                              child: Icon(
+                                visuals.icon,
+                                size: 28,
+                                color: isSelected
+                                    ? ZanateColors.zanateBlack
+                                    : textPrimary,
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             cat.label,
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w700,
-                              color: isSelected
-                                  ? ZanateColors.zanateBlack
-                                  : textPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            visuals.subtitle,
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              color: isSelected
-                                  ? ZanateColors.zanateBlack.withValues(
-                                      alpha: 0.78,
-                                    )
-                                  : textSecondary,
+                              fontSize: 12,
+                              fontWeight: isSelected
+                                  ? FontWeight.w700
+                                  : FontWeight.w600,
+                              color: textPrimary,
+                              height: 1.2,
                             ),
                           ),
                         ],
@@ -1257,7 +1295,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     );
   }
 
-  // Sección "Ofertas y Aportes del Día" con carrusel horizontal.
+  // Sección "Ofertas y Aportes del Día" estilo eBay (tarjetas verticales clicables).
   Widget _buildEbayDealsSection(bool isDark) {
     final deals = _listings
         .where((item) => item.isFree || item.upvotes > 0)
@@ -1269,9 +1307,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: ZanateColors.card(isDark),
+        color: ZanateColors.bg(isDark),
         border: Border(
           bottom: BorderSide(color: ZanateColors.border(isDark), width: 0.8),
         ),
@@ -1290,7 +1328,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
               Text(
                 'Ofertas y Aportes del Día',
                 style: GoogleFonts.outfit(
-                  fontSize: 15,
+                  fontSize: 16,
                   fontWeight: FontWeight.w700,
                   letterSpacing: -0.2,
                   color: textPrimary,
@@ -1315,7 +1353,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
@@ -1327,120 +1365,126 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
 
                 return Padding(
                   padding: EdgeInsets.only(
-                    right: idx < deals.length - 1 ? 10 : 0,
+                    right: idx < deals.length - 1 ? 12 : 0,
                   ),
-                  child: Container(
-                    width: 245,
-                    constraints: const BoxConstraints(minHeight: 132),
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: ZanateColors.surface(isDark),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: ZanateColors.border(isDark),
-                        width: 1.0,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ProductDetailScreen(
+                            itemId: item.id,
+                            initialItem: item,
+                          ),
+                        ),
+                      );
+                      _loadData();
+                    },
+                    child: Container(
+                      width: 196,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: ZanateColors.card(isDark),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: ZanateColors.border(isDark),
+                          width: 1.0,
+                        ),
                       ),
-                    ),
-                    child: Row(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            width: 76,
-                            height: 108,
-                            color: ZanateColors.card(isDark),
-                            child: item.imageUrls.isNotEmpty
-                                ? Image.network(
-                                    item.imageUrls.first,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (ctx, err, stack) => Center(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              width: double.infinity,
+                              height: 132,
+                              color: ZanateColors.surface(isDark),
+                              child: item.imageUrls.isNotEmpty
+                                  ? Image.network(
+                                      item.imageUrls.first,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (ctx, err, stack) => Center(
+                                        child: Icon(
+                                          visuals.icon,
+                                          size: 28,
+                                          color: ZanateColors.textMuted(isDark),
+                                        ),
+                                      ),
+                                    )
+                                  : Center(
                                       child: Icon(
                                         visuals.icon,
-                                        size: 24,
+                                        size: 28,
                                         color: ZanateColors.textMuted(isDark),
                                       ),
                                     ),
-                                  )
-                                : Center(
-                                    child: Icon(
-                                      visuals.icon,
-                                      size: 24,
-                                      color: ZanateColors.textMuted(isDark),
-                                    ),
-                                  ),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: item.isFree
+                                  ? ZanateColors.zanateEyeYellow
+                                  : (isDark
+                                        ? Colors.white
+                                        : ZanateColors.zanateBlack),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              item.isFree ? 'GRATIS' : item.formattedPrice,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: item.isFree
+                                    ? ZanateColors.zanateBlack
+                                    : (isDark
+                                          ? ZanateColors.zanateBlack
+                                          : Colors.white),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            item.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.outfit(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 7,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: item.isFree
-                                      ? ZanateColors.zanateEyeYellow
-                                      : (isDark
-                                            ? Colors.white
-                                            : ZanateColors.zanateBlack),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
+                              const Icon(
+                                PhosphorIconsRegular.mapPin,
+                                size: 11,
+                                color: Color(0xFF94A3B8),
+                              ),
+                              const SizedBox(width: 3),
+                              Expanded(
                                 child: Text(
-                                  item.isFree ? 'GRATIS' : item.formattedPrice,
-                                  style: TextStyle(
+                                  item.locationDetail.isNotEmpty
+                                      ? item.locationDetail
+                                      : item.sede,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
                                     fontSize: 10.5,
-                                    fontWeight: FontWeight.w800,
-                                    color: item.isFree
-                                        ? ZanateColors.zanateBlack
-                                        : (isDark
-                                              ? ZanateColors.zanateBlack
-                                              : Colors.white),
+                                    color: Color(0xFF94A3B8),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(height: 5),
-                              Text(
-                                item.title,
-                                style: GoogleFonts.outfit(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 5),
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Padding(
-                                    padding: EdgeInsets.only(top: 1),
-                                    child: Icon(
-                                      PhosphorIconsRegular.mapPin,
-                                      size: 11,
-                                      color: Color(0xFF94A3B8),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 3),
-                                  Expanded(
-                                    child: Text(
-                                      item.locationDetail.isNotEmpty
-                                          ? item.locationDetail
-                                          : item.sede,
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        color: Color(0xFF94A3B8),
-                                      ),
-                                    ),
-                                  ),
-                                ],
                               ),
                             ],
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 );
@@ -1452,7 +1496,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     );
   }
 
-  // Encabezado del feed: conteo de publicaciones y filtro de gratuitos.
+  // Encabezado del feed: conteo, ordenamiento eBay y filtro de gratuitos.
   Widget _buildFeedFilterHeader(bool isDark) {
     final textPrimary = ZanateColors.textPrimary(isDark);
     final borderColor = ZanateColors.border(isDark);
@@ -1463,60 +1507,164 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         color: ZanateColors.card(isDark),
         border: Border(bottom: BorderSide(color: borderColor)),
       ),
-      child: Row(
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        alignment: WrapAlignment.spaceBetween,
         children: [
-          Expanded(
-            child: Text(
-              '${_listings.length} publicaciones disponibles',
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-                color: ZanateColors.textSecondary(isDark),
-              ),
+          Text(
+            '${_listings.length} publicaciones disponibles',
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: ZanateColors.textSecondary(isDark),
             ),
           ),
-          const SizedBox(width: 8),
-          InkWell(
-            onTap: () {
-              setState(() => _onlyFree = !_onlyFree);
-              _loadData();
-            },
-            borderRadius: BorderRadius.circular(10),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: _onlyFree
-                    ? ZanateColors.zanateEyeYellow
-                    : ZanateColors.pill(isDark),
-                borderRadius: BorderRadius.circular(10),
-                border: _onlyFree ? null : Border.all(color: borderColor),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    _onlyFree
-                        ? PhosphorIconsFill.checkCircle
-                        : PhosphorIconsRegular.gift,
-                    size: 14,
-                    color: _onlyFree ? ZanateColors.zanateBlack : textPrimary,
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    'Solo Gratuitos',
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: ZanateColors.pill(isDark),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: borderColor),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _sortBy,
+                    isDense: true,
+                    dropdownColor: ZanateColors.card(isDark),
+                    borderRadius: BorderRadius.circular(12),
+                    icon: Icon(
+                      PhosphorIconsRegular.caretDown,
+                      size: 13,
+                      color: textPrimary,
+                    ),
                     style: TextStyle(
                       fontSize: 11.5,
-                      fontWeight: _onlyFree ? FontWeight.w700 : FontWeight.w600,
-                      color: _onlyFree ? ZanateColors.zanateBlack : textPrimary,
+                      fontWeight: FontWeight.w600,
+                      color: textPrimary,
                     ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'recent',
+                        child: Text('Más recientes'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'price_asc',
+                        child: Text('Menor precio'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'price_desc',
+                        child: Text('Mayor precio'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'popular',
+                        child: Text('Más populares'),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() => _sortBy = val);
+                      }
+                    },
                   ),
-                ],
+                ),
               ),
-            ),
+              InkWell(
+                onTap: () {
+                  setState(() => _onlyFree = !_onlyFree);
+                  _loadData();
+                },
+                borderRadius: BorderRadius.circular(10),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _onlyFree
+                        ? ZanateColors.zanateEyeYellow
+                        : ZanateColors.pill(isDark),
+                    borderRadius: BorderRadius.circular(10),
+                    border: _onlyFree ? null : Border.all(color: borderColor),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _onlyFree
+                            ? PhosphorIconsFill.checkCircle
+                            : PhosphorIconsRegular.gift,
+                        size: 14,
+                        color: _onlyFree
+                            ? ZanateColors.zanateBlack
+                            : textPrimary,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Solo Gratuitos',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: _onlyFree
+                              ? FontWeight.w700
+                              : FontWeight.w600,
+                          color: _onlyFree
+                              ? ZanateColors.zanateBlack
+                              : textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMarketplaceItemCard(MarketplaceItem item) {
+    return MarketplaceCard(
+      key: ValueKey(item.id),
+      item: item,
+      isOwner:
+          item.isMine ||
+          (item.userId != null && item.userId == SupabaseService.currentUserId),
+      onTap: () async {
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) =>
+                ProductDetailScreen(itemId: item.id, initialItem: item),
+          ),
+        );
+        _loadData();
+      },
+      onOpenStore: item.sellerPublicId != null
+          ? () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => StoreProfileScreen(
+                    sellerPublicId: item.sellerPublicId!,
+                  ),
+                ),
+              );
+            }
+          : null,
+      onToggleBookmark: () => _handleToggleBookmark(item),
+      onShowPlans: () => MarketplacePlansSheet.show(context),
+      onUpvote: () => _handleToggleUpvote(item),
+      onStatusChanged: (newStatus) =>
+          _handleUpdateItemStatus(item, newStatus),
+      onSponsoredHide: () => _hideSponsoredItem(item),
+      onReport: (reason) => _handleReportItem(item, reason),
+      onShare: () => _handleShareListing(item),
     );
   }
 
@@ -1532,7 +1680,8 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       );
     }
 
-    if (_listings.isEmpty) {
+    final sorted = _sortedListings;
+    if (sorted.isEmpty) {
       return const EmptyStateWidget(
         icon: PhosphorIconsRegular.storefront,
         title: 'No hay publicaciones en esta categoría aún',
@@ -1541,50 +1690,424 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       );
     }
 
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _listings.length,
-      separatorBuilder: (_, _) => const SizedBox.shrink(),
-      itemBuilder: (ctx, i) {
-        final item = _listings[i];
-        return MarketplaceCard(
-          key: ValueKey(item.id),
-          item: item,
-          isOwner:
-              item.isMine ||
-              (item.userId != null &&
-                  item.userId == SupabaseService.currentUserId),
-          onTap: () async {
-            await Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) =>
-                    ProductDetailScreen(itemId: item.id, initialItem: item),
-              ),
-            );
-            _loadData();
-          },
-          onOpenStore: item.sellerPublicId != null
-              ? () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => StoreProfileScreen(
-                        sellerPublicId: item.sellerPublicId!,
-                      ),
-                    ),
-                  );
-                }
-              : null,
-          onToggleBookmark: () => _handleToggleBookmark(item),
-          onShowPlans: () => MarketplacePlansSheet.show(context),
-          onUpvote: () => _handleToggleUpvote(item),
-          onStatusChanged: (newStatus) =>
-              _handleUpdateItemStatus(item, newStatus),
-          onSponsoredHide: () => _hideSponsoredItem(item),
-          onReport: (reason) => _handleReportItem(item, reason),
-          onShare: () => _handleShareListing(item),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth;
+        final columns = maxWidth >= 960
+            ? 3
+            : (maxWidth >= 640 ? 2 : 1);
+
+        if (columns == 1) {
+          return ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(12),
+            itemCount: sorted.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 12),
+            itemBuilder: (ctx, i) => _buildMarketplaceItemCard(sorted[i]),
+          );
+        }
+
+        const spacing = 14.0;
+        final innerWidth = (maxWidth - 32).clamp(280.0, double.infinity);
+        final cardWidth = (innerWidth - spacing * (columns - 1)) / columns;
+
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Wrap(
+            spacing: spacing,
+            runSpacing: spacing,
+            children: sorted
+                .map(
+                  (item) => SizedBox(
+                    width: cardWidth,
+                    child: _buildMarketplaceItemCard(item),
+                  ),
+                )
+                .toList(),
+          ),
         );
       },
+    );
+  }
+
+  Widget _buildDesktopHeader(bool isDark) {
+    final textPrimary = ZanateColors.textPrimary(isDark);
+    return Container(
+      height: 58,
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: ZanateColors.card(isDark),
+        border: Border(bottom: BorderSide(color: ZanateColors.border(isDark))),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 48),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  'ZANATE STORE',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                    color: ZanateColors.textMuted(isDark),
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  'Marketplace',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopSidebarAction({
+    required bool isDark,
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    final textPrimary = ZanateColors.textPrimary(isDark);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Material(
+        color: ZanateColors.surface(isDark),
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Container(
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: ZanateColors.border(isDark),
+                width: 0.9,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, size: 18, color: textPrimary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: textPrimary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopSidebar(bool isDark) {
+    final textPrimary = ZanateColors.textPrimary(isDark);
+    final textSecondary = ZanateColors.textSecondary(isDark);
+    final borderColor = ZanateColors.border(isDark);
+
+    if (_isDesktopSidebarCollapsed) {
+      return Container(
+        width: 56,
+        decoration: BoxDecoration(
+          color: ZanateColors.card(isDark),
+          border: Border(right: BorderSide(color: borderColor, width: 1)),
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 10),
+            IconButton(
+              tooltip: 'Expandir barra lateral',
+              onPressed: () =>
+                  setState(() => _isDesktopSidebarCollapsed = false),
+              icon: Icon(
+                PhosphorIconsRegular.sidebarSimple,
+                size: 20,
+                color: textPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            IconButton(
+              tooltip: 'Buscar en Marketplace',
+              onPressed: () =>
+                  setState(() => _isDesktopSidebarCollapsed = false),
+              icon: Icon(
+                PhosphorIconsRegular.magnifyingGlass,
+                size: 20,
+                color: _searchQuery.isNotEmpty
+                    ? ZanateColors.focusBorder(isDark)
+                    : textSecondary,
+              ),
+            ),
+            IconButton(
+              tooltip: 'Elegir ubicación en el mapa',
+              onPressed: _openLocationMapPicker,
+              icon: Icon(
+                _hasActiveLocationFilter
+                    ? PhosphorIconsFill.mapPin
+                    : PhosphorIconsRegular.mapTrifold,
+                size: 20,
+                color: _hasActiveLocationFilter
+                    ? ZanateColors.focusBorder(isDark)
+                    : textSecondary,
+              ),
+            ),
+            const Spacer(),
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: ZanateColors.bg(isDark),
+                border: Border(top: BorderSide(color: borderColor, width: 0.8)),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Column(
+                children: [
+                  IconButton(
+                    tooltip: 'Productos guardados',
+                    onPressed: _openSavedListings,
+                    icon: Icon(
+                      PhosphorIconsRegular.bookmarkSimple,
+                      size: 19,
+                      color: textPrimary,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Mis ventas',
+                    onPressed: _openMySales,
+                    icon: Icon(
+                      PhosphorIconsRegular.storefront,
+                      size: 19,
+                      color: textPrimary,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Configuración y Perfil',
+                    onPressed: () => SettingsScreen.show(
+                      context,
+                      activeAlias: widget.activeAlias,
+                      onAliasChanged: widget.onAliasChanged,
+                      onToggleTheme: widget.onToggleTheme,
+                    ),
+                    icon: Icon(
+                      PhosphorIconsRegular.gear,
+                      size: 19,
+                      color: textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      width: 280,
+      decoration: BoxDecoration(
+        color: ZanateColors.card(isDark),
+        border: Border(right: BorderSide(color: borderColor, width: 1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Búsqueda y ubicación',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: textSecondary,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Contraer barra lateral',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints.tightFor(
+                        width: 30,
+                        height: 30,
+                      ),
+                      onPressed: () =>
+                          setState(() => _isDesktopSidebarCollapsed = true),
+                      icon: Icon(
+                        PhosphorIconsRegular.sidebarSimple,
+                        size: 18,
+                        color: textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _searchController,
+                  style: TextStyle(fontSize: 13, color: textPrimary),
+                  decoration: InputDecoration(
+                    hintText: 'Buscar postres, almuerzos, tutorías o libros...',
+                    hintStyle: TextStyle(
+                      fontSize: 12,
+                      color: ZanateColors.textMuted(isDark),
+                    ),
+                    prefixIcon: Icon(
+                      PhosphorIconsRegular.magnifyingGlass,
+                      size: 17,
+                      color: textSecondary,
+                    ),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(
+                              PhosphorIconsRegular.x,
+                              size: 15,
+                              color: textSecondary,
+                            ),
+                            splashRadius: 14,
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _searchQuery = '');
+                              _loadData();
+                            },
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: ZanateColors.surface(isDark),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 11,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: borderColor, width: 1.2),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: borderColor, width: 1.2),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: ZanateColors.focusBorder(isDark),
+                        width: 1.6,
+                      ),
+                    ),
+                  ),
+                  onSubmitted: (val) {
+                    setState(() => _searchQuery = val.trim());
+                    _loadData();
+                  },
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 38,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: ZanateColors.ctaBg(isDark),
+                      foregroundColor: ZanateColors.ctaFg(isDark),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () {
+                      setState(
+                        () => _searchQuery = _searchController.text.trim(),
+                      );
+                      _loadData();
+                    },
+                    child: const Text(
+                      'Buscar',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Ubicación para comprar',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                _buildLocationMapPickerButton(isDark),
+              ],
+            ),
+          ),
+          const Spacer(),
+          Container(
+            decoration: BoxDecoration(
+              color: ZanateColors.bg(isDark),
+              border: Border(top: BorderSide(color: borderColor, width: 0.8)),
+            ),
+            padding: const EdgeInsets.fromLTRB(10, 10, 10, 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildDesktopSidebarAction(
+                  isDark: isDark,
+                  icon: PhosphorIconsRegular.bookmarkSimple,
+                  label: 'Productos guardados',
+                  onTap: _openSavedListings,
+                ),
+                _buildDesktopSidebarAction(
+                  isDark: isDark,
+                  icon: PhosphorIconsRegular.storefront,
+                  label: 'Mis ventas',
+                  onTap: _openMySales,
+                ),
+                _buildDesktopSidebarAction(
+                  isDark: isDark,
+                  icon: PhosphorIconsRegular.gear,
+                  label: 'Configuración',
+                  onTap: () => SettingsScreen.show(
+                    context,
+                    activeAlias: widget.activeAlias,
+                    onAliasChanged: widget.onAliasChanged,
+                    onToggleTheme: widget.onToggleTheme,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1594,62 +2117,85 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     final isDark = theme.brightness == Brightness.dark;
     final isDesktop = Responsive.isDesktop(context);
 
+    final scrollBody = Expanded(
+      child: RefreshIndicator(
+        color: ZanateColors.focusBorder(isDark),
+        backgroundColor: ZanateColors.card(isDark),
+        onRefresh: _loadData,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: isDesktop ? 1280 : double.infinity,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Franja promocional (UX-MKT-001)
+                  _buildTopBanner(isDark, isDesktop),
+
+                  // Compra por categorías
+                  _buildEbayCategoriesSection(isDark),
+
+                  // Ofertas y aportes del día
+                  _buildEbayDealsSection(isDark),
+
+                  // Carrusel de patrocinadores (UX-MKT-002)
+                  SponsorCarousel(
+                    sponsoredItems: _sponsoredListings,
+                    onRequestSponsor: _openSponsorRequestDialog,
+                    onHideSponsored: _hideSponsoredItem,
+                    onReportSponsored: _handleReportItem,
+                  ),
+
+                  // Aviso de modo offline
+                  if (_isOffline) OfflineBanner(onRetry: _loadData),
+
+                  // Encabezado del feed con conteo y filtro de gratuitos
+                  _buildFeedFilterHeader(isDark),
+
+                  // Feed de publicaciones
+                  _buildPostsFeed(isDark),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
     return MarketplaceTheme.wrap(
       context,
       Scaffold(
         backgroundColor: ZanateColors.bg(isDark),
-        body: Column(
-          children: [
-            // 1. Cabecera Zanate
-            _buildSquaredHeader(isDark),
-
-            // 2. Búsqueda y filtros
-            _buildSearchAndFilters(isDark, isDesktop),
-
-            // 3. Contenido desplazable: franja promocional, categorías,
-            // ofertas, patrocinios y feed a ancho completo.
-            Expanded(
-              child: RefreshIndicator(
-                color: ZanateColors.focusBorder(isDark),
-                backgroundColor: ZanateColors.card(isDark),
-                onRefresh: _loadData,
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Franja promocional (UX-MKT-001)
-                      _buildTopBanner(isDark, isDesktop),
-
-                      // Compra por categorías
-                      _buildEbayCategoriesSection(isDark),
-
-                      // Ofertas y aportes del día
-                      _buildEbayDealsSection(isDark),
-
-                      // Carrusel de patrocinadores (UX-MKT-002)
-                      SponsorCarousel(
-                        sponsoredItems: _sponsoredListings,
-                        onRequestSponsor: _openSponsorRequestDialog,
-                        onHideSponsored: _hideSponsoredItem,
-                        onReportSponsored: _handleReportItem,
-                      ),
-
-                      // Aviso de modo offline
-                      if (_isOffline) OfflineBanner(onRetry: _loadData),
-
-                      // Encabezado del feed con conteo y filtro de gratuitos
-                      _buildFeedFilterHeader(isDark),
-
-                      // Feed de publicaciones
-                      _buildPostsFeed(isDark),
-                    ],
+        body: isDesktop
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildDesktopSidebar(isDark),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        _buildDesktopHeader(isDark),
+                        scrollBody,
+                      ],
+                    ),
                   ),
-                ),
+                ],
+              )
+            : Column(
+                children: [
+                  // 1. Cabecera Zanate
+                  _buildSquaredHeader(isDark),
+
+                  // 2. Búsqueda y ubicación en el mapa
+                  _buildSearchAndFilters(isDark, isDesktop),
+
+                  // 3. Contenido desplazable
+                  scrollBody,
+                ],
               ),
-            ),
-          ],
-        ),
         floatingActionButton: widget.showFloatingActionButton
             ? FloatingActionButton.extended(
                 heroTag: 'marketplace_fab',
