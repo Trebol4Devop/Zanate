@@ -14,6 +14,7 @@ import '../../profile/widgets/carne_validation_modal.dart';
 import '../../shared/widgets/identity_badge_chip.dart';
 import '../../../core/models/user_profile.dart';
 import '../marketplace_theme.dart';
+import 'marketplace_location_picker_dialog.dart';
 import 'marketplace_plans_sheet.dart';
 
 class CreateListingDialog extends StatefulWidget {
@@ -72,6 +73,7 @@ class _CreateListingDialogState extends State<CreateListingDialog> {
   String _selectedSede = 'central';
   String _selectedBuilding = 'T-3';
   String _selectedFacultad = 'todas';
+  String _selectedLocationLabel = 'T-3 · Edificio T-3 · Facultad de Ingeniería';
 
   bool _isFree = false;
   bool _isSubmitting = false;
@@ -635,7 +637,7 @@ class _CreateListingDialogState extends State<CreateListingDialog> {
                 const SizedBox(height: 16),
               ],
 
-              // Sede & Building / Location
+              // Ubicación de entrega seleccionada en el mapa
               Text(
                 'Ubicación de Entrega en el Campus',
                 style: GoogleFonts.outfit(
@@ -646,89 +648,93 @@ class _CreateListingDialogState extends State<CreateListingDialog> {
               ),
               const SizedBox(height: 8),
 
-              Wrap(
-                spacing: 10,
-                runSpacing: 8,
-                children: [
-                  SizedBox(
-                    width: isMobile ? double.infinity : 240,
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _selectedSede,
-                      isExpanded: true,
-                      itemHeight: null,
-                      dropdownColor: ZanateColors.card(isDark),
-                      decoration: _zanateInput(
-                        isDark,
-                        labelText: 'Sede / Campus',
-                      ),
-                      items: USACConstants.sedes
-                          .map(
-                            (s) => DropdownMenuItem<String>(
-                              value: s['id']!,
-                              child: Text(
-                                s['nombre']!,
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (val) =>
-                          setState(() => _selectedSede = val ?? 'central'),
+              InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () async {
+                  final selection = await MarketplaceLocationPickerDialog.show(
+                    context,
+                    initialSedeId: _selectedSede,
+                    initialFacultadId: _selectedFacultad,
+                    initialBuildingCode: _selectedBuilding,
+                    allowClearAll: false,
+                  );
+                  if (selection != null && mounted) {
+                    setState(() {
+                      _selectedSede = selection.sedeId;
+                      _selectedFacultad = selection.facultadId;
+                      _selectedBuilding = selection.buildingCode;
+                      _selectedLocationLabel = selection.label;
+                    });
+                  }
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: ZanateColors.surface(isDark),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: ZanateColors.border(isDark),
+                      width: 1.2,
                     ),
                   ),
-                  SizedBox(
-                    width: isMobile ? double.infinity : 240,
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _selectedFacultad,
-                      isExpanded: true,
-                      itemHeight: null,
-                      dropdownColor: ZanateColors.card(isDark),
-                      decoration: _zanateInput(
-                        isDark,
-                        labelText: 'Facultad / Unidad',
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: ZanateColors.zanateEyeYellow
+                              .withValues(alpha: 0.24),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          PhosphorIconsFill.mapTrifold,
+                          size: 18,
+                          color: isDark
+                              ? ZanateColors.zanateEyeYellow
+                              : ZanateColors.zanateBlack,
+                        ),
                       ),
-                      items: USACConstants.facultades
-                          .map(
-                            (f) => DropdownMenuItem<String>(
-                              value: f['id'].toString(),
-                              child: Text(
-                                f['nombre'].toString(),
-                                style: const TextStyle(fontSize: 12),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Elegir ubicación en el mapa',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: ZanateColors.textMuted(isDark),
                               ),
                             ),
-                          )
-                          .toList(),
-                      onChanged: (val) =>
-                          setState(() => _selectedFacultad = val ?? 'todas'),
-                    ),
-                  ),
-                  SizedBox(
-                    width: isMobile ? double.infinity : 240,
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _selectedBuilding,
-                      isExpanded: true,
-                      itemHeight: null,
-                      dropdownColor: ZanateColors.card(isDark),
-                      decoration: _zanateInput(
-                        isDark,
-                        labelText: 'Edificio o Punto',
-                      ),
-                      items: USACConstants.campusBuildings
-                          .map(
-                            (b) => DropdownMenuItem<String>(
-                              value: b['building_code'].toString(),
-                              child: Text(
-                                '${b['building_code']} — ${b['nombre']}',
-                                style: const TextStyle(fontSize: 12),
+                            const SizedBox(height: 2),
+                            Text(
+                              _selectedLocationLabel,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: primaryText,
                               ),
                             ),
-                          )
-                          .toList(),
-                      onChanged: (val) =>
-                          setState(() => _selectedBuilding = val ?? 'T-3'),
-                    ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(
+                        PhosphorIconsRegular.caretRight,
+                        size: 16,
+                        color: ZanateColors.textMuted(isDark),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
 
               const SizedBox(height: 10),

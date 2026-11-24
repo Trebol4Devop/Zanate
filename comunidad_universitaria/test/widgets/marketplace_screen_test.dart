@@ -116,11 +116,27 @@ void main() {
           findsOneWidget,
         );
 
-        // En desktop hay un botón 'Publicar Anuncio' en el header banner además del FAB
+        // En desktop conserva botón 'Publicar Anuncio' en el banner además del botón 'Buscar'
         expect(find.text('Publicar Anuncio'), findsWidgets);
+        expect(find.text('Buscar'), findsOneWidget);
+        expect(find.text('Más recientes'), findsOneWidget);
 
-        // Dropdown de Sede y Facultad presentes
-        expect(find.byType(DropdownButtonFormField<String>), findsWidgets);
+        // Barra lateral contraíble con ubicación en mapa y accesos abajo
+        expect(find.text('Elegir ubicación en el mapa'), findsOneWidget);
+        expect(find.text('Productos guardados'), findsOneWidget);
+        expect(find.text('Mis ventas'), findsOneWidget);
+        expect(find.text('Configuración'), findsOneWidget);
+
+        // Se eliminaron los dropdowns de Sede/Facultad/Edificio
+        expect(find.byType(DropdownButtonFormField<String>), findsNothing);
+
+        // Se puede contraer y expandir la barra lateral
+        await tester.tap(find.byTooltip('Contraer barra lateral'));
+        await tester.pumpAndSettle();
+        expect(find.text('Productos guardados'), findsNothing);
+        await tester.tap(find.byTooltip('Expandir barra lateral'));
+        await tester.pumpAndSettle();
+        expect(find.text('Productos guardados'), findsOneWidget);
       },
     );
 

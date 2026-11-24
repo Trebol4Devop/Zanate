@@ -103,12 +103,11 @@ class _MarketplaceCardState extends State<MarketplaceCard> {
 
     final cardWidget = Container(
       decoration: BoxDecoration(
-        color: ZanateColors.bg(isDark),
-        border: Border(
-          bottom: BorderSide(
-            color: ZanateColors.border(isDark),
-            width: 0.8,
-          ),
+        color: ZanateColors.card(isDark),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: ZanateColors.border(isDark),
+          width: 1.0,
         ),
       ),
       clipBehavior: Clip.antiAlias,
@@ -119,7 +118,7 @@ class _MarketplaceCardState extends State<MarketplaceCard> {
           Stack(
             children: [
               Container(
-                height: 140,
+                height: 185,
                 width: double.infinity,
                 color: ZanateColors.surface(isDark),
                 child: item.imageUrls.isNotEmpty
