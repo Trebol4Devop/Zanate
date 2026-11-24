@@ -179,8 +179,10 @@ void main() {
         await tester.pumpWidget(buildTestShell(activeAlias: 'Ingeniero #404'));
         await tester.pumpAndSettle();
 
-        // En escritorio muestra título 'Comunidad Universitaria'
-        expect(find.text('Comunidad Universitaria'), findsOneWidget);
+        // En escritorio muestra el logo y el título 'Zanate' sin 'Comunidad Universitaria'.
+        expect(find.bySemanticsLabel('Logo de Zanate'), findsOneWidget);
+        expect(find.text('Zanate'), findsOneWidget);
+        expect(find.text('Comunidad Universitaria'), findsNothing);
 
         // No debe tener NavigationBar inferior
         expect(find.byType(NavigationBar), findsNothing);
@@ -258,7 +260,7 @@ void main() {
       );
       expect(
         tester
-                .getSemantics(desktopTabSemantics('Marketplace & Tutorías'))
+                .getSemantics(desktopTabSemantics('Grupos de Estudio'))
                 .getSemanticsData()
                 .flagsCollection
                 .isSelected ==
@@ -270,7 +272,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         tester
-                .getSemantics(desktopTabSemantics('Mapa'))
+                .getSemantics(desktopTabSemantics('Marketplace & Tutorías'))
                 .getSemanticsData()
                 .flagsCollection
                 .isSelected ==
@@ -294,7 +296,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         tester
-                .getSemantics(desktopTabSemantics('Mapa'))
+                .getSemantics(desktopTabSemantics('Marketplace & Tutorías'))
                 .getSemanticsData()
                 .flagsCollection
                 .isSelected ==
@@ -347,7 +349,9 @@ void main() {
       expect(find.text('Marketplace & Tutorías'), findsOneWidget);
       expect(find.text('Grupos de Estudio'), findsOneWidget);
       expect(find.text('Mapa'), findsOneWidget);
-      expect(find.text('Comunidad Universitaria'), findsOneWidget);
+      expect(find.bySemanticsLabel('Logo de Zanate'), findsOneWidget);
+      expect(find.text('Zanate'), findsOneWidget);
+      expect(find.text('Comunidad Universitaria'), findsNothing);
     });
 
     testWidgets(
@@ -425,34 +429,60 @@ void main() {
       expect(find.byType(ForumScreen), findsOneWidget);
     });
 
-    testWidgets('Botón de cambio de tema dispara callback onToggleTheme', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(1200, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() => tester.view.resetPhysicalSize());
+    testWidgets(
+      'En modo PC (1200x800) no muestra botón de cambio de tema ni abre modal al tocar Zanate',
+      (tester) async {
+        tester.view.physicalSize = const Size(1200, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
 
-      bool themeToggled = false;
+        await tester.pumpWidget(
+          buildTestShell(
+            activeAlias: 'Desktop User',
+            isDarkMode: false,
+            onToggleTheme: () {},
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      await tester.pumpWidget(
-        buildTestShell(
-          activeAlias: 'Theme User',
-          isDarkMode: false,
-          onToggleTheme: () {
-            themeToggled = true;
-          },
-        ),
-      );
-      await tester.pumpAndSettle();
+        expect(find.byTooltip('Cambiar tema'), findsNothing);
 
-      final themeButton = find.byTooltip('Cambiar tema');
-      expect(themeButton, findsOneWidget);
+        await tester.tap(find.text('Zanate'));
+        await tester.pumpAndSettle();
 
-      await tester.tap(themeButton);
-      await tester.pumpAndSettle();
+        expect(find.text('Aviso Comunitario'), findsNothing);
+      },
+    );
 
-      expect(themeToggled, isTrue);
-    });
+    testWidgets(
+      'Botón de cambio de tema dispara callback onToggleTheme en tableta',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+
+        bool themeToggled = false;
+
+        await tester.pumpWidget(
+          buildTestShell(
+            activeAlias: 'Theme User',
+            isDarkMode: false,
+            onToggleTheme: () {
+              themeToggled = true;
+            },
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final themeButton = find.byTooltip('Cambiar tema');
+        expect(themeButton, findsOneWidget);
+
+        await tester.tap(themeButton);
+        await tester.pumpAndSettle();
+
+        expect(themeToggled, isTrue);
+      },
+    );
 
     testWidgets('Navbar no muestra botón de perfil duplicado', (tester) async {
       tester.view.physicalSize = const Size(1200, 800);
@@ -468,14 +498,14 @@ void main() {
     testWidgets('Desde el modal comunitario navega hacia RulesScreen', (
       tester,
     ) async {
-      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
 
       await tester.pumpWidget(buildTestShell(activeAlias: 'Rules Tester'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Comunidad Universitaria'));
+      await tester.tap(find.text('Zanate'));
       await tester.pumpAndSettle();
 
       final rulesButton = find.text('Ver Normas Completas');
@@ -489,9 +519,9 @@ void main() {
     });
 
     testWidgets(
-      'Click en el banner de título abre el modal de Aviso Comunitario',
+      'Click en el banner de título abre el modal de Aviso Comunitario en móvil',
       (tester) async {
-        tester.view.physicalSize = const Size(1200, 800);
+        tester.view.physicalSize = const Size(400, 800);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(() => tester.view.resetPhysicalSize());
 
@@ -500,8 +530,8 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // Tocamos el encabezado Comunidad Universitaria
-        final titleHeader = find.text('Comunidad Universitaria');
+        // Tocamos el encabezado Zanate
+        final titleHeader = find.text('Zanate');
         await tester.tap(titleHeader);
         await tester.pumpAndSettle();
 

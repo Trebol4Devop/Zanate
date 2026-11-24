@@ -36,8 +36,8 @@ class _AppShellState extends State<AppShell> {
   int _currentIndex = 0;
   bool _showMobileTopBar = true;
   final Set<int> _visitedTabs = {0};
-  final GlobalKey<GroupsScreenState> _groupsScreenKey =
-      GlobalKey<GroupsScreenState>();
+  static const List<int> _desktopScreenIndices = [0, 2, 3, 1];
+
   final List<FocusNode> _desktopTabFocusNodes = List.generate(
     4,
     (index) => FocusNode(debugLabel: 'Desktop tab $index'),
@@ -51,14 +51,15 @@ class _AppShellState extends State<AppShell> {
     super.dispose();
   }
 
-  void _selectDesktopTab(int index) {
-    if (_currentIndex != index || !_visitedTabs.contains(index)) {
+  void _selectDesktopTab(int tabIndex) {
+    final screenIndex = _desktopScreenIndices[tabIndex];
+    if (_currentIndex != screenIndex || !_visitedTabs.contains(screenIndex)) {
       setState(() {
-        _currentIndex = index;
-        _visitedTabs.add(index);
+        _currentIndex = screenIndex;
+        _visitedTabs.add(screenIndex);
       });
     }
-    _desktopTabFocusNodes[index].requestFocus();
+    _desktopTabFocusNodes[tabIndex].requestFocus();
   }
 
   KeyEventResult _handleDesktopTabKey(int index, KeyEvent event) {
@@ -209,6 +210,30 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isMobile = Responsive.isMobile(context);
+    final isDesktop = Responsive.isDesktop(context);
+
+    final brandTitle = Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 4,
+        vertical: 2,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildBrandMark(),
+          const SizedBox(width: 10),
+          Text(
+            'Zanate',
+            style: GoogleFonts.croissantOne(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
+              color: ZanateColors.textPrimary(widget.isDarkMode),
+            ),
+          ),
+        ],
+      ),
+    );
 
     return Scaffold(
       appBar: isMobile
@@ -225,63 +250,28 @@ class _AppShellState extends State<AppShell> {
               ),
               centerTitle: false,
               titleSpacing: 16,
-              title: Row(
-                children: [
-                  _buildBrandMark(),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: InkWell(
+              title: isDesktop
+                  ? brandTitle
+                  : InkWell(
                       onTap: _showDisclaimerModal,
                       borderRadius: BorderRadius.circular(8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Wrap(
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Text(
-                                'Zanate',
-                                style: GoogleFonts.croissantOne(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.5,
-                                  color: ZanateColors.textPrimary(
-                                    widget.isDarkMode,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          Text(
-                            'Comunidad Universitaria',
-                            style: TextStyle(
-                              color: widget.isDarkMode
-                                  ? ZanateColors.darkTextMuted
-                                  : Colors.blueGrey.shade400,
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
+                      child: brandTitle,
                     ),
-                  ),
-                ],
-              ),
-              actions: [
-                IconButton(
-                  icon: PhosphorIcon(
-                    widget.isDarkMode
-                        ? PhosphorIconsRegular.sun
-                        : PhosphorIconsRegular.moon,
-                    size: 20,
-                  ),
-                  tooltip: 'Cambiar tema',
-                  onPressed: widget.onToggleTheme,
-                ),
-                const SizedBox(width: 8),
-              ],
+              actions: isDesktop
+                  ? null
+                  : [
+                      IconButton(
+                        icon: PhosphorIcon(
+                          widget.isDarkMode
+                              ? PhosphorIconsRegular.sun
+                              : PhosphorIconsRegular.moon,
+                          size: 20,
+                        ),
+                        tooltip: 'Cambiar tema',
+                        onPressed: widget.onToggleTheme,
+                      ),
+                      const SizedBox(width: 8),
+                    ],
               bottom: PreferredSize(
                 preferredSize: const Size.fromHeight(48),
                 child: Container(
@@ -314,21 +304,21 @@ class _AppShellState extends State<AppShell> {
                               ),
                               _buildNavTab(
                                 index: 1,
-                                label: 'Marketplace & Tutorías',
-                                activeIcon: PhosphorIconsFill.shoppingBag,
-                                inactiveIcon: PhosphorIconsRegular.shoppingBag,
-                              ),
-                              _buildNavTab(
-                                index: 2,
                                 label: 'Grupos de Estudio',
                                 activeIcon: PhosphorIconsFill.usersThree,
                                 inactiveIcon: PhosphorIconsRegular.usersThree,
                               ),
                               _buildNavTab(
-                                index: 3,
+                                index: 2,
                                 label: 'Mapa',
                                 activeIcon: PhosphorIconsFill.mapTrifold,
                                 inactiveIcon: PhosphorIconsRegular.mapTrifold,
+                              ),
+                              _buildNavTab(
+                                index: 3,
+                                label: 'Marketplace & Tutorías',
+                                activeIcon: PhosphorIconsFill.shoppingBag,
+                                inactiveIcon: PhosphorIconsRegular.shoppingBag,
                               ),
                             ],
                           ),
@@ -598,7 +588,6 @@ class _AppShellState extends State<AppShell> {
             ? ExcludeSemantics(
                 excluding: _currentIndex != 2,
                 child: GroupsScreen(
-                  key: _groupsScreenKey,
                   activeAlias: widget.activeAlias,
                   onAliasChanged: widget.onAliasChanged,
                   onToggleTheme: widget.onToggleTheme,
@@ -639,7 +628,7 @@ class _AppShellState extends State<AppShell> {
     required IconData activeIcon,
     required IconData inactiveIcon,
   }) {
-    final isSelected = _currentIndex == index;
+    final isSelected = _currentIndex == _desktopScreenIndices[index];
     final activeColor = ZanateColors.textPrimary(widget.isDarkMode);
     final inactiveColor = ZanateColors.textMuted(widget.isDarkMode);
 
