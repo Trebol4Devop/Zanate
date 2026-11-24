@@ -55,6 +55,7 @@ void main() {
 
         // En móvil sigue la cabecera compacta de la referencia.
         expect(find.text('Zanate'), findsOneWidget);
+        expect(find.text('Beta'), findsOneWidget);
         final logo = find.byWidgetPredicate(
           (widget) =>
               widget is Image &&
@@ -72,18 +73,21 @@ void main() {
         // Botón de perfil ya no se muestra en el navbar (se ubica en la barra inferior)
         expect(find.byType(AliasBadgeButton), findsNothing);
 
-        // Navegación móvil Zanate con 4 ítems en el orden de referencia.
-        for (final label in const ['Foro', 'Grupos', 'Mapa', 'Marketplace']) {
+        // En móvil solo quedan disponibles Foro y Grupos.
+        for (final label in const ['Foro', 'Grupos']) {
           expect(find.bySemanticsLabel(label), findsOneWidget);
+        }
+        for (final label in const ['Mapa', 'Marketplace']) {
+          expect(find.bySemanticsLabel(label), findsNothing);
         }
         for (final icon in const [
           PhosphorIconsFill.chatsCircle,
           PhosphorIconsRegular.usersThree,
-          PhosphorIconsRegular.mapTrifold,
-          PhosphorIconsRegular.shoppingBag,
         ]) {
           expect(find.byIcon(icon), findsOneWidget);
         }
+        expect(find.byIcon(PhosphorIconsRegular.mapTrifold), findsNothing);
+        expect(find.byIcon(PhosphorIconsRegular.shoppingBag), findsNothing);
 
         // En el tab inicial (Foro), no hay FloatingActionButton
         expect(find.byType(FloatingActionButton), findsNothing);
@@ -148,7 +152,7 @@ void main() {
       },
     );
 
-    testWidgets('El destino Mapa abre el directorio de ubicaciones USAC', (
+    testWidgets('Mapa no está disponible desde la navegación móvil', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(400, 800);
@@ -157,16 +161,9 @@ void main() {
 
       await tester.pumpWidget(buildTestShell(activeAlias: 'Map Tester'));
       await tester.pumpAndSettle();
-      await tester.tap(find.bySemanticsLabel('Mapa'));
-      await tester.pumpAndSettle();
 
-      expect(find.byType(CampusMapScreen), findsOneWidget);
-      expect(
-        find.text('Puntos de encuentro y edificios de la USAC'),
-        findsOneWidget,
-      );
-      expect(find.text('Campus Central'), findsOneWidget);
-      expect(find.byTooltip('Cómo llegar'), findsWidgets);
+      expect(find.bySemanticsLabel('Mapa'), findsNothing);
+      expect(find.byType(CampusMapScreen, skipOffstage: false), findsNothing);
     });
 
     testWidgets(
@@ -179,17 +176,18 @@ void main() {
         await tester.pumpWidget(buildTestShell(activeAlias: 'Ingeniero #404'));
         await tester.pumpAndSettle();
 
-        // En escritorio muestra título 'Comunidad Universitaria'
+        // En escritorio muestra título, subtítulo y etiqueta de versión.
         expect(find.text('Comunidad Universitaria'), findsOneWidget);
+        expect(find.text('Beta'), findsOneWidget);
 
         // No debe tener NavigationBar inferior
         expect(find.byType(NavigationBar), findsNothing);
 
-        // Las cuatro secciones están disponibles desde la navegación superior.
+        // Solo Foro y Grupos quedan disponibles en la navegación superior.
         expect(find.text('Foro Estudiantil'), findsOneWidget);
-        expect(find.text('Marketplace & Tutorías'), findsOneWidget);
         expect(find.text('Grupos de Estudio'), findsOneWidget);
-        expect(find.text('Mapa'), findsOneWidget);
+        expect(find.text('Marketplace & Tutorías'), findsNothing);
+        expect(find.text('Mapa'), findsNothing);
       },
     );
 
@@ -218,7 +216,7 @@ void main() {
               widget is Semantics &&
               widget.properties.role == SemanticsRole.tab,
         ),
-        findsNWidgets(4),
+        findsNWidgets(2),
       );
       expect(
         tester
@@ -258,7 +256,7 @@ void main() {
       );
       expect(
         tester
-                .getSemantics(desktopTabSemantics('Marketplace & Tutorías'))
+                .getSemantics(desktopTabSemantics('Grupos de Estudio'))
                 .getSemanticsData()
                 .flagsCollection
                 .isSelected ==
@@ -270,7 +268,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         tester
-                .getSemantics(desktopTabSemantics('Mapa'))
+                .getSemantics(desktopTabSemantics('Grupos de Estudio'))
                 .getSemanticsData()
                 .flagsCollection
                 .isSelected ==
@@ -294,7 +292,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         tester
-                .getSemantics(desktopTabSemantics('Mapa'))
+                .getSemantics(desktopTabSemantics('Grupos de Estudio'))
                 .getSemanticsData()
                 .flagsCollection
                 .isSelected ==
@@ -304,27 +302,22 @@ void main() {
       semantics.dispose();
     });
 
-    testWidgets(
-      'Navegación móvil entre tabs y botón de publicar anuncio en Marketplace',
-      (tester) async {
-        tester.view.physicalSize = const Size(400, 800);
-        tester.view.devicePixelRatio = 1.0;
-        addTearDown(() => tester.view.resetPhysicalSize());
+    testWidgets('Marketplace y Mapa no están disponibles en móvil', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
 
-        await tester.pumpWidget(buildTestShell(activeAlias: 'Tester USAC'));
-        await tester.pumpAndSettle();
+      await tester.pumpWidget(buildTestShell(activeAlias: 'Tester USAC'));
+      await tester.pumpAndSettle();
 
-        // Tab 0: ForumScreen activo por defecto
-        expect(find.byType(ForumScreen), findsOneWidget);
-
-        // El cuarto icono visual abre Marketplace (pantalla interna 1).
-        await tester.tap(find.bySemanticsLabel('Marketplace'));
-        await tester.pumpAndSettle();
-
-        // Muestra el botón Zanate 'Publicar Anuncio' en la cabecera del Marketplace
-        expect(find.byTooltip('Publicar Anuncio'), findsOneWidget);
-      },
-    );
+      expect(find.byType(ForumScreen), findsOneWidget);
+      expect(find.bySemanticsLabel('Marketplace'), findsNothing);
+      expect(find.bySemanticsLabel('Mapa'), findsNothing);
+      expect(find.byType(MarketplaceScreen, skipOffstage: false), findsNothing);
+      expect(find.byType(CampusMapScreen, skipOffstage: false), findsNothing);
+    });
 
     testWidgets('Breakpoint canónico conmuta a pestañas superiores en 700px', (
       tester,
@@ -344,9 +337,9 @@ void main() {
 
       expect(find.bySemanticsLabel('Foro'), findsNothing);
       expect(find.text('Foro Estudiantil'), findsOneWidget);
-      expect(find.text('Marketplace & Tutorías'), findsOneWidget);
       expect(find.text('Grupos de Estudio'), findsOneWidget);
-      expect(find.text('Mapa'), findsOneWidget);
+      expect(find.text('Marketplace & Tutorías'), findsNothing);
+      expect(find.text('Mapa'), findsNothing);
       expect(find.text('Comunidad Universitaria'), findsOneWidget);
     });
 
@@ -378,7 +371,7 @@ void main() {
 
         Navigator.of(tester.element(find.byType(CreateGroupDialog))).pop();
         await tester.pumpAndSettle();
-        await tester.tap(find.bySemanticsLabel('Marketplace'));
+        await tester.tap(find.bySemanticsLabel('Foro'));
         await tester.pumpAndSettle();
         await tester.tap(find.bySemanticsLabel('Grupos'));
         await tester.pumpAndSettle();
@@ -398,14 +391,12 @@ void main() {
       await tester.pumpWidget(buildTestShell(activeAlias: 'Desktop User'));
       await tester.pumpAndSettle();
 
-      // Seleccionar Marketplace & Tutorías
-      final tabMarket = find.text('Marketplace & Tutorías');
-      await tester.tap(tabMarket);
-      await tester.pumpAndSettle();
+      expect(find.text('Marketplace & Tutorías'), findsNothing);
+      expect(find.text('Mapa'), findsNothing);
+      expect(find.byType(MarketplaceScreen, skipOffstage: false), findsNothing);
+      expect(find.byType(CampusMapScreen, skipOffstage: false), findsNothing);
 
-      expect(find.byType(MarketplaceScreen), findsOneWidget);
-
-      // Entrar a Grupos y volver al Foro desde las pestañas superiores.
+      // Cambiar entre Grupos y Foro desde las pestañas superiores.
       await tester.tap(find.text('Grupos de Estudio'));
       await tester.pumpAndSettle();
       expect(find.byType(GroupsScreen), findsOneWidget);
