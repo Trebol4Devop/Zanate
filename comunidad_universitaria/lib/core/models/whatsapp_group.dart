@@ -1,4 +1,12 @@
-enum GroupPlatform { whatsApp, telegram, discord, drive, other }
+enum GroupPlatform {
+  whatsApp,
+  messenger,
+  telegram,
+  discord,
+  twitch,
+  drive,
+  other,
+}
 
 class WhatsAppGroup {
   final String id;
@@ -14,11 +22,13 @@ class WhatsAppGroup {
   final int? avatarIconIndex;
   final int upvotes;
   final int reportedCount;
+  final int sharesCount;
   final DateTime createdAt;
   final String? imageUrl;
   final int moderationStatus;
   final bool isUpvotedByMe;
   final bool isMine;
+  final GroupPlatform? explicitPlatform;
 
   WhatsAppGroup({
     required this.id,
@@ -34,21 +44,27 @@ class WhatsAppGroup {
     this.avatarIconIndex,
     required this.upvotes,
     required this.reportedCount,
+    this.sharesCount = 0,
     required this.createdAt,
     this.imageUrl,
     this.moderationStatus = 0,
     this.isUpvotedByMe = false,
     this.isMine = false,
+    this.explicitPlatform,
   });
 
   static String platformToString(GroupPlatform p) {
     switch (p) {
       case GroupPlatform.whatsApp:
         return 'whatsapp';
+      case GroupPlatform.messenger:
+        return 'messenger';
       case GroupPlatform.telegram:
         return 'telegram';
       case GroupPlatform.discord:
         return 'discord';
+      case GroupPlatform.twitch:
+        return 'twitch';
       case GroupPlatform.drive:
         return 'drive';
       case GroupPlatform.other:
@@ -61,10 +77,14 @@ class WhatsAppGroup {
       switch (p.toLowerCase()) {
         case 'whatsapp':
           return GroupPlatform.whatsApp;
+        case 'messenger':
+          return GroupPlatform.messenger;
         case 'telegram':
           return GroupPlatform.telegram;
         case 'discord':
           return GroupPlatform.discord;
+        case 'twitch':
+          return GroupPlatform.twitch;
         case 'drive':
           return GroupPlatform.drive;
         case 'otro':
@@ -75,11 +95,19 @@ class WhatsAppGroup {
     if (lower.contains('chat.whatsapp.com') || lower.contains('wa.me')) {
       return GroupPlatform.whatsApp;
     }
+    if (lower.contains('://m.me/') ||
+        lower.contains('://www.m.me/') ||
+        lower.contains('messenger.com')) {
+      return GroupPlatform.messenger;
+    }
     if (lower.contains('t.me') || lower.contains('telegram.me')) {
       return GroupPlatform.telegram;
     }
     if (lower.contains('discord.gg') || lower.contains('discord.com')) {
       return GroupPlatform.discord;
+    }
+    if (lower.contains('twitch.tv')) {
+      return GroupPlatform.twitch;
     }
     if (lower.contains('drive.google.com') ||
         lower.contains('docs.google.com')) {
@@ -88,7 +116,7 @@ class WhatsAppGroup {
     return GroupPlatform.other;
   }
 
-  GroupPlatform get platform => stringToPlatform(null, link);
+  GroupPlatform get platform => explicitPlatform ?? stringToPlatform(null, link);
 
   WhatsAppGroup copyWith({
     String? id,
@@ -104,6 +132,7 @@ class WhatsAppGroup {
     int? avatarIconIndex,
     int? upvotes,
     int? reportedCount,
+    int? sharesCount,
     DateTime? createdAt,
     String? imageUrl,
     int? moderationStatus,
@@ -124,6 +153,7 @@ class WhatsAppGroup {
       avatarIconIndex: avatarIconIndex ?? this.avatarIconIndex,
       upvotes: upvotes ?? this.upvotes,
       reportedCount: reportedCount ?? this.reportedCount,
+      sharesCount: sharesCount ?? this.sharesCount,
       createdAt: createdAt ?? this.createdAt,
       imageUrl: imageUrl ?? this.imageUrl,
       moderationStatus: moderationStatus ?? this.moderationStatus,
@@ -158,6 +188,9 @@ class WhatsAppGroup {
       reportedCount: (map['reported_count'] is int)
           ? map['reported_count']
           : int.tryParse(map['reported_count']?.toString() ?? '0') ?? 0,
+      sharesCount: (map['shares_count'] is int)
+          ? map['shares_count']
+          : int.tryParse(map['shares_count']?.toString() ?? '0') ?? 0,
       createdAt: map['created_at'] != null
           ? DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now()
           : DateTime.now(),
@@ -167,6 +200,10 @@ class WhatsAppGroup {
           : int.tryParse(map['moderation_status']?.toString() ?? '0') ?? 0,
       isUpvotedByMe: isUpvotedByMe,
       isMine: map['is_mine'] == true,
+      explicitPlatform: map['platform'] != null &&
+              map['platform'].toString().trim().isNotEmpty
+          ? stringToPlatform(map['platform'].toString(), map['link'] ?? '')
+          : null,
     );
   }
 
@@ -183,6 +220,7 @@ class WhatsAppGroup {
       'author_alias': authorAlias,
       'upvotes': upvotes,
       'reported_count': reportedCount,
+      'shares_count': sharesCount,
       'image_url': imageUrl,
       'moderation_status': moderationStatus,
     };
