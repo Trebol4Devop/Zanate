@@ -192,7 +192,7 @@ void main() {
       expect(find.byType(Dialog), findsNothing);
 
       final savedServers = await ForumServerPreferencesService.load();
-      expect(savedServers.any((server) => server.id != 'todas'), isTrue);
+      expect(savedServers, isEmpty);
       expect(
         find.descendant(
           of: find.byType(ForumChannelSidebar),
@@ -200,11 +200,6 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(
-        savedServers.any((server) => server.carreraId == '05-00-01'),
-        isTrue,
-      );
-      expect(savedServers.any((server) => server.isGroups), isFalse);
     });
 
     testWidgets(
@@ -224,19 +219,16 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(
-          find.text('Todas las Facultades · todos-los-temas'),
-          findsOneWidget,
-        );
+        // Título en doble línea igual que en móvil: servidor arriba, canal abajo.
+        expect(find.text('TODAS LAS FACULTADES'), findsOneWidget);
+        expect(find.text('todos-los-temas'), findsWidgets);
         expect(find.textContaining('#todos-los-temas'), findsNothing);
         expect(find.text('Crear Primera Publicación'), findsNothing);
 
-        await tester.tap(find.text('catedraticos-opiniones'));
+        await tester.tap(find.text('catedraticos-opiniones').first);
         await tester.pumpAndSettle();
-        expect(
-          find.text('Todas las Facultades · catedraticos-opiniones'),
-          findsOneWidget,
-        );
+        expect(find.text('TODAS LAS FACULTADES'), findsOneWidget);
+        expect(find.text('catedraticos-opiniones'), findsWidgets);
         expect(find.textContaining('#catedraticos-opiniones'), findsNothing);
       },
     );

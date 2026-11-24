@@ -1,5 +1,3 @@
-import '../services/share_count_service.dart';
-
 class PollOption {
   final String id;
   final String pollId;
@@ -97,6 +95,7 @@ class Post {
   final int? avatarIconIndex;
   final DateTime createdAt;
   final String carrera;
+  final String? forumServerId;
   final String? imageUrl;
   final String? gifUrl;
   final String? videoUrl;
@@ -133,6 +132,7 @@ class Post {
     this.avatarIconIndex,
     required this.createdAt,
     this.carrera = 'todas',
+    this.forumServerId,
     this.imageUrl,
     this.gifUrl,
     this.videoUrl,
@@ -169,6 +169,7 @@ class Post {
     int? avatarIconIndex,
     DateTime? createdAt,
     String? carrera,
+    String? forumServerId,
     String? imageUrl,
     String? gifUrl,
     String? videoUrl,
@@ -203,6 +204,7 @@ class Post {
       avatarIconIndex: avatarIconIndex ?? this.avatarIconIndex,
       createdAt: createdAt ?? this.createdAt,
       carrera: carrera ?? this.carrera,
+      forumServerId: forumServerId ?? this.forumServerId,
       imageUrl: imageUrl ?? this.imageUrl,
       gifUrl: gifUrl ?? this.gifUrl,
       videoUrl: videoUrl ?? this.videoUrl,
@@ -281,6 +283,7 @@ class Post {
           ? DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now()
           : DateTime.now(),
       carrera: map['carrera'] ?? 'todas',
+      forumServerId: map['forum_server_id']?.toString(),
       imageUrl: map['image_url'],
       gifUrl: map['gif_url'],
       videoUrl: map['video_url']?.toString(),
@@ -292,15 +295,10 @@ class Post {
           : int.tryParse(map['reposts_count']?.toString() ?? '0') ?? 0,
       sharesCount: () {
         final rawShares = map['shares_count'] ?? map['shares'];
-        int parsedShares = 0;
-        if (rawShares != null) {
-          parsedShares = (rawShares is int)
-              ? rawShares
-              : int.tryParse(rawShares.toString()) ?? 0;
-        }
-        final postId = map['id']?.toString() ?? '';
-        final localShares = ShareCountService.getCachedCount(postId);
-        return localShares > parsedShares ? localShares : parsedShares;
+        if (rawShares == null) return 0;
+        return (rawShares is int)
+            ? rawShares
+            : int.tryParse(rawShares.toString()) ?? 0;
       }(),
       isPinned: map['is_pinned'] == true,
       moderationStatus: (map['moderation_status'] is int)

@@ -76,7 +76,7 @@ class ModerationService {
 
   /// Oculta contenido reportado o inapropiado (moderation_status = 2) y registra en auditoría.
   static Future<bool> ocultarContenido({
-    required String tabla, // 'posts', 'comments', 'whatsapp_groups', 'marketplace_items'
+    required String tabla, // 'posts', 'comments', 'student_groups', 'marketplace_items'
     required String itemId,
     required String justificacion,
   }) async {
@@ -157,8 +157,8 @@ class ModerationService {
         'panel_aprobar',
         params: {
           'p_tabla': tabla,
-          'p_item_id': itemId,
-          'p_comentario': comentario?.trim(),
+          'p_id': itemId,
+          'p_reason': comentario?.trim(),
         },
       );
       return res == true;
@@ -181,8 +181,8 @@ class ModerationService {
         'panel_rechazar',
         params: {
           'p_tabla': tabla,
-          'p_item_id': itemId,
-          'p_motivo': motivo.trim(),
+          'p_id': itemId,
+          'p_reason': motivo.trim(),
         },
       );
       return res == true;
@@ -204,10 +204,10 @@ class ModerationService {
         'panel_remoderar',
         params: {
           'p_tabla': tabla,
-          'p_item_id': itemId,
+          'p_id': itemId,
         },
       );
-      return res == true;
+      return res != null && res.toString().trim().isNotEmpty;
     } catch (e) {
       debugPrint('Error al re-moderar en panel: $e');
       return false;

@@ -70,6 +70,12 @@ class LocalStorageService {
     await prefs.setString(_keyAlias, alias.trim());
   }
 
+  static Future<void> saveAvatar(int colorIndex, int iconIndex) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyAvatarColor, colorIndex);
+    await prefs.setInt(_keyAvatarIcon, iconIndex);
+  }
+
   static Future<UserProfile> getUserProfile() async {
     final prefs = await SharedPreferences.getInstance();
     final alias = await getOrGenerateAlias();

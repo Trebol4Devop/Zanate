@@ -21,6 +21,7 @@ class PostCard extends StatelessWidget {
   final Function(String reason)? onReport;
   final VoidCallback? onDelete;
   final bool isModerator;
+  final Map<String, String>? categoryLabels;
 
   const PostCard({
     super.key,
@@ -34,9 +35,14 @@ class PostCard extends StatelessWidget {
     this.onReport,
     this.onDelete,
     this.isModerator = false,
+    this.categoryLabels,
   });
 
   String _getCategoryLabel(String catId) {
+    final dynamicLabel = categoryLabels?[catId];
+    if (dynamicLabel != null && dynamicLabel.trim().isNotEmpty) {
+      return dynamicLabel;
+    }
     final match = USACConstants.forumCategories.where((c) => c.id == catId);
     return match.isNotEmpty ? match.first.label : 'General';
   }

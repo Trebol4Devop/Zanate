@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import '../../../core/constants/zanate_colors.dart';
 import '../../../core/utils/time_utils.dart';
+import 'user_avatar_circle.dart';
 
 /// Encabezado reutilizable de autor anónimo para el foro.
 /// Garantiza una identidad visual 100% determinista basada en authorHash.
 class AnonymousAuthorHeader extends StatelessWidget {
   final String authorAlias;
   final String? authorHash;
+  final int? avatarColorIndex;
+  final int? avatarIconIndex;
   final bool isOp;
   final bool isMine;
   final DateTime? createdAt;
@@ -20,6 +23,8 @@ class AnonymousAuthorHeader extends StatelessWidget {
     super.key,
     required this.authorAlias,
     this.authorHash,
+    this.avatarColorIndex,
+    this.avatarIconIndex,
     this.isOp = false,
     this.isMine = false,
     this.createdAt,
@@ -116,24 +121,14 @@ class AnonymousAuthorHeader extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Container(
-          width: compact ? 24 : 30,
-          height: compact ? 24 : 30,
-          decoration: BoxDecoration(
-            color: ZanateColors.surface(isDark),
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: ZanateColors.border(isDark),
-              width: 1.0,
-            ),
-          ),
-          child: Center(
-            child: Icon(
-              PhosphorIconsRegular.user,
-              size: compact ? 13 : 16,
-              color: ZanateColors.textPrimary(isDark),
-            ),
-          ),
+        UserAvatarCircle(
+          authorAlias: authorAlias,
+          authorHash: authorHash,
+          avatarColorIndex: avatarColorIndex,
+          avatarIconIndex: avatarIconIndex,
+          isMine: isMine,
+          size: compact ? 24 : 30,
+          iconSize: compact ? 13 : 16,
         ),
         const SizedBox(width: 8),
         Expanded(

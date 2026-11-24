@@ -218,6 +218,22 @@ class _ProfileScreenState extends State<ProfileScreen>
 
       setState(() {
         _profile = updatedProfile;
+        _myPosts = _myPosts
+            .map(
+              (p) => p.copyWith(
+                avatarColorIndex: updatedProfile.avatarColorIndex,
+                avatarIconIndex: updatedProfile.avatarIconIndex,
+              ),
+            )
+            .toList();
+        _myGroups = _myGroups
+            .map(
+              (g) => g.copyWith(
+                avatarColorIndex: updatedProfile.avatarColorIndex,
+                avatarIconIndex: updatedProfile.avatarIconIndex,
+              ),
+            )
+            .toList();
         _isSaving = false;
       });
 
@@ -426,10 +442,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                   : SingleChildScrollView(
                       child: Center(
                         child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 1000),
+                          constraints: const BoxConstraints(maxWidth: 600),
                           child: Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: isDesktop ? 32 : 20,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
                               vertical: 20,
                             ),
                             child: Column(
@@ -439,24 +455,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 _buildHeaderCard(theme, isDesktop),
                                 const SizedBox(height: 16),
 
-                                // Academic & Contact Settings (Two columns on desktop, stacked on mobile)
-                                if (isDesktop)
-                                  Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Expanded(
-                                        child: _buildAcademicCard(theme),
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Expanded(child: _buildContactCard(theme)),
-                                    ],
-                                  )
-                                else ...[
-                                  _buildAcademicCard(theme),
-                                  const SizedBox(height: 16),
-                                  _buildContactCard(theme),
-                                ],
+                                // Academic & Contact Settings (uniform 1-column layout)
+                                _buildAcademicCard(theme),
+                                const SizedBox(height: 16),
+                                _buildContactCard(theme),
 
                                 const SizedBox(height: 20),
 

@@ -28,14 +28,30 @@ class ForumService {
   static const String _cacheNamespace = 'forum_posts';
 
   static const String _postFallbackColumns =
-      'id, title, category, content, author_alias, author_hash, likes, carrera, image_url, gif_url, video_url, is_pinned, quoted_post_id, reposts_count, moderation_status, created_at, comments_count, hot_score, expires_at, deleted_at, is_legal_hold';
+      'id, title, category, content, author_alias, author_hash, likes, carrera, forum_server_id, image_url, gif_url, video_url, is_pinned, quoted_post_id, reposts_count, shares_count, moderation_status, created_at, comments_count, hot_score, expires_at, deleted_at, is_legal_hold';
 
   static const String _commentFallbackColumns =
       'id, post_id, parent_id, content, author_alias, author_hash, gif_url, created_at, moderation_status, is_op, likes_count, deleted_at';
 
-  static Set<String> _getCareerIdsForFaculty(String facultadId) {
+  static Set<String> _getCareerIdsForFaculty(
+    String facultadId, {
+    List<ForumFaculty>? faculties,
+  }) {
     if (facultadId == 'todas') return <String>{'todas'};
     final careerIds = <String>{};
+    if (faculties != null) {
+      final loadedFac = faculties.cast<ForumFaculty?>().firstWhere(
+        (f) => f?.id == facultadId,
+        orElse: () => null,
+      );
+      if (loadedFac != null) {
+        for (final c in loadedFac.careers) {
+          if (c.id != 'todas' && c.id.isNotEmpty) {
+            careerIds.add(c.id);
+          }
+        }
+      }
+    }
     final fac = USACConstants.facultades.firstWhere(
       (f) => f['id'] == facultadId,
       orElse: () => <String, dynamic>{},
@@ -65,24 +81,23 @@ class ForumService {
     String category = 'todos',
     String facultad = 'todas',
     String carrera = 'todas',
+    String? forumServerId,
+    String? serverKind,
+    List<String>? childServerIds,
     String searchQuery = '',
     bool showOnlyBookmarks = false,
     FeedMode feedMode = FeedMode.hot,
     bool forceRefresh = false,
+    List<ForumFaculty>? faculties,
   }) async {
-    final isDefaultQuery =
-        category == 'todos' &&
-        facultad == 'todas' &&
-        carrera == 'todas' &&
-        searchQuery.trim().isEmpty &&
-        !showOnlyBookmarks &&
-        feedMode == FeedMode.hot;
-
+    final effectiveServerId = (forumServerId ?? '').trim();
     final cacheKey = CacheService.buildKey({
       'user': SupabaseService.currentUserId ?? 'anon',
       'category': category,
       'facultad': facultad,
       'carrera': carrera,
+      'server': effectiveServerId,
+      'serverKind': serverKind ?? '',
       'search': searchQuery.trim().toLowerCase(),
       'bookmarks': showOnlyBookmarks,
       'feedMode': feedMode.name,
@@ -97,13 +112,60 @@ class ForumService {
       throw Exception('La aplicación no está conectada a la base de datos.');
     }
 
-    if (isDefaultQuery && !forceRefresh) {
-      final persisted = await _readPersistedPosts(cacheKey);
-      if (persisted != null) return persisted;
-    }
-
     try {
       final currentUserId = SupabaseService.currentUserId;
+
+      PostgrestFilterBuilder<List<Map<String, dynamic>>> applyScopeFilter(
+        PostgrestFilterBuilder<List<Map<String, dynamic>>> q,
+      ) {
+        if (effectiveServerId == 'general' || carrera == 'general') {
+          return q.or('forum_server_id.eq.general,carrera.in.(general,todas)');
+        }
+        if (serverKind == 'faculty' && effectiveServerId.isNotEmpty) {
+          final serverIds = <String>{
+            effectiveServerId,
+            ...?childServerIds,
+          }.where((id) => id.isNotEmpty).toList();
+          final careerIds = _getCareerIdsForFaculty(
+            facultad,
+            faculties: faculties,
+          );
+          final parts = <String>[];
+          if (serverIds.isNotEmpty) {
+            parts.add('forum_server_id.in.(${serverIds.join(',')})');
+          }
+          if (careerIds.isNotEmpty) {
+            parts.add('carrera.in.(${careerIds.join(',')})');
+          }
+          if (parts.isNotEmpty) {
+            return q.or(parts.join(','));
+          }
+        }
+        if (effectiveServerId.isNotEmpty && effectiveServerId != 'todas') {
+          if (carrera.isNotEmpty && carrera != 'todas' && carrera != effectiveServerId) {
+            return q.or(
+              'forum_server_id.eq.$effectiveServerId,carrera.eq.$carrera',
+            );
+          }
+          return q.or(
+            'forum_server_id.eq.$effectiveServerId,carrera.eq.$effectiveServerId',
+          );
+        }
+        if (carrera != 'todas') {
+          return q.eq('carrera', carrera);
+        }
+        if (facultad != 'todas') {
+          final careerIds = _getCareerIdsForFaculty(
+            facultad,
+            faculties: faculties,
+          );
+          return q.inFilter(
+            'carrera',
+            careerIds.isNotEmpty ? careerIds.toList() : const ['__none__'],
+          );
+        }
+        return q;
+      }
 
       if (showOnlyBookmarks) {
         if (currentUserId == null) return [];
@@ -118,22 +180,14 @@ class ForumService {
             .toList();
         if (bookmarkedIds.isEmpty) return [];
 
-        var bookmarksQuery = SupabaseService.client
-            .from('posts')
-            .select(_postFallbackColumns)
-            .isFilter('deleted_at', null)
-            .neq('moderation_status', 2)
-            .inFilter('id', bookmarkedIds);
-
-        if (carrera != 'todas') {
-          bookmarksQuery = bookmarksQuery.eq('carrera', carrera);
-        } else if (facultad != 'todas') {
-          final careerIds = _getCareerIdsForFaculty(facultad);
-          bookmarksQuery = bookmarksQuery.inFilter(
-            'carrera',
-            careerIds.isNotEmpty ? careerIds.toList() : const ['__none__'],
-          );
-        }
+        var bookmarksQuery = applyScopeFilter(
+          SupabaseService.client
+              .from('posts')
+              .select(_postFallbackColumns)
+              .isFilter('deleted_at', null)
+              .neq('moderation_status', 2)
+              .inFilter('id', bookmarkedIds),
+        );
 
         if (searchQuery.trim().isNotEmpty) {
           final q = InputSanitizer.sanitizePostgrestSearch(searchQuery);
@@ -166,24 +220,16 @@ class ForumService {
         return posts;
       }
 
-      var query = SupabaseService.client
-          .from('posts')
-          .select(_postFallbackColumns)
-          .isFilter('deleted_at', null)
-          .neq('moderation_status', 2);
+      var query = applyScopeFilter(
+        SupabaseService.client
+            .from('posts')
+            .select(_postFallbackColumns)
+            .isFilter('deleted_at', null)
+            .neq('moderation_status', 2),
+      );
 
       if (category != 'todos') {
         query = query.eq('category', category);
-      }
-
-      if (carrera != 'todas') {
-        query = query.eq('carrera', carrera);
-      } else if (facultad != 'todas') {
-        final careerIds = _getCareerIdsForFaculty(facultad);
-        query = query.inFilter(
-          'carrera',
-          careerIds.isNotEmpty ? careerIds.toList() : const ['__none__'],
-        );
       }
 
       if (searchQuery.trim().isNotEmpty) {
@@ -191,6 +237,9 @@ class ForumService {
         if (q.isNotEmpty) {
           query = query.or('title.ilike.%$q%,content.ilike.%$q%');
         }
+      } else {
+        final nowIso = DateTime.now().toUtc().toIso8601String();
+        query = query.or('expires_at.is.null,expires_at.gt.$nowIso');
       }
 
       final PostgrestTransformBuilder<List<Map<String, dynamic>>> orderedQuery;
@@ -212,20 +261,9 @@ class ForumService {
       final posts = await _hydratePosts(data, currentUserId);
 
       CacheService.set(_cacheNamespace, cacheKey, List<Post>.from(posts));
-      if (isDefaultQuery && posts.isNotEmpty) {
-        await CacheService.setPersisted(
-          _cacheNamespace,
-          cacheKey,
-          posts.map(_postToCacheMap).toList(),
-        );
-      }
       return posts;
     } catch (e) {
       debugPrint('Error al obtener posts del foro: $e');
-      if (isDefaultQuery) {
-        final persisted = await _readPersistedPosts(cacheKey, allowStale: true);
-        if (persisted != null) return persisted;
-      }
       rethrow;
     }
   }
@@ -268,11 +306,13 @@ class ForumService {
       'avatar_icon_index': post.avatarIconIndex,
       'created_at': post.createdAt.toIso8601String(),
       'carrera': post.carrera,
+      'forum_server_id': post.forumServerId,
       'image_url': post.imageUrl,
       'gif_url': post.gifUrl,
       'video_url': post.videoUrl,
       'quoted_post_id': post.quotedPostId,
       'reposts_count': post.repostsCount,
+      'shares_count': post.sharesCount,
       'is_pinned': post.isPinned,
       'moderation_status': post.moderationStatus,
       'is_mine': post.isMine,
@@ -461,33 +501,90 @@ class ForumService {
       }
     }
 
-    return data.map((item) {
-      final map = Map<String, dynamic>.from(item);
-      final postId = map['id'].toString();
-      int commentCount = 0;
-      if (map['comments'] is List && (map['comments'] as List).isNotEmpty) {
-        final countObj = (map['comments'] as List).first;
-        commentCount = countObj['count'] ?? 0;
+    // 4. Avatares y alias vivos desde Supabase (sin exponer user_id)
+    final Map<String, ({int? color, int? icon, String? alias})> liveProfilesByPostId = {};
+    final allPostIds = <String>{...postIds, ...quotedIds}.toList();
+    if (allPostIds.isNotEmpty) {
+      try {
+        final avatarsRes = await SupabaseService.client.rpc(
+          'get_posts_avatars',
+          params: {'p_post_ids': allPostIds},
+        );
+        if (avatarsRes is List) {
+          for (final item in avatarsRes) {
+            if (item is! Map) continue;
+            final pid = item['post_id']?.toString();
+            final colorIdx = item['avatar_color_index'] is int
+                ? item['avatar_color_index'] as int
+                : int.tryParse(item['avatar_color_index']?.toString() ?? '');
+            final iconIdx = item['avatar_icon_index'] is int
+                ? item['avatar_icon_index'] as int
+                : int.tryParse(item['avatar_icon_index']?.toString() ?? '');
+            final rawAlias = item['author_alias']?.toString().trim();
+            final alias = (rawAlias != null && rawAlias.isNotEmpty) ? rawAlias : null;
+            if (pid != null && (colorIdx != null || iconIdx != null || alias != null)) {
+              liveProfilesByPostId[pid] = (color: colorIdx, icon: iconIdx, alias: alias);
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Aviso cargando avatares/alias de posts: $e');
       }
+    }
 
-      final qId = map['quoted_post_id']?.toString();
-      final quoted = (qId != null) ? quotedPostsMap[qId] : null;
+    if (liveProfilesByPostId.isNotEmpty && quotedPostsMap.isNotEmpty) {
+      for (final entry in quotedPostsMap.entries.toList()) {
+        final lp = liveProfilesByPostId[entry.key];
+        if (lp != null) {
+          quotedPostsMap[entry.key] = entry.value.copyWith(
+            authorAlias: lp.alias,
+            avatarColorIndex: lp.color,
+            avatarIconIndex: lp.icon,
+          );
+        }
+      }
+    }
 
-      final bool isMine =
-          map['is_mine'] == true ||
-          map['is_my_post'] == true ||
-          myPostIds.contains(postId);
-      map['is_mine'] = isMine;
+    final nowUtc = DateTime.now().toUtc();
+    return data
+        .map((item) {
+          final map = Map<String, dynamic>.from(item);
+          final postId = map['id'].toString();
+          int commentCount = 0;
+          if (map['comments'] is List && (map['comments'] as List).isNotEmpty) {
+            final countObj = (map['comments'] as List).first;
+            commentCount = countObj['count'] ?? 0;
+          }
 
-      return Post.fromMap(
-        map,
-        isLikedByMe: likedPostIds.contains(postId),
-        isBookmarkedByMe: bookmarkedPostIds.contains(postId),
-        commentCount: commentCount,
-        poll: pollsByPostId[postId],
-        quotedPost: quoted,
-      ).copyWith(isMine: isMine);
-    }).toList();
+          final qId = map['quoted_post_id']?.toString();
+          final quoted = (qId != null) ? quotedPostsMap[qId] : null;
+
+          final bool isMine =
+              map['is_mine'] == true ||
+              map['is_my_post'] == true ||
+              myPostIds.contains(postId);
+          map['is_mine'] = isMine;
+
+          final lp = liveProfilesByPostId[postId];
+
+          return Post.fromMap(
+            map,
+            isLikedByMe: likedPostIds.contains(postId),
+            isBookmarkedByMe: bookmarkedPostIds.contains(postId),
+            commentCount: commentCount,
+            poll: pollsByPostId[postId],
+            quotedPost: quoted,
+          ).copyWith(
+            isMine: isMine,
+            authorAlias: lp?.alias,
+            avatarColorIndex: lp?.color,
+            avatarIconIndex: lp?.icon,
+          );
+        })
+        .where(
+          (p) => p.expiresAt == null || p.expiresAt!.toUtc().isAfter(nowUtc),
+        )
+        .toList();
   }
 
   static Future<bool> toggleLike(Post post) async {
@@ -649,7 +746,7 @@ class ForumService {
       };
 
       const selectColumns =
-          'id, title, category, content, author_alias, author_hash, likes, carrera, image_url, gif_url, is_pinned, quoted_post_id, reposts_count, moderation_status, created_at, comments_count, hot_score, expires_at, deleted_at, is_legal_hold';
+          'id, title, category, content, author_alias, author_hash, likes, carrera, forum_server_id, image_url, gif_url, is_pinned, quoted_post_id, reposts_count, shares_count, moderation_status, created_at, comments_count, hot_score, expires_at, deleted_at, is_legal_hold';
       final selectWithVideo = '$selectColumns, video_url';
 
       Map<String, dynamic> res;
@@ -744,18 +841,47 @@ class ForumService {
 
       final currentUserId = SupabaseService.currentUserId;
       final Set<String> myCommentIds = {};
-      if (currentUserId != null && allComments.isNotEmpty) {
+      final Map<String, ({int? color, int? icon, String? alias})> liveProfilesByCommentId = {};
+      if (allComments.isNotEmpty) {
+        final commentIds = allComments.map((c) => c.id).toList();
+        if (currentUserId != null) {
+          try {
+            final authorsRes = await SupabaseService.client
+                .from('comment_authors')
+                .select('comment_id')
+                .inFilter('comment_id', commentIds);
+            for (var item in authorsRes) {
+              myCommentIds.add(item['comment_id'].toString());
+            }
+          } catch (e) {
+            debugPrint('Error verificando autoría de comentarios: $e');
+          }
+        }
+
         try {
-          final commentIds = allComments.map((c) => c.id).toList();
-          final authorsRes = await SupabaseService.client
-              .from('comment_authors')
-              .select('comment_id')
-              .inFilter('comment_id', commentIds);
-          for (var item in authorsRes) {
-            myCommentIds.add(item['comment_id'].toString());
+          final avatarsRes = await SupabaseService.client.rpc(
+            'get_comments_avatars',
+            params: {'p_comment_ids': commentIds},
+          );
+          if (avatarsRes is List) {
+            for (final item in avatarsRes) {
+              if (item is! Map) continue;
+              final cid = item['comment_id']?.toString();
+              final colorIdx = item['avatar_color_index'] is int
+                  ? item['avatar_color_index'] as int
+                  : int.tryParse(item['avatar_color_index']?.toString() ?? '');
+              final iconIdx = item['avatar_icon_index'] is int
+                  ? item['avatar_icon_index'] as int
+                  : int.tryParse(item['avatar_icon_index']?.toString() ?? '');
+              final rawAlias = item['author_alias']?.toString().trim();
+              final alias = (rawAlias != null && rawAlias.isNotEmpty) ? rawAlias : null;
+              if (cid != null && (colorIdx != null || iconIdx != null || alias != null)) {
+                liveProfilesByCommentId[cid] = (color: colorIdx, icon: iconIdx, alias: alias);
+              }
+            }
           }
         } catch (e) {
-          debugPrint('Error verificando autoría de comentarios: $e');
+          debugPrint('Aviso cargando avatares/alias de comentarios: $e');
         }
       }
 
@@ -765,8 +891,14 @@ class ForumService {
       for (var i = 0; i < allComments.length; i++) {
         var c = allComments[i];
         c.children = [];
-        if (myCommentIds.contains(c.id)) {
-          c = c.copyWith(isMine: true);
+        final lp = liveProfilesByCommentId[c.id];
+        if (myCommentIds.contains(c.id) || lp != null) {
+          c = c.copyWith(
+            isMine: myCommentIds.contains(c.id) ? true : c.isMine,
+            authorAlias: lp?.alias ?? c.authorAlias,
+            avatarColorIndex: lp?.color ?? c.avatarColorIndex,
+            avatarIconIndex: lp?.icon ?? c.avatarIconIndex,
+          );
           allComments[i] = c;
         }
         map[c.id] = c;
@@ -889,14 +1021,42 @@ class ForumService {
           .single()
           .timeout(const Duration(seconds: 12));
 
+      int? avatarColorIndex;
+      int? avatarIconIndex;
+      try {
+        final profile = await LocalStorageService.getUserProfile();
+        avatarColorIndex = profile.avatarColorIndex;
+        avatarIconIndex = profile.avatarIconIndex;
+      } catch (_) {}
+
       final comment = PostComment.fromMap(
         Map<String, dynamic>.from(res),
-      ).copyWith(isMine: true);
+      ).copyWith(
+        isMine: true,
+        avatarColorIndex: avatarColorIndex,
+        avatarIconIndex: avatarIconIndex,
+      );
       await CacheService.invalidateAll(_cacheNamespace);
       return comment;
     } catch (e) {
       debugPrint('Error al agregar comentario: $e');
       rethrow;
+    }
+  }
+
+  static Future<int?> incrementShareCount(String postId) async {
+    if (!SupabaseConfig.isConfigured || postId.trim().isEmpty) return null;
+    try {
+      final res = await SupabaseService.client.rpc(
+        'increment_post_share',
+        params: {'p_post_id': postId},
+      );
+      await CacheService.invalidateAll(_cacheNamespace);
+      if (res is int) return res;
+      return int.tryParse(res?.toString() ?? '');
+    } catch (e) {
+      debugPrint('Error al incrementar shares_count del post: $e');
+      return null;
     }
   }
 
@@ -1482,7 +1642,7 @@ class ForumService {
 
         if (foundCareer != null && foundFac != null) {
           final server = ForumServer(
-            id: 'server_${foundCareer.id}',
+            id: foundCareer.id,
             name: foundCareer.name,
             shortCode: foundCareer.shortCode,
             icon: foundCareer.icon,
