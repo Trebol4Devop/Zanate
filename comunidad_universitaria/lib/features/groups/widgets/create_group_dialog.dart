@@ -76,10 +76,20 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
   void initState() {
     super.initState();
     if (widget.initialFacultad != null && widget.initialFacultad!.isNotEmpty) {
-      _selectedFacultad = widget.initialFacultad!;
+      final validFacultad = USACConstants.facultades.any(
+        (f) => f['id']?.toString() == widget.initialFacultad,
+      );
+      if (validFacultad) {
+        _selectedFacultad = widget.initialFacultad!;
+      }
     }
     if (widget.initialCarrera != null && widget.initialCarrera!.isNotEmpty) {
-      _selectedCarrera = widget.initialCarrera!;
+      final validCarrera = _availableCarreras.any(
+        (c) => c['id']?.toString() == widget.initialCarrera,
+      );
+      if (validCarrera) {
+        _selectedCarrera = widget.initialCarrera!;
+      }
     }
   }
 
@@ -519,10 +529,14 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
                   if (val == null || val.trim().isEmpty) {
                     return 'Pega el enlace de invitación del grupo.';
                   }
-                  final lower = val.toLowerCase();
+                  final trimmed = val.trim();
+                  final lower = trimmed.toLowerCase();
                   if (!lower.startsWith('http://') &&
                       !lower.startsWith('https://')) {
                     return 'El enlace debe comenzar con https://';
+                  }
+                  if (WhatsAppGroup.detectPlatformFromLink(trimmed) == null) {
+                    return 'Solo se permiten enlaces de WhatsApp, Telegram o Discord.';
                   }
                   return null;
                 },

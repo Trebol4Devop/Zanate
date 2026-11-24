@@ -10,8 +10,10 @@ import '../../../core/constants/categories.dart';
 import '../../../core/constants/zanate_colors.dart';
 import '../../../core/models/whatsapp_group.dart';
 import '../../../core/services/groups_service.dart';
+import '../../../core/services/local_storage_service.dart';
 import '../../../core/services/profile_service.dart';
 import '../../../core/services/supabase_service.dart';
+import '../../../core/utils/responsive.dart';
 import '../widgets/create_group_dialog.dart';
 import '../widgets/group_card.dart';
 import '../../shared/widgets/auth_modal.dart';
@@ -61,6 +63,8 @@ class GroupsScreenState extends State<GroupsScreen> {
   Timer? _searchDebounce;
   int _loadRequestId = 0;
   final Set<String> _votingGroupIds = {};
+  bool _isDesktopFilterExpanded = false;
+  bool _isDesktopSidebarCollapsed = false;
 
   @override
   void initState() {
@@ -71,7 +75,27 @@ class GroupsScreenState extends State<GroupsScreen> {
     if (widget.activeCarreraId != null) {
       _selectedCarrera = widget.activeCarreraId!;
     }
+    ProfileService.profileRevision.addListener(_onProfileRevisionChanged);
     _loadGroups();
+  }
+
+  Future<void> _onProfileRevisionChanged() async {
+    try {
+      final profile = await LocalStorageService.getUserProfile();
+      if (!mounted) return;
+      setState(() {
+        _groups = _groups.map((g) {
+          if (!g.isMine) return g;
+          return g.copyWith(
+            avatarColorIndex: profile.avatarColorIndex,
+            avatarIconIndex: profile.avatarIconIndex,
+          );
+        }).toList();
+      });
+    } catch (_) {}
+    if (mounted) {
+      _loadGroups(forceRefresh: true);
+    }
   }
 
   @override
@@ -95,6 +119,7 @@ class GroupsScreenState extends State<GroupsScreen> {
 
   @override
   void dispose() {
+    ProfileService.profileRevision.removeListener(_onProfileRevisionChanged);
     _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
@@ -115,7 +140,7 @@ class GroupsScreenState extends State<GroupsScreen> {
     _loadGroups();
   }
 
-  Future<void> _loadGroups() async {
+  Future<void> _loadGroups({bool forceRefresh = false}) async {
     final currentRequestId = ++_loadRequestId;
     setState(() {
       _isLoading = true;
@@ -127,6 +152,7 @@ class GroupsScreenState extends State<GroupsScreen> {
         facultad: _selectedFacultad,
         carrera: _selectedCarrera,
         searchQuery: _searchQuery,
+        forceRefresh: forceRefresh,
       );
       if (mounted && currentRequestId == _loadRequestId) {
         setState(() {
@@ -336,9 +362,7 @@ class GroupsScreenState extends State<GroupsScreen> {
       initialFacultad: _selectedFacultad != 'todas' ? _selectedFacultad : null,
       initialCarrera: _selectedCarrera != 'todas' ? _selectedCarrera : null,
       onGroupCreated: (newGroup) {
-        setState(() {
-          _groups.insert(0, newGroup);
-        });
+        _loadGroups(forceRefresh: true);
       },
     );
   }
@@ -603,10 +627,80 @@ class GroupsScreenState extends State<GroupsScreen> {
     );
   }
 
-  // 2. Zanate Search & Preferences Bar
-  Widget _buildSquaredSearchBar(bool isDark) {
+  Widget _buildSearchInput(bool isDark) {
     final textPrimary = ZanateColors.textPrimary(isDark);
     final textSecondary = ZanateColors.textSecondary(isDark);
+    final borderColor = ZanateColors.border(isDark);
+
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: ZanateColors.surface(isDark),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: borderColor,
+          width: 1.2,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            PhosphorIconsRegular.magnifyingGlass,
+            size: 17,
+            color: textSecondary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              onChanged: _onSearchChanged,
+              onSubmitted: _submitSearch,
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                filled: false,
+                hintText: 'Buscar cursos, secciones o palabras clave...',
+                hintStyle: TextStyle(
+                  fontSize: 13,
+                  color: ZanateColors.textMuted(isDark),
+                  fontWeight: FontWeight.w400,
+                ),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+              style: TextStyle(
+                fontSize: 13.5,
+                color: textPrimary,
+              ),
+            ),
+          ),
+          if (_searchQuery.isNotEmpty)
+            InkWell(
+              borderRadius: BorderRadius.circular(999),
+              onTap: () {
+                _searchController.clear();
+                _onSearchChanged('');
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Icon(
+                  PhosphorIconsRegular.x,
+                  size: 15,
+                  color: textSecondary,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // 2. Zanate Search & Preferences Bar (móvil / tableta)
+  Widget _buildSquaredSearchBar(bool isDark) {
+    final textPrimary = ZanateColors.textPrimary(isDark);
     final borderColor = ZanateColors.border(isDark);
     return Container(
       width: double.infinity,
@@ -619,72 +713,7 @@ class GroupsScreenState extends State<GroupsScreen> {
       ),
       child: Row(
         children: [
-          Expanded(
-            child: Container(
-              height: 40,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: ZanateColors.surface(isDark),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: borderColor,
-                  width: 1.2,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    PhosphorIconsRegular.magnifyingGlass,
-                    size: 17,
-                    color: textSecondary,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: _onSearchChanged,
-                      onSubmitted: _submitSearch,
-                      textInputAction: TextInputAction.search,
-                      decoration: InputDecoration(
-                        filled: false,
-                        hintText: 'Buscar cursos, secciones o palabras clave...',
-                        hintStyle: TextStyle(
-                          fontSize: 13,
-                          color: ZanateColors.textMuted(isDark),
-                          fontWeight: FontWeight.w400,
-                        ),
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        color: textPrimary,
-                      ),
-                    ),
-                  ),
-                  if (_searchQuery.isNotEmpty)
-                    InkWell(
-                      borderRadius: BorderRadius.circular(999),
-                      onTap: () {
-                        _searchController.clear();
-                        _onSearchChanged('');
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(4),
-                        child: Icon(
-                          PhosphorIconsRegular.x,
-                          size: 15,
-                          color: textSecondary,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
+          Expanded(child: _buildSearchInput(isDark)),
           const SizedBox(width: 8),
 
           // Discrete Zanate Preferences Pill
@@ -813,17 +842,28 @@ class GroupsScreenState extends State<GroupsScreen> {
       return _buildLoadError();
     }
 
+    final isDesktop = Responsive.isDesktop(context);
+
     if (_groups.isEmpty) {
+      final empty = const EmptyStateWidget(
+        icon: PhosphorIconsRegular.usersThree,
+        title: 'No se encontraron grupos para este filtro',
+        description:
+            'Prueba ajustando tus preferencias o usa el botón + superior para compartir un enlace con tus compañeros.',
+      );
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 24),
-        children: const [
-          EmptyStateWidget(
-            icon: PhosphorIconsRegular.usersThree,
-            title: 'No se encontraron grupos para este filtro',
-            description:
-                'Prueba ajustando tus preferencias o usa el botón + superior para compartir un enlace con tus compañeros.',
-          ),
+        children: [
+          if (isDesktop)
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: empty,
+              ),
+            )
+          else
+            empty,
         ],
       );
     }
@@ -832,16 +872,515 @@ class GroupsScreenState extends State<GroupsScreen> {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.zero,
       itemCount: _groups.length,
-      itemBuilder: (ctx, i) => _buildGroupCard(_groups[i]),
+      itemBuilder: (ctx, i) {
+        final card = _buildGroupCard(_groups[i]);
+        if (!isDesktop) return card;
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: card,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDesktopHeader(bool isDark, String titleText) {
+    final textPrimary = ZanateColors.textPrimary(isDark);
+    return Container(
+      constraints: const BoxConstraints(minHeight: 58),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: ZanateColors.card(isDark),
+        border: Border(
+          bottom: BorderSide(color: ZanateColors.border(isDark)),
+        ),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 48),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  'DIRECTORIO ESTUDIANTIL',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                    color: ZanateColors.textMuted(isDark),
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  titleText,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Compartir Grupo',
+            onPressed: _openCreateGroupDialog,
+            icon: Icon(
+              PhosphorIconsBold.plus,
+              size: 22,
+              color: textPrimary,
+            ),
+            splashRadius: 22,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopSidebar(bool isDark) {
+    final textPrimary = ZanateColors.textPrimary(isDark);
+    final textSecondary = ZanateColors.textSecondary(isDark);
+    final borderColor = ZanateColors.border(isDark);
+
+    if (_isDesktopSidebarCollapsed) {
+      return Container(
+        width: 56,
+        decoration: BoxDecoration(
+          color: ZanateColors.card(isDark),
+          border: Border(
+            right: BorderSide(color: borderColor, width: 1),
+          ),
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 10),
+            IconButton(
+              tooltip: 'Expandir barra lateral',
+              onPressed: () =>
+                  setState(() => _isDesktopSidebarCollapsed = false),
+              icon: Icon(
+                PhosphorIconsRegular.sidebarSimple,
+                size: 20,
+                color: textPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            IconButton(
+              tooltip: 'Buscar grupos',
+              onPressed: () =>
+                  setState(() => _isDesktopSidebarCollapsed = false),
+              icon: Icon(
+                PhosphorIconsRegular.magnifyingGlass,
+                size: 20,
+                color: _searchQuery.isNotEmpty
+                    ? ZanateColors.focusBorder(isDark)
+                    : textSecondary,
+              ),
+            ),
+            IconButton(
+              tooltip: 'Filtrar por Facultad',
+              onPressed: () {
+                setState(() {
+                  _isDesktopSidebarCollapsed = false;
+                  _isDesktopFilterExpanded = true;
+                });
+              },
+              icon: Icon(
+                _hasActivePreferences
+                    ? PhosphorIconsFill.slidersHorizontal
+                    : PhosphorIconsRegular.slidersHorizontal,
+                size: 20,
+                color: _hasActivePreferences
+                    ? ZanateColors.focusBorder(isDark)
+                    : textSecondary,
+              ),
+            ),
+            const Spacer(),
+            Container(
+              decoration: BoxDecoration(
+                color: ZanateColors.bg(isDark),
+                border: Border(top: BorderSide(color: borderColor, width: 0.8)),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              width: double.infinity,
+              child: IconButton(
+                tooltip: 'Configuración y Perfil',
+                onPressed: () => SettingsScreen.show(
+                  context,
+                  activeAlias: widget.activeAlias,
+                  onAliasChanged: widget.onAliasChanged,
+                  onToggleTheme: widget.onToggleTheme,
+                ),
+                icon: Icon(
+                  PhosphorIconsRegular.gear,
+                  size: 20,
+                  color: textPrimary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      width: 272,
+      decoration: BoxDecoration(
+        color: ZanateColors.card(isDark),
+        border: Border(
+          right: BorderSide(color: borderColor, width: 1),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Búsqueda y filtros',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: textSecondary,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Contraer barra lateral',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints.tightFor(
+                        width: 30,
+                        height: 30,
+                      ),
+                      onPressed: () =>
+                          setState(() => _isDesktopSidebarCollapsed = true),
+                      icon: Icon(
+                        PhosphorIconsRegular.sidebarSimple,
+                        size: 18,
+                        color: textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                _buildSearchInput(isDark),
+                const SizedBox(height: 10),
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _isDesktopFilterExpanded = !_isDesktopFilterExpanded;
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    height: 40,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: _hasActivePreferences
+                          ? ZanateColors.zanateEyeYellow
+                          : ZanateColors.pill(isDark),
+                      borderRadius: BorderRadius.circular(12),
+                      border: _hasActivePreferences
+                          ? null
+                          : Border.all(color: borderColor, width: 1),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _hasActivePreferences
+                              ? PhosphorIconsFill.slidersHorizontal
+                              : PhosphorIconsRegular.slidersHorizontal,
+                          size: 16,
+                          color: _hasActivePreferences
+                              ? ZanateColors.zanateBlack
+                              : textPrimary,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _getActivePreferencesLabel(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: _hasActivePreferences
+                                  ? FontWeight.w700
+                                  : FontWeight.w600,
+                              color: _hasActivePreferences
+                                  ? ZanateColors.zanateBlack
+                                  : textPrimary,
+                            ),
+                          ),
+                        ),
+                        if (_hasActivePreferences)
+                          InkWell(
+                            borderRadius: BorderRadius.circular(10),
+                            onTap: () {
+                              setState(() => _selectedFacultad = 'todas');
+                              _loadGroups();
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.all(4),
+                              child: Icon(
+                                PhosphorIconsBold.x,
+                                size: 13,
+                                color: ZanateColors.zanateBlack,
+                              ),
+                            ),
+                          ),
+                        const SizedBox(width: 2),
+                        Icon(
+                          _isDesktopFilterExpanded
+                              ? PhosphorIconsRegular.caretUp
+                              : PhosphorIconsRegular.caretDown,
+                          size: 15,
+                          color: _hasActivePreferences
+                              ? ZanateColors.zanateBlack
+                              : textSecondary,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              child: _isDesktopFilterExpanded
+                  ? Column(
+                      key: const ValueKey('desktop_filter_list'),
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(14, 4, 10, 6),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Filtrar por Facultad',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: textSecondary,
+                                  ),
+                                ),
+                              ),
+                              if (_hasActivePreferences) ...[
+                                const SizedBox(width: 6),
+                                TextButton(
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  onPressed: () {
+                                    setState(() => _selectedFacultad = 'todas');
+                                    _loadGroups();
+                                  },
+                                  child: Text(
+                                    'Restablecer',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      color: isDark
+                                          ? const Color(0xFFF87171)
+                                          : const Color(0xFFEF4444),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(10, 0, 10, 12),
+                            itemCount: USACConstants.facultades.length,
+                            itemBuilder: (ctx, i) {
+                              final fac = USACConstants.facultades[i];
+                              final facId = fac['id'].toString();
+                              final facName = fac['nombre'].toString();
+                              final isSelected = _selectedFacultad == facId;
+                              final activeBg = isDark
+                                  ? ZanateColors.zanateEyeYellow
+                                      .withValues(alpha: 0.20)
+                                  : ZanateColors.zanateEyeYellow
+                                      .withValues(alpha: 0.28);
+
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 3),
+                                child: Material(
+                                  color: isSelected
+                                      ? activeBg
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(10),
+                                    onTap: () {
+                                      setState(() => _selectedFacultad = facId);
+                                      _loadGroups();
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 8,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              facName,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 12.5,
+                                                fontWeight: isSelected
+                                                    ? FontWeight.w700
+                                                    : FontWeight.w500,
+                                                color: isSelected
+                                                    ? textPrimary
+                                                    : textSecondary,
+                                              ),
+                                            ),
+                                          ),
+                                          if (isSelected) ...[
+                                            const SizedBox(width: 6),
+                                            Icon(
+                                              PhosphorIconsBold.check,
+                                              size: 14,
+                                              color: isDark
+                                                  ? ZanateColors.zanateEyeYellow
+                                                  : ZanateColors.zanateBlack,
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    )
+                  : const SizedBox.shrink(key: ValueKey('desktop_filter_empty')),
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: ZanateColors.bg(isDark),
+              border: Border(top: BorderSide(color: borderColor, width: 0.8)),
+            ),
+            padding: const EdgeInsets.all(10),
+            child: Tooltip(
+              message: 'Configuración y Perfil',
+              child: Material(
+                color: ZanateColors.surface(isDark),
+                borderRadius: BorderRadius.circular(12),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => SettingsScreen.show(
+                    context,
+                    activeAlias: widget.activeAlias,
+                    onAliasChanged: widget.onAliasChanged,
+                    onToggleTheme: widget.onToggleTheme,
+                  ),
+                  child: Container(
+                    height: 40,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: borderColor, width: 0.9),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          PhosphorIconsRegular.gear,
+                          size: 18,
+                          color: textPrimary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Configuración',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDesktop = Responsive.isDesktop(context);
     final titleText = widget.activeChannelName != null
         ? '#${widget.activeChannelName}'
         : 'Grupos de Estudio';
+
+    if (isDesktop) {
+      return Scaffold(
+        backgroundColor: ZanateColors.bg(isDark),
+        body: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildDesktopSidebar(isDark),
+            Expanded(
+              child: Column(
+                children: [
+                  _buildDesktopHeader(isDark, titleText),
+                  if (_loadError != null && _groups.isNotEmpty) ...[
+                    _buildLoadError(),
+                  ],
+                  Expanded(
+                    child: RefreshIndicator(
+                      color: ZanateColors.focusBorder(isDark),
+                      backgroundColor: ZanateColors.card(isDark),
+                      onRefresh: () => _loadGroups(forceRefresh: true),
+                      child: _buildGroupsFeed(isDark),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        floatingActionButton: null,
+      );
+    }
 
     return Scaffold(
       backgroundColor: ZanateColors.bg(isDark),
@@ -862,7 +1401,7 @@ class GroupsScreenState extends State<GroupsScreen> {
             child: RefreshIndicator(
               color: ZanateColors.focusBorder(isDark),
               backgroundColor: ZanateColors.card(isDark),
-              onRefresh: _loadGroups,
+              onRefresh: () => _loadGroups(forceRefresh: true),
               child: _buildGroupsFeed(isDark),
             ),
           ),

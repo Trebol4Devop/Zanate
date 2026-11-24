@@ -206,5 +206,45 @@ void main() {
         expect(allGroups.length, equals(5));
       },
     );
+
+    test(
+      'incluye carreras 77-* de Humanidades al filtrar por facultad 07 y ambiental en 08',
+      () async {
+        final mockGroups = [
+          TestFixtures.whatsAppGroupMap(
+            id: 'g-hum-1',
+            title: 'Pedagogía',
+            carrera: '77-00-01',
+            curso: 'Didáctica',
+          ),
+          TestFixtures.whatsAppGroupMap(
+            id: 'g-amb-1',
+            title: 'Ingeniería Ambiental',
+            carrera: 'ambiental',
+            curso: 'Ecología',
+          ),
+        ];
+
+        fakeServer.onGet(
+          '/rest/v1/safe_student_groups',
+          (req) => mockGroups,
+        );
+        fakeServer.onGet('/rest/v1/student_groups', (req) => mockGroups);
+
+        final humGroups = await GroupsService.fetchGroups(
+          facultad: '07',
+          carrera: 'todas',
+          forceRefresh: true,
+        );
+        expect(humGroups.map((g) => g.id), ['g-hum-1']);
+
+        final ingGroups = await GroupsService.fetchGroups(
+          facultad: '08',
+          carrera: 'todas',
+          forceRefresh: true,
+        );
+        expect(ingGroups.map((g) => g.id), ['g-amb-1']);
+      },
+    );
   });
 }

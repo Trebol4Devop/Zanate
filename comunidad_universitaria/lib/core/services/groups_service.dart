@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../features/forum/models/discord_forum_models.dart';
 import '../config/supabase_config.dart';
 import '../models/whatsapp_group.dart';
 import '../utils/input_sanitizer.dart';
 import 'cache_service.dart';
+import 'forum_service.dart';
 import 'local_storage_service.dart';
 import 'publish_cooldown_service.dart';
 import 'supabase_service.dart';
@@ -27,6 +29,8 @@ class GroupsService {
       'mecanica',
       'quimica',
       'electronica',
+      'electrica',
+      'ambiental',
       'ingenieria',
       'fi',
       'area_comun',
@@ -36,8 +40,8 @@ class GroupsService {
     '04': ['derecho', 'juridicas', 'leyes', 'sociales'],
     '03': ['economicas', 'auditoria', 'administracion', 'economia'],
     '02': ['arquitectura', 'diseno', 'farq'],
-    '01': ['agronomia', 'ambiental', 'agricola', 'fausac'],
-    '06': ['farmacia', 'bioquimica', 'quimica', 'quimicas', 'farmaceutica'],
+    '01': ['agronomia', 'agricola', 'fausac'],
+    '06': ['farmacia', 'bioquimica', 'quimicas', 'farmaceutica'],
     '77': [
       'humanidades',
       'pedagogia',
@@ -63,6 +67,7 @@ class GroupsService {
     String facultad = 'todas',
     String carrera = 'todas',
     String searchQuery = '',
+    bool forceRefresh = false,
   }) async {
     final isDefaultQuery =
         facultad == 'todas' && carrera == 'todas' && searchQuery.trim().isEmpty;
@@ -73,17 +78,16 @@ class GroupsService {
       'search': searchQuery.trim().toLowerCase(),
     });
 
-    final cached = CacheService.get<List<WhatsAppGroup>>(
-      _cacheNamespace,
-      cacheKey,
-    );
+    final cached = forceRefresh
+        ? null
+        : CacheService.get<List<WhatsAppGroup>>(_cacheNamespace, cacheKey);
     if (cached != null) return List<WhatsAppGroup>.from(cached);
 
     if (!SupabaseConfig.isConfigured) {
       throw Exception('La aplicación no está conectada a la base de datos.');
     }
 
-    if (isDefaultQuery) {
+    if (isDefaultQuery && !forceRefresh) {
       final persisted = await _readPersistedGroups(cacheKey);
       if (persisted != null) return persisted;
     }
@@ -96,7 +100,7 @@ class GroupsService {
         var query = SupabaseService.client
             .from(source)
             .select(columns)
-            .lt('moderation_status', 2);
+            .neq('moderation_status', 2);
 
         if (carrera != 'todas') {
           query = query.eq('carrera', carrera);
@@ -145,6 +149,31 @@ class GroupsService {
         }
       }
 
+      // Avatares actuales de los autores desde Supabase (sin exponer user_id)
+      final Map<String, ({int color, int icon})> avatarsByGroupId = {};
+      if (data.isNotEmpty) {
+        try {
+          final groupIds = data.map((item) => item['id'].toString()).toList();
+          final avatarsRes = await SupabaseService.client.rpc(
+            'get_student_groups_avatars',
+            params: {'p_group_ids': groupIds},
+          );
+          if (avatarsRes is List) {
+            for (final item in avatarsRes) {
+              if (item is! Map) continue;
+              final gid = item['group_id']?.toString();
+              final colorIdx = item['avatar_color_index'];
+              final iconIdx = item['avatar_icon_index'];
+              if (gid != null && colorIdx is int && iconIdx is int) {
+                avatarsByGroupId[gid] = (color: colorIdx, icon: iconIdx);
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint('Aviso cargando avatares de grupos: $e');
+        }
+      }
+
       int? myColorIndex;
       int? myIconIndex;
       final hasMineGroup = data.any(
@@ -165,6 +194,13 @@ class GroupsService {
           map,
           isUpvotedByMe: upvotedGroupIds.contains(groupId),
         );
+        final av = avatarsByGroupId[groupId];
+        if (av != null) {
+          return parsed.copyWith(
+            avatarColorIndex: av.color,
+            avatarIconIndex: av.icon,
+          );
+        }
         if (parsed.isMine && myColorIndex != null && myIconIndex != null) {
           return parsed.copyWith(
             avatarColorIndex: parsed.avatarColorIndex ?? myColorIndex,
@@ -176,12 +212,33 @@ class GroupsService {
 
       if (facultad != 'todas' && carrera == 'todas') {
         final facultyKeywords = _facultyAliases[facultad] ?? [];
-        groups = groups.where((g) {
-          // 1. La carrera inicia con el código de la facultad (ej. 08, 08-01-01, 08_todas)
-          if (g.carrera.startsWith(facultad)) return true;
+        final Set<String> facultyCareerIds = {};
+        try {
+          final faculties = await ForumService.fetchForumFaculties();
+          final matchedFac = faculties.cast<ForumFaculty?>().firstWhere(
+            (f) => f?.id == facultad,
+            orElse: () => null,
+          );
+          if (matchedFac != null) {
+            for (final c in matchedFac.careers) {
+              if (c.id.isNotEmpty && c.id != 'todas') {
+                facultyCareerIds.add(c.id.toLowerCase());
+              }
+            }
+          }
+        } catch (_) {}
 
-          // 2. Si la carrera coincide con algún alias de la facultad (ej. 'sistemas', 'civil', etc.)
+        groups = groups.where((g) {
           final carreraLower = g.carrera.toLowerCase().trim();
+
+          // 1. Coincidencia exacta con los IDs oficiales de carreras de esta facultad
+          if (facultyCareerIds.contains(carreraLower)) return true;
+
+          // 2. La carrera inicia con el código de la facultad (ej. 08, 08-01-01, 08_todas, o 77- para Humanidades 07)
+          if (g.carrera.startsWith(facultad)) return true;
+          if (facultad == '07' && g.carrera.startsWith('77')) return true;
+
+          // 3. Si la carrera coincide con algún alias de la facultad (ej. 'sistemas', 'civil', etc.)
           if (carreraLower.isNotEmpty &&
               carreraLower != 'todas' &&
               facultyKeywords.any(
@@ -190,15 +247,14 @@ class GroupsService {
             return true;
           }
 
-          // 3. Caso especial de Área Común (Ingeniería o general)
+          // 4. Caso especial de Área Común (Ingeniería o general)
           if (carreraLower == 'area_comun' &&
               (facultad == '08' || facultad == 'area_comun')) {
             return true;
           }
 
-          // 4. Si la carrera fue registrada como 'todas' o vacía, SOLO se incluye si su título, curso
-          // o descripción menciona explícitamente palabras clave de esta facultad específica (evitando
-          // que grupos de otras facultades o grupos globales USAC se cuelen en este servidor).
+          // 5. Si la carrera fue registrada como 'todas' o vacía, SOLO se incluye si su título, curso
+          // o descripción menciona explícitamente palabras clave de esta facultad específica.
           if (carreraLower == 'todas' || carreraLower.isEmpty) {
             final searchable = '${g.title} ${g.curso} ${g.description}'
                 .toLowerCase();
@@ -402,6 +458,7 @@ class GroupsService {
         'increment_student_group_share',
         params: {'p_group_id': groupId},
       );
+      await CacheService.invalidateAll(_cacheNamespace);
       if (res is int) return res;
       return int.tryParse(res?.toString() ?? '');
     } catch (e) {
