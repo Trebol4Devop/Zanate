@@ -159,7 +159,8 @@ void main() {
           avatarIconIndex: 4,
         );
 
-        // Sembramos la caché para la carrera default y contexto del usuario (08 - sistemas)
+        // Sembramos la caché para la facultad default del usuario (08 - todas)
+        seedGroupsCache([sampleGroup], carrera: 'todas', facultad: '08');
         seedGroupsCache([sampleGroup], carrera: 'sistemas', facultad: '08');
         seedGroupsCache([sampleGroup], carrera: 'sistemas');
         seedGroupsCache([sampleGroup], carrera: 'todas');
@@ -175,11 +176,10 @@ void main() {
         expect(avatarWidget.isMine, isTrue);
         expect(avatarWidget.avatarColorIndex, 2);
         expect(avatarWidget.avatarIconIndex, 4);
-        expect(find.text('Física 1'), findsOneWidget);
-        expect(find.text('Sección B'), findsOneWidget);
+        expect(find.text('Física 1 • WhatsApp'), findsOneWidget);
+        expect(find.text('Sección B'), findsNothing);
         expect(find.text('Física 1 - Sección B'), findsNothing);
         expect(find.text('Enlace Web'), findsNothing);
-        expect(find.text('WhatsApp'), findsNothing);
         expect(find.text('15'), findsOneWidget);
         final voteButton = find.ancestor(
           of: find.text('15'),
@@ -206,12 +206,78 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('Unirse al Grupo'));
+      await tester.tap(find.text('Unirse'));
       await tester.pumpAndSettle();
 
       expect(find.text('El enlace del grupo no es válido.'), findsOneWidget);
       expect(find.text('Enlace Web'), findsNothing);
     });
+
+    testWidgets(
+      'Muestra Eliminar grupo debajo de Reportar solo para el autor',
+      (tester) async {
+        var deleted = false;
+        final ownGroup = TestFixtures.whatsAppGroup(
+          id: 'own-group',
+          title: 'Mi grupo',
+          link: 'https://chat.whatsapp.com/Test123',
+        ).copyWith(isMine: true);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: GroupCard(
+                group: ownGroup,
+                onUpvote: () {},
+                onReport: (_) {},
+                onDelete: () => deleted = true,
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.byTooltip('Más opciones'));
+        await tester.pumpAndSettle();
+
+        final reportY = tester.getTopLeft(find.text('Reportar')).dy;
+        final deleteFinder = find.text('Eliminar grupo');
+        expect(deleteFinder, findsOneWidget);
+        expect(reportY, lessThan(tester.getTopLeft(deleteFinder).dy));
+
+        await tester.tap(deleteFinder);
+        await tester.pumpAndSettle();
+        expect(deleted, isTrue);
+      },
+    );
+
+    testWidgets(
+      'GroupCard muestra botón Compartir igual al foro en lugar de Copiar',
+      (tester) async {
+        var shared = false;
+        final group = TestFixtures.whatsAppGroup(
+          id: 'share-group-1',
+          title: 'Grupo Compartible',
+          link: 'https://chat.whatsapp.com/Test123',
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: GroupCard(
+                group: group,
+                onUpvote: () {},
+                onShare: () => shared = true,
+              ),
+            ),
+          ),
+        );
+
+        expect(find.byTooltip('Copiar enlace'), findsNothing);
+        expect(find.byTooltip('Compartir'), findsOneWidget);
+        await tester.tap(find.byTooltip('Compartir'));
+        expect(shared, isTrue);
+      },
+    );
 
     testWidgets('Abre CreateGroupDialog al hacer click en compartir grupo', (
       tester,

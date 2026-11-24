@@ -58,7 +58,6 @@ class CreateGroupDialog extends StatefulWidget {
 class _CreateGroupDialogState extends State<CreateGroupDialog> {
   final _formKey = GlobalKey<FormState>();
   final _cursoController = TextEditingController();
-  final _sectionController = TextEditingController(text: 'Sección A');
   final _generalTitleController = TextEditingController();
   final _linkController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -87,7 +86,6 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
   @override
   void dispose() {
     _cursoController.dispose();
-    _sectionController.dispose();
     _generalTitleController.dispose();
     _linkController.dispose();
     _descriptionController.dispose();
@@ -213,10 +211,8 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
 
     if (_groupType == 'curso') {
       cursoName = _cursoController.text.trim();
-      sectionName = _sectionController.text.trim().isEmpty
-          ? 'Sección Única'
-          : _sectionController.text.trim();
-      title = '$cursoName - $sectionName';
+      sectionName = 'General';
+      title = cursoName;
     } else {
       title = _generalTitleController.text.trim();
       switch (_groupType) {
@@ -473,37 +469,17 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
 
               // Dynamic fields based on group type
               if (_groupType == 'curso') ...[
-                // Course Name & Section
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 8,
-                  children: [
-                    SizedBox(
-                      width: isMobile ? double.infinity : 280,
-                      child: TextFormField(
-                        controller: _cursoController,
-                        decoration: _zanateInput(
-                          isDark,
-                          labelText: 'Nombre del Curso',
-                          hintText: 'Ej. Matemática Básica 1',
-                        ),
-                        validator: (val) => (val == null || val.trim().isEmpty)
-                            ? 'Ingresa el nombre del curso'
-                            : null,
-                      ),
-                    ),
-                    SizedBox(
-                      width: isMobile ? double.infinity : 200,
-                      child: TextFormField(
-                        controller: _sectionController,
-                        decoration: _zanateInput(
-                          isDark,
-                          labelText: 'Sección',
-                          hintText: 'Ej. Sección A',
-                        ),
-                      ),
-                    ),
-                  ],
+                // Course Name (no section field)
+                TextFormField(
+                  controller: _cursoController,
+                  decoration: _zanateInput(
+                    isDark,
+                    labelText: 'Nombre del Curso',
+                    hintText: 'Ej. Matemática Básica 1',
+                  ),
+                  validator: (val) => (val == null || val.trim().isEmpty)
+                      ? 'Ingresa el nombre del curso'
+                      : null,
                 ),
               ] else ...[
                 // General purpose title
