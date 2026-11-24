@@ -112,7 +112,7 @@ class StorageService {
   static const int maxCompressedImageBytes = 2 * 1024 * 1024;
   static const int maxImageDimension = 1280;
   static const int jpegQuality = 78;
-  static const int maxVideoBytes = 15 * 1024 * 1024;
+  static const int maxVideoBytes = 50 * 1024 * 1024;
   static const Duration maxVideoDuration = Duration(seconds: 45);
   static const Set<String> allowedVideoExtensions = {'mp4', 'webm', 'mov', 'm4v'};
 
@@ -213,7 +213,7 @@ class StorageService {
     }
     if (sizeBytes > maxVideoBytes) {
       throw const StorageUploadException(
-        'El video supera el máximo permitido de 15 MB.',
+        'El video supera el máximo permitido de 50 MB.',
       );
     }
 
@@ -317,7 +317,7 @@ class StorageService {
     }
     if (bytes.length > maxVideoBytes) {
       throw const StorageUploadException(
-        'El video supera el máximo permitido de 15 MB.',
+        'El video supera el máximo permitido de 50 MB.',
       );
     }
 

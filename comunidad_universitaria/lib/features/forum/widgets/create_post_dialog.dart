@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
+import 'package:video_player/video_player.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/constants/categories.dart';
 import '../../../core/constants/zanate_colors.dart';
@@ -1171,71 +1173,15 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
               // Attached Local Video Preview
               if (_pendingVideo != null) ...[
                 const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: bgFill,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: borderColor),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: ZanateColors.zanateEyeYellow.withValues(
-                            alpha: 0.25,
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: PhosphorIcon(
-                          PhosphorIconsRegular.filmSlate,
-                          size: 20,
-                          color: primaryTextColor,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _pendingVideo!.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: primaryTextColor,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${(_pendingVideo!.sizeBytes / (1024 * 1024)).toStringAsFixed(1)} MB · Video listo para publicar',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: secondaryTextColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: _isSubmitting
-                            ? null
-                            : () => setState(() => _pendingVideo = null),
-                        icon: PhosphorIcon(
-                          PhosphorIconsRegular.x,
-                          size: 18,
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                    ],
-                  ),
+                _PendingVideoPreview(
+                  video: _pendingVideo!,
+                  isDark: isDark,
+                  bgFill: bgFill,
+                  borderColor: borderColor,
+                  primaryTextColor: primaryTextColor,
+                  secondaryTextColor: secondaryTextColor,
+                  isSubmitting: _isSubmitting,
+                  onRemove: () => setState(() => _pendingVideo = null),
                 ),
               ],
 
@@ -1442,6 +1388,197 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
         ),
       ),
       body: SafeArea(child: content),
+    );
+  }
+}
+
+class _PendingVideoPreview extends StatefulWidget {
+  final PickedVideoData video;
+  final bool isDark;
+  final Color bgFill;
+  final Color borderColor;
+  final Color primaryTextColor;
+  final Color secondaryTextColor;
+  final bool isSubmitting;
+  final VoidCallback onRemove;
+
+  const _PendingVideoPreview({
+    required this.video,
+    required this.isDark,
+    required this.bgFill,
+    required this.borderColor,
+    required this.primaryTextColor,
+    required this.secondaryTextColor,
+    required this.isSubmitting,
+    required this.onRemove,
+  });
+
+  @override
+  State<_PendingVideoPreview> createState() => _PendingVideoPreviewState();
+}
+
+class _PendingVideoPreviewState extends State<_PendingVideoPreview> {
+  VideoPlayerController? _controller;
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initPreview();
+  }
+
+  @override
+  void didUpdateWidget(covariant _PendingVideoPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.video.file.path != widget.video.file.path) {
+      _disposePreview();
+      _initPreview();
+    }
+  }
+
+  Future<void> _initPreview() async {
+    final rawPath = widget.video.file.path.trim();
+    if (rawPath.isEmpty) return;
+
+    final uri = kIsWeb ? Uri.tryParse(rawPath) : Uri.file(rawPath);
+    if (uri == null || !uri.hasScheme) return;
+
+    final controller = VideoPlayerController.networkUrl(uri);
+    _controller = controller;
+    try {
+      await controller.initialize();
+      await controller.setLooping(true);
+      if (!mounted || _controller != controller) return;
+      setState(() => _isInitialized = true);
+    } catch (_) {
+      if (!mounted || _controller != controller) return;
+      setState(() => _isInitialized = false);
+    }
+  }
+
+  void _disposePreview() {
+    _controller?.dispose();
+    _controller = null;
+    _isInitialized = false;
+  }
+
+  @override
+  void dispose() {
+    _disposePreview();
+    super.dispose();
+  }
+
+  void _togglePlayPause() {
+    final c = _controller;
+    if (c == null || !_isInitialized) return;
+    setState(() {
+      if (c.value.isPlaying) {
+        c.pause();
+      } else {
+        c.play();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: widget.borderColor),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 280, minHeight: 160),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            if (_isInitialized && _controller != null)
+              GestureDetector(
+                onTap: _togglePlayPause,
+                child: Container(
+                  width: double.infinity,
+                  color: Colors.black,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      AspectRatio(
+                        aspectRatio: _controller!.value.aspectRatio > 0
+                            ? _controller!.value.aspectRatio
+                            : 16 / 9,
+                        child: VideoPlayer(_controller!),
+                      ),
+                      if (!_controller!.value.isPlaying)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.6),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            PhosphorIconsFill.play,
+                            color: Colors.white,
+                            size: 26,
+                          ),
+                        ),
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: VideoProgressIndicator(
+                          _controller!,
+                          allowScrubbing: true,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 4,
+                            horizontal: 8,
+                          ),
+                          colors: VideoProgressColors(
+                            playedColor: ZanateColors.zanateEyeYellow,
+                            bufferedColor: Colors.white38,
+                            backgroundColor: Colors.white12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              Container(
+                width: double.infinity,
+                height: 160,
+                color: widget.bgFill,
+                alignment: Alignment.center,
+                child: PhosphorIcon(
+                  PhosphorIconsRegular.filmSlate,
+                  size: 32,
+                  color: widget.secondaryTextColor,
+                ),
+              ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: InkWell(
+                onTap: widget.isSubmitting ? null : widget.onRemove,
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const PhosphorIcon(
+                    PhosphorIconsRegular.x,
+                    size: 16,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

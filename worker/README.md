@@ -10,7 +10,7 @@ Código fuente del Worker desplegable en [src/index.js](src/index.js) con config
    `POST /upload` devuelve `directUploadUrl` y `uploadUrl` firmadas con HMAC-SHA256 (`exp` de 120 s) hacia el propio Worker, evitando el `PUT` directo al dominio `r2.cloudflarestorage.com` sin CORS.
 3. **Validación estricta de carpetas, tamaños y magic bytes:**
    - Imágenes (`forum`, `groups`, `listings`): `image/jpeg`, `image/png`, `image/webp` hasta **2 MB**.
-   - Videos (`forum_videos` únicamente): `video/mp4`, `video/webm`, `video/quicktime` hasta **15 MB**.
+   - Videos (`forum_videos` únicamente): `video/mp4`, `video/webm`, `video/quicktime` hasta **50 MB**.
    - Verifica firma binaria real (magic bytes) antes de guardar en R2 (`415` si no coincide) y fuerza el prefijo `<userId>_` en la clave.
 4. **Rate limit por usuario:**
    Máximo 6 imágenes por minuto y 2 videos cada 5 minutos (`429` con `Retry-After`).
