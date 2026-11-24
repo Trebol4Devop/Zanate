@@ -11,7 +11,7 @@ import 'supabase_service.dart';
 class GroupsService {
   static const String _groupColumns =
       'id, title, carrera, curso, section, link, description, author_alias, '
-      'upvotes, reported_count, created_at, image_url, moderation_status, '
+      'upvotes, reported_count, shares_count, created_at, image_url, moderation_status, '
       'moderation_label, moderation_confidence, moderation_reason, moderated_at, '
       'moderated_by, platform, updated_at, deleted_at, is_legal_hold';
 
@@ -318,6 +318,7 @@ class GroupsService {
     required String description,
     required String authorAlias,
     String? imageUrl,
+    GroupPlatform? platform,
   }) async {
     if (!SupabaseConfig.isConfigured) {
       throw Exception('La aplicación no está conectada a la base de datos.');
@@ -340,14 +341,15 @@ class GroupsService {
     }
 
     try {
-      final platform = WhatsAppGroup.stringToPlatform(null, link);
+      final resolvedPlatform =
+          platform ?? WhatsAppGroup.stringToPlatform(null, link);
       final groupMap = {
         'title': title.trim(),
         'carrera': carrera,
         'curso': curso.trim(),
         'section': section.trim().isEmpty ? 'Sección Única' : section.trim(),
         'link': link.trim(),
-        'platform': WhatsAppGroup.platformToString(platform),
+        'platform': WhatsAppGroup.platformToString(resolvedPlatform),
         'description': description.trim(),
         'author_alias': authorAlias.trim(),
         'user_id': userId,
@@ -359,7 +361,7 @@ class GroupsService {
 
       const explicitColumns =
           'id, title, carrera, curso, section, link, description, author_alias, '
-          'upvotes, reported_count, created_at, image_url, moderation_status, platform';
+          'upvotes, reported_count, shares_count, created_at, image_url, moderation_status, platform';
 
       final res = await SupabaseService.client
           .from('student_groups')
@@ -390,6 +392,21 @@ class GroupsService {
     } catch (e) {
       debugPrint('Error al crear grupo: $e');
       rethrow;
+    }
+  }
+
+  static Future<int?> incrementShareCount(String groupId) async {
+    if (!SupabaseConfig.isConfigured || groupId.trim().isEmpty) return null;
+    try {
+      final res = await SupabaseService.client.rpc(
+        'increment_student_group_share',
+        params: {'p_group_id': groupId},
+      );
+      if (res is int) return res;
+      return int.tryParse(res?.toString() ?? '');
+    } catch (e) {
+      debugPrint('Error al incrementar shares_count del grupo: $e');
+      return null;
     }
   }
 

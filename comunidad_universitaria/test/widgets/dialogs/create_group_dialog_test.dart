@@ -48,9 +48,10 @@ void main() {
       expect(find.text('Tipo de Grupo / Propósito'), findsOneWidget);
       expect(find.text('Curso Académico'), findsOneWidget);
 
-      // Campos específicos de curso
+      // Campos específicos de curso (sin campo Sección ni barra de plataforma)
       expect(find.widgetWithText(TextFormField, 'Nombre del Curso'), findsOneWidget);
-      expect(find.widgetWithText(TextFormField, 'Sección'), findsOneWidget);
+      expect(find.widgetWithText(TextFormField, 'Sección'), findsNothing);
+      expect(find.text('Seleccionar plataforma'), findsNothing);
 
       // Campo de enlace
       expect(find.widgetWithText(TextFormField, 'Enlace de Invitación'), findsOneWidget);

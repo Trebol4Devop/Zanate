@@ -1,14 +1,16 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/constants/categories.dart';
 import '../../../core/constants/zanate_colors.dart';
 import '../../../core/models/whatsapp_group.dart';
 import '../../../core/services/groups_service.dart';
-import '../../../core/services/local_storage_service.dart';
+import '../../../core/services/profile_service.dart';
 import '../../../core/services/supabase_service.dart';
 import '../widgets/create_group_dialog.dart';
 import '../widgets/group_card.dart';
@@ -69,9 +71,6 @@ class GroupsScreenState extends State<GroupsScreen> {
     if (widget.activeCarreraId != null) {
       _selectedCarrera = widget.activeCarreraId!;
     }
-    if (widget.activeFacultadId == null) {
-      _loadUserAcademicContext();
-    }
     _loadGroups();
   }
 
@@ -90,21 +89,6 @@ class GroupsScreenState extends State<GroupsScreen> {
       shouldReload = true;
     }
     if (shouldReload) {
-      _loadGroups();
-    }
-  }
-
-  Future<void> _loadUserAcademicContext() async {
-    final profile = await LocalStorageService.getUserProfile();
-    if (mounted &&
-        profile.facultadId.isNotEmpty &&
-        widget.activeFacultadId == null) {
-      setState(() {
-        _selectedFacultad = profile.facultadId;
-        _selectedCarrera = profile.carreraId.isNotEmpty
-            ? profile.carreraId
-            : 'todas';
-      });
       _loadGroups();
     }
   }
@@ -246,11 +230,84 @@ class GroupsScreenState extends State<GroupsScreen> {
     );
   }
 
+  Future<void> _handleDeleteGroup(WhatsAppGroup group) async {
+    final ok = await ProfileService.deleteGroup(group.id);
+    if (!mounted) return;
+    if (ok) {
+      setState(() {
+        _groups.removeWhere((g) => g.id == group.id);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Grupo eliminado.'),
+          backgroundColor: ZanateColors.zanateBlack,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo eliminar el grupo.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleShareGroup(WhatsAppGroup group) async {
+    final shareText = group.link.trim();
+    if (shareText.isEmpty) return;
+
+    final optimistic = group.sharesCount + 1;
+    setState(() {
+      final idx = _groups.indexWhere((g) => g.id == group.id);
+      if (idx != -1) {
+        _groups[idx] = _groups[idx].copyWith(sharesCount: optimistic);
+      }
+    });
+
+    final updatedCount = await GroupsService.incrementShareCount(group.id);
+    if (mounted && updatedCount != null) {
+      setState(() {
+        final idx = _groups.indexWhere((g) => g.id == group.id);
+        if (idx != -1) {
+          _groups[idx] = _groups[idx].copyWith(sharesCount: updatedCount);
+        }
+      });
+    }
+
+    try {
+      final result = await SharePlus.instance.share(
+        ShareParams(text: shareText, subject: group.title),
+      );
+      if (result.status == ShareResultStatus.unavailable) {
+        await Clipboard.setData(ClipboardData(text: shareText));
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Enlace del grupo copiado al portapapeles'),
+            backgroundColor: ZanateColors.zanateBlack,
+          ),
+        );
+      }
+    } catch (_) {
+      await Clipboard.setData(ClipboardData(text: shareText));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Enlace del grupo copiado al portapapeles'),
+          backgroundColor: ZanateColors.zanateBlack,
+        ),
+      );
+    }
+  }
+
   Widget _buildGroupCard(WhatsAppGroup group) => GroupCard(
     key: ValueKey(group.id),
     group: group,
     onUpvote: () => _handleToggleUpvote(group),
     onReport: (reason) => _handleReportGroup(group, reason),
+    onDelete: group.isMine ? () => _handleDeleteGroup(group) : null,
+    onShare: () => _handleShareGroup(group),
   );
 
   void openCreateGroupDialog() => _openCreateGroupDialog();
@@ -294,7 +351,7 @@ class GroupsScreenState extends State<GroupsScreen> {
         (f) => f['id'].toString() == _selectedFacultad,
         orElse: () => {'nombre': 'Facultad'},
       );
-      return fac['nombre']?.toString().replaceAll('Facultad de ', '') ?? 'Facultad';
+      return fac['nombre']?.toString() ?? 'Facultad';
     }
     return 'Facultad';
   }
@@ -631,61 +688,75 @@ class GroupsScreenState extends State<GroupsScreen> {
           const SizedBox(width: 8),
 
           // Discrete Zanate Preferences Pill
-          InkWell(
-            onTap: () => _showPreferencesSheet(context, isDark),
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              height: 40,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: _hasActivePreferences
-                    ? ZanateColors.zanateEyeYellow
-                    : ZanateColors.pill(isDark),
+          Flexible(
+            flex: 0,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 185),
+              child: InkWell(
+                onTap: () => _showPreferencesSheet(context, isDark),
                 borderRadius: BorderRadius.circular(12),
-                border: _hasActivePreferences
-                    ? null
-                    : Border.all(color: borderColor, width: 1),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    _hasActivePreferences
-                        ? PhosphorIconsFill.slidersHorizontal
-                        : PhosphorIconsRegular.slidersHorizontal,
-                    size: 15,
+                child: Container(
+                  height: 40,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
                     color: _hasActivePreferences
-                        ? ZanateColors.zanateBlack
-                        : textPrimary,
+                        ? ZanateColors.zanateEyeYellow
+                        : ZanateColors.pill(isDark),
+                    borderRadius: BorderRadius.circular(12),
+                    border: _hasActivePreferences
+                        ? null
+                        : Border.all(color: borderColor, width: 1),
                   ),
-                  const SizedBox(width: 6),
-                  Text(
-                    _getActivePreferencesLabel(),
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: _hasActivePreferences
-                          ? FontWeight.w700
-                          : FontWeight.w600,
-                      color: _hasActivePreferences
-                          ? ZanateColors.zanateBlack
-                          : textPrimary,
-                    ),
-                  ),
-                  if (_hasActivePreferences) ...[
-                    const SizedBox(width: 6),
-                    InkWell(
-                      onTap: () {
-                        setState(() => _selectedFacultad = 'todas');
-                        _loadGroups();
-                      },
-                      child: const Icon(
-                        PhosphorIconsBold.x,
-                        size: 13,
-                        color: ZanateColors.zanateBlack,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _hasActivePreferences
+                            ? PhosphorIconsFill.slidersHorizontal
+                            : PhosphorIconsRegular.slidersHorizontal,
+                        size: 15,
+                        color: _hasActivePreferences
+                            ? ZanateColors.zanateBlack
+                            : textPrimary,
                       ),
-                    ),
-                  ],
-                ],
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          _getActivePreferencesLabel(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: _hasActivePreferences
+                                ? FontWeight.w700
+                                : FontWeight.w600,
+                            color: _hasActivePreferences
+                                ? ZanateColors.zanateBlack
+                                : textPrimary,
+                          ),
+                        ),
+                      ),
+                      if (_hasActivePreferences) ...[
+                        const SizedBox(width: 2),
+                        InkWell(
+                          borderRadius: BorderRadius.circular(10),
+                          onTap: () {
+                            setState(() => _selectedFacultad = 'todas');
+                            _loadGroups();
+                          },
+                          child: const Padding(
+                            padding: EdgeInsets.all(6),
+                            child: Icon(
+                              PhosphorIconsBold.x,
+                              size: 13,
+                              color: ZanateColors.zanateBlack,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
