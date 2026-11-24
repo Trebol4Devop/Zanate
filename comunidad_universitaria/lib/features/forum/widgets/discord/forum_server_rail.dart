@@ -61,7 +61,7 @@ class ForumServerRail extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 children: [
-                  for (final server in visibleServers)
+                  for (final server in visibleServers.reversed)
                     _ServerButton(
                       server: server,
                       isSelected: server.id == activeServer.id,
