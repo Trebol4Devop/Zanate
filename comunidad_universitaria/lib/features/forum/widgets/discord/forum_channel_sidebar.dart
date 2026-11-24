@@ -14,6 +14,8 @@ class ForumChannelSidebar extends StatelessWidget {
   final Function(ForumServer)? onSelectSubserver;
   final Function(ForumChannel) onSelectChannel;
   final VoidCallback? onAddServer;
+  final VoidCallback? onSearch;
+  final bool hasActiveSearch;
   final String? activeAlias;
   final Function(String)? onAliasChanged;
   final VoidCallback? onToggleTheme;
@@ -28,6 +30,8 @@ class ForumChannelSidebar extends StatelessWidget {
     this.onSelectSubserver,
     required this.onSelectChannel,
     this.onAddServer,
+    this.onSearch,
+    this.hasActiveSearch = false,
     this.activeAlias,
     this.onAliasChanged,
     this.onToggleTheme,
@@ -222,6 +226,8 @@ class ForumChannelSidebar extends StatelessWidget {
                           Flexible(
                             child: Text(
                               'Agregar servidor',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
@@ -238,8 +244,28 @@ class ForumChannelSidebar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 4),
+          if (onSearch != null) ...[
+            IconButton(
+              tooltip: 'Buscar en el foro',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 38, height: 38),
+              onPressed: onSearch,
+              icon: PhosphorIcon(
+                PhosphorIconsRegular.magnifyingGlass,
+                size: 20,
+                color: hasActiveSearch
+                    ? (isDark
+                          ? ZanateColors.zanateEyeYellow
+                          : ZanateColors.zanateBlack)
+                    : muted,
+              ),
+            ),
+            const SizedBox(width: 2),
+          ],
           IconButton(
             tooltip: 'Configuración y Perfil',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 38, height: 38),
             onPressed: () => SettingsScreen.show(
               context,
               activeAlias: activeAlias ?? 'Estudiante',

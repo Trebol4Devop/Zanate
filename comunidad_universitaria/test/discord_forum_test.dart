@@ -242,7 +242,7 @@ void main() {
     );
 
     testWidgets(
-      'En móvil muestra buscador directo sin abrir submenú modal',
+      'En móvil el buscador está en el menú desplegable entre Agregar servidor y Configuración',
       (tester) async {
         tester.view.physicalSize = const Size(400, 800);
         tester.view.devicePixelRatio = 1;
@@ -258,23 +258,40 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        final searchField = find.widgetWithText(
-          TextField,
-          'Buscar publicaciones...',
+        expect(
+          find.widgetWithText(TextField, 'Buscar publicaciones...'),
+          findsNothing,
         );
-        expect(searchField, findsOneWidget);
-        expect(find.byTooltip('Buscar en el foro'), findsNothing);
 
-        await tester.enterText(searchField, 'parcial');
-        await tester.pump(const Duration(milliseconds: 350));
+        await tester.tap(find.byIcon(PhosphorIconsRegular.list));
+        await tester.pumpAndSettle();
+
+        final addServerFinder = find.byTooltip('Agregar servidor');
+        final searchButtonFinder = find.byTooltip('Buscar en el foro');
+        final settingsFinder = find.byTooltip('Configuración y Perfil');
+
+        expect(addServerFinder, findsOneWidget);
+        expect(searchButtonFinder, findsOneWidget);
+        expect(settingsFinder, findsOneWidget);
+
+        final addServerX = tester.getCenter(addServerFinder).dx;
+        final searchX = tester.getCenter(searchButtonFinder).dx;
+        final settingsX = tester.getCenter(settingsFinder).dx;
+        expect(addServerX, lessThan(searchX));
+        expect(searchX, lessThan(settingsX));
+
+        await tester.tap(searchButtonFinder);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(AlertDialog), findsOneWidget);
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Buscar publicaciones...'),
+          'parcial',
+        );
+        await tester.tap(find.text('Buscar'));
         await tester.pumpAndSettle();
 
         expect(find.byType(AlertDialog), findsNothing);
-        expect(find.byTooltip('Limpiar búsqueda'), findsOneWidget);
-
-        await tester.tap(find.byTooltip('Limpiar búsqueda'));
-        await tester.pumpAndSettle();
-        expect(find.byTooltip('Limpiar búsqueda'), findsNothing);
       },
     );
 

@@ -14,6 +14,7 @@ import '../../../core/services/local_storage_service.dart';
 import '../../../core/services/forum_server_preferences_service.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../core/utils/url_utils.dart';
 import '../models/discord_forum_models.dart';
 import '../widgets/create_post_dialog.dart';
 import '../widgets/discord/forum_channel_sidebar.dart';
@@ -89,6 +90,7 @@ class _ForumScreenState extends State<ForumScreen> {
   List<Post> _posts = [];
   bool _isLoading = true;
   bool _isOffline = false;
+  int _loadRequestId = 0;
   UserProfile? _currentUserProfile;
   String _searchQuery = '';
   FeedMode _feedMode = FeedMode.hot;
@@ -255,8 +257,14 @@ class _ForumScreenState extends State<ForumScreen> {
     super.dispose();
   }
 
-  Future<void> _loadPosts() async {
-    setState(() => _isLoading = true);
+  Future<void> _loadPosts({
+    bool showLoadingIndicator = true,
+    bool forceRefresh = false,
+  }) async {
+    final currentRequestId = ++_loadRequestId;
+    if (showLoadingIndicator) {
+      setState(() => _isLoading = true);
+    }
 
     try {
       final isBookmarks = _activeChannel.isSpecial;
@@ -269,7 +277,10 @@ class _ForumScreenState extends State<ForumScreen> {
         searchQuery: _searchQuery,
         showOnlyBookmarks: isBookmarks,
         feedMode: _feedMode,
+        forceRefresh: forceRefresh,
       );
+
+      if (!mounted || currentRequestId != _loadRequestId) return;
 
       await ShareCountService.preload(posts.map((p) => p.id).toList());
       final enrichedPosts = posts.map((p) {
@@ -277,7 +288,7 @@ class _ForumScreenState extends State<ForumScreen> {
         return count > p.sharesCount ? p.copyWith(sharesCount: count) : p;
       }).toList();
 
-      if (mounted) {
+      if (mounted && currentRequestId == _loadRequestId) {
         setState(() {
           _posts = enrichedPosts;
           _isLoading = false;
@@ -285,7 +296,7 @@ class _ForumScreenState extends State<ForumScreen> {
         });
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted && currentRequestId == _loadRequestId) {
         setState(() {
           _isLoading = false;
           _isOffline = true;
@@ -568,8 +579,7 @@ class _ForumScreenState extends State<ForumScreen> {
 
     await ShareCountService.incrementShare(post.id);
 
-    final shareText =
-        '${post.title}\n\n${post.content}\n\n— ${post.authorAlias} (Zanate)';
+    final shareText = UrlUtils.currentSiteUrl('/foro/${post.id}');
     try {
       await SharePlus.instance.share(
         ShareParams(text: shareText, subject: post.title),
@@ -880,6 +890,8 @@ class _ForumScreenState extends State<ForumScreen> {
               onSelectSubserver: _onSelectSubserver,
               onSelectChannel: _onSelectChannel,
               onAddServer: _addServerFromSidebar,
+              onSearch: _openSearchDialog,
+              hasActiveSearch: _searchQuery.isNotEmpty,
               activeAlias: widget.activeAlias,
               onAliasChanged: widget.onAliasChanged,
               onToggleTheme: widget.onToggleTheme,
@@ -943,6 +955,8 @@ class _ForumScreenState extends State<ForumScreen> {
                   channels: currentChannels,
                   onSelectChannel: _onSelectChannel,
                   onAddServer: _addServerFromSidebar,
+                  onSearch: _openSearchDialog,
+                  hasActiveSearch: _searchQuery.isNotEmpty,
                   activeAlias: widget.activeAlias,
                   onAliasChanged: widget.onAliasChanged,
                   onToggleTheme: widget.onToggleTheme,
@@ -1154,18 +1168,6 @@ class _ForumScreenState extends State<ForumScreen> {
     );
   }
 
-  void _onSearchChanged(String val) {
-    setState(() {});
-    _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
-      if (!mounted) return;
-      final trimmed = val.trim();
-      if (trimmed == _searchQuery) return;
-      setState(() => _searchQuery = trimmed);
-      _loadPosts();
-    });
-  }
-
   void _submitSearch(String val) {
     _searchDebounce?.cancel();
     setState(() => _searchQuery = val.trim());
@@ -1179,62 +1181,91 @@ class _ForumScreenState extends State<ForumScreen> {
     _loadPosts();
   }
 
-  Widget _buildSearchField(bool isDark, {required bool isDesktop}) {
-    final borderColor = ZanateColors.border(isDark);
-    final hasQuery =
-        _searchController.text.isNotEmpty || _searchQuery.isNotEmpty;
+  Future<void> _openSearchDialog() async {
+    if (_scaffoldKey.currentState?.isDrawerOpen == true) {
+      Navigator.of(context).pop();
+    }
 
-    return TextField(
-      controller: _searchController,
-      textInputAction: TextInputAction.search,
-      onChanged: _onSearchChanged,
-      onSubmitted: _submitSearch,
-      style: TextStyle(
-        fontSize: isDesktop ? 13 : 13.5,
-        color: ZanateColors.textPrimary(isDark),
-      ),
-      decoration: InputDecoration(
-        hintText: isDesktop ? 'Buscar...' : 'Buscar publicaciones...',
-        hintStyle: TextStyle(
-          fontSize: isDesktop ? 12.5 : 13,
-          color: ZanateColors.textMuted(isDark),
-        ),
-        prefixIcon: PhosphorIcon(
-          PhosphorIconsRegular.magnifyingGlass,
-          size: isDesktop ? 16 : 17,
-          color: ZanateColors.textMuted(isDark),
-        ),
-        suffixIcon: hasQuery
-            ? IconButton(
-                tooltip: 'Limpiar búsqueda',
-                padding: EdgeInsets.zero,
-                icon: PhosphorIcon(
-                  PhosphorIconsRegular.x,
-                  size: isDesktop ? 14 : 15,
-                  color: ZanateColors.textMuted(isDark),
+    _searchController.text = _searchQuery;
+    _searchController.selection = TextSelection.fromPosition(
+      TextPosition(offset: _searchController.text.length),
+    );
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogCtx) {
+        final isDark = Theme.of(dialogCtx).brightness == Brightness.dark;
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return AlertDialog(
+              scrollable: true,
+              backgroundColor: ZanateColors.card(isDark),
+              title: Text(
+                'Buscar en el foro',
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 17,
+                  color: ZanateColors.textPrimary(isDark),
                 ),
-                onPressed: _clearSearch,
-              )
-            : null,
-        contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
-        filled: true,
-        fillColor: ZanateColors.surface(isDark),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: borderColor, width: 1.0),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: borderColor, width: 1.0),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: ZanateColors.focusBorder(isDark),
-            width: 1.5,
-          ),
-        ),
-      ),
+              ),
+              content: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 340),
+                child: TextField(
+                  controller: _searchController,
+                  autofocus: true,
+                  textInputAction: TextInputAction.search,
+                  onChanged: (_) => setDialogState(() {}),
+                  onSubmitted: (val) {
+                    _submitSearch(val);
+                    Navigator.of(dialogCtx).pop();
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Buscar publicaciones...',
+                    prefixIcon: const PhosphorIcon(
+                      PhosphorIconsRegular.magnifyingGlass,
+                      size: 18,
+                    ),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            tooltip: 'Limpiar búsqueda',
+                            icon: const PhosphorIcon(
+                              PhosphorIconsRegular.x,
+                              size: 16,
+                            ),
+                            onPressed: () {
+                              _clearSearch();
+                              setDialogState(() {});
+                            },
+                          )
+                        : null,
+                  ),
+                ),
+              ),
+              actions: [
+                if (_searchQuery.isNotEmpty)
+                  TextButton(
+                    onPressed: () {
+                      _clearSearch();
+                      Navigator.of(dialogCtx).pop();
+                    },
+                    child: const Text('Limpiar'),
+                  ),
+                TextButton(
+                  onPressed: () => Navigator.of(dialogCtx).pop(),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    _submitSearch(_searchController.text);
+                    Navigator.of(dialogCtx).pop();
+                  },
+                  child: const Text('Buscar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -1258,7 +1289,8 @@ class _ForumScreenState extends State<ForumScreen> {
           child: RefreshIndicator(
             color: ZanateColors.focusBorder(isDark),
             backgroundColor: ZanateColors.card(isDark),
-            onRefresh: _loadPosts,
+            onRefresh: () =>
+                _loadPosts(showLoadingIndicator: false, forceRefresh: true),
             child: _buildPostsFeed(theme, isDark),
           ),
         ),
@@ -1293,7 +1325,7 @@ class _ForumScreenState extends State<ForumScreen> {
               onTap: () {
                 if (!isHot) {
                   setState(() => _feedMode = FeedMode.hot);
-                  _loadPosts();
+                  _loadPosts(forceRefresh: true);
                 }
               },
               child: AnimatedContainer(
@@ -1338,7 +1370,7 @@ class _ForumScreenState extends State<ForumScreen> {
               onTap: () {
                 if (!isRecent) {
                   setState(() => _feedMode = FeedMode.recent);
-                  _loadPosts();
+                  _loadPosts(forceRefresh: true);
                 }
               },
               child: AnimatedContainer(
@@ -1531,16 +1563,6 @@ class _ForumScreenState extends State<ForumScreen> {
                 ],
               ),
             ),
-            const SizedBox(width: 12),
-            Flexible(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 220),
-                child: SizedBox(
-                  height: 38,
-                  child: _buildSearchField(isDark, isDesktop: true),
-                ),
-              ),
-            ),
             if (!_activeChannel.isSpecial) ...[
               const SizedBox(width: 10),
               IconButton(
@@ -1565,29 +1587,6 @@ class _ForumScreenState extends State<ForumScreen> {
       );
     }
 
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.fromLTRB(
-        14,
-        10,
-        14,
-        _activeChannel.isSpecial ? 10 : 2,
-      ),
-      decoration: BoxDecoration(
-        color: ZanateColors.card(isDark),
-        border: _activeChannel.isSpecial
-            ? Border(
-                bottom: BorderSide(
-                  color: ZanateColors.border(isDark),
-                  width: 1.0,
-                ),
-              )
-            : null,
-      ),
-      child: SizedBox(
-        height: 40,
-        child: _buildSearchField(isDark, isDesktop: false),
-      ),
-    );
+    return const SizedBox.shrink();
   }
 }

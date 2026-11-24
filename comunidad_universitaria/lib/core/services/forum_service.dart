@@ -68,6 +68,7 @@ class ForumService {
     String searchQuery = '',
     bool showOnlyBookmarks = false,
     FeedMode feedMode = FeedMode.hot,
+    bool forceRefresh = false,
   }) async {
     final isDefaultQuery =
         category == 'todos' &&
@@ -87,14 +88,16 @@ class ForumService {
       'feedMode': feedMode.name,
     });
 
-    final cached = CacheService.get<List<Post>>(_cacheNamespace, cacheKey);
+    final cached = forceRefresh
+        ? null
+        : CacheService.get<List<Post>>(_cacheNamespace, cacheKey);
     if (cached != null) return List<Post>.from(cached);
 
     if (!SupabaseConfig.isConfigured) {
       throw Exception('La aplicación no está conectada a la base de datos.');
     }
 
-    if (isDefaultQuery) {
+    if (isDefaultQuery && !forceRefresh) {
       final persisted = await _readPersistedPosts(cacheKey);
       if (persisted != null) return persisted;
     }
