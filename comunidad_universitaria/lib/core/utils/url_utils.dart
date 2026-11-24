@@ -3,6 +3,16 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class UrlUtils {
+  static String currentSiteUrl([String path = '']) {
+    final base = Uri.base;
+    final origin = (base.hasScheme && base.host.isNotEmpty)
+        ? base.origin
+        : 'http://localhost';
+    if (path.isEmpty) return origin;
+    final normalized = path.startsWith('/') ? path : '/$path';
+    return '$origin$normalized';
+  }
+
   static Future<bool> openUrl(BuildContext context, String urlString) async {
     try {
       String formattedUrl = urlString.trim();

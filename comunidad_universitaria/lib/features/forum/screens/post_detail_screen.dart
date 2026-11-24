@@ -12,6 +12,7 @@ import '../../../core/services/share_count_service.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/time_utils.dart';
+import '../../../core/utils/url_utils.dart';
 import '../widgets/comment_item.dart';
 import '../widgets/create_post_dialog.dart';
 import '../../legal/widgets/terms_consent_modal.dart';
@@ -151,8 +152,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
     await ShareCountService.incrementShare(_post.id);
 
-    final shareText =
-        '${_post.title}\n\n${_post.content}\n\n— ${_post.authorAlias} (Zanate)';
+    final shareText = UrlUtils.currentSiteUrl('/foro/${_post.id}');
     try {
       await SharePlus.instance.share(
         ShareParams(text: shareText, subject: _post.title),
@@ -723,28 +723,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                   ],
                                 ),
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 9,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: panelSurface,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: panelBorder,
-                                    width: 0.8,
-                                  ),
-                                ),
-                                child: Text(
-                                  _getCategoryLabel(_post.category),
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: isDark
-                                        ? const Color(0xFF94A3B8)
-                                        : const Color(0xFF64748B),
-                                  ),
+                              Text(
+                                _getCategoryLabel(_post.category),
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: isDark
+                                      ? const Color(0xFF94A3B8)
+                                      : const Color(0xFF64748B),
                                 ),
                               ),
                             ],
@@ -1055,6 +1041,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               title: _post.title,
                               isGif: true,
                               maxHeight: 480,
+                              borderRadius: BorderRadius.zero,
+                              showBorder: false,
                             ),
                           ],
 
@@ -1067,6 +1055,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               title: _post.title,
                               isGif: false,
                               maxHeight: 680,
+                              borderRadius: BorderRadius.zero,
+                              showBorder: false,
                             ),
                           ],
 
@@ -1077,6 +1067,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             DiscordVideoAttachment(
                               videoUrl: _post.videoUrl!,
                               maxHeight: 480,
+                              borderRadius: BorderRadius.zero,
+                              showBorder: false,
                             ),
                           ],
 
