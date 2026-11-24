@@ -8,11 +8,12 @@ import '../../../core/constants/categories.dart';
 import '../../../core/constants/zanate_colors.dart';
 import '../../../core/models/post.dart';
 import '../../../core/services/forum_service.dart';
-import '../../../core/services/share_count_service.dart';
+import '../../../core/services/local_storage_service.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/time_utils.dart';
 import '../../../core/utils/url_utils.dart';
+import '../models/discord_forum_models.dart';
 import '../widgets/comment_item.dart';
 import '../widgets/create_post_dialog.dart';
 import '../../legal/widgets/terms_consent_modal.dart';
@@ -28,11 +29,21 @@ import '../widgets/discord/discord_video_attachment.dart';
 class PostDetailScreen extends StatefulWidget {
   final Post initialPost;
   final String activeAlias;
+  final Map<String, String>? categoryLabels;
+  final ForumServer? activeServer;
+  final ForumChannel? activeChannel;
+  final List<ForumChannel>? availableChannels;
+  final List<ForumFaculty>? availableFaculties;
 
   const PostDetailScreen({
     super.key,
     required this.initialPost,
     required this.activeAlias,
+    this.categoryLabels,
+    this.activeServer,
+    this.activeChannel,
+    this.availableChannels,
+    this.availableFaculties,
   });
 
   @override
@@ -57,7 +68,30 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     super.initState();
     _post = widget.initialPost;
     _commentAlias = widget.activeAlias;
+    _loadFreshAlias();
     _loadComments();
+  }
+
+  Future<void> _loadFreshAlias() async {
+    try {
+      final accountAlias = await ProfileService.fetchAccountAlias();
+      if (mounted && accountAlias != null && accountAlias.trim().isNotEmpty) {
+        setState(() => _commentAlias = accountAlias.trim());
+        return;
+      }
+      final profile = await LocalStorageService.getUserProfile();
+      if (mounted && profile.alias.trim().isNotEmpty) {
+        setState(() => _commentAlias = profile.alias.trim());
+      }
+    } catch (_) {}
+  }
+
+  int _countCommentsTree(List<PostComment> nodes) {
+    int total = 0;
+    for (final c in nodes) {
+      total += 1 + _countCommentsTree(c.children);
+    }
+    return total;
   }
 
   @override
@@ -77,6 +111,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       if (mounted) {
         setState(() {
           _comments = list;
+          _post = _post.copyWith(commentsCount: _countCommentsTree(list));
           _isLoadingComments = false;
           _commentsLoadError = false;
         });
@@ -150,7 +185,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       _post = _post.copyWith(sharesCount: newCount);
     });
 
-    await ShareCountService.incrementShare(_post.id);
+    final persistedCount = await ForumService.incrementShareCount(_post.id);
+    if (mounted && persistedCount != null && persistedCount > 0) {
+      setState(() {
+        _post = _post.copyWith(sharesCount: persistedCount);
+      });
+    }
 
     final shareText = UrlUtils.currentSiteUrl('/foro/${_post.id}');
     try {
@@ -184,12 +224,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       return;
     }
 
-    final prevBookmarked = _post.isBookmarkedByMe;
+    final previousPost = _post;
+    final prevBookmarked = previousPost.isBookmarkedByMe;
     setState(() {
-      _post = _post.copyWith(isBookmarkedByMe: !prevBookmarked);
+      _post = previousPost.copyWith(isBookmarkedByMe: !prevBookmarked);
     });
 
-    final success = await ForumService.toggleBookmark(_post);
+    final success = await ForumService.toggleBookmark(previousPost);
     if (mounted) {
       if (success != !prevBookmarked) {
         setState(() {
@@ -267,8 +308,16 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
     CreatePostDialog.show(
       context,
-      activeAlias: widget.activeAlias,
+      activeAlias: _commentAlias,
       quotedPost: _post,
+      serverName: widget.activeServer?.name,
+      channelName: widget.activeChannel?.name,
+      initialCategory: _post.category,
+      initialCarrera: _post.carrera,
+      initialFacultad: widget.activeServer?.facultadId,
+      initialServerId: _post.forumServerId ?? widget.activeServer?.id,
+      availableChannels: widget.availableChannels,
+      availableFaculties: widget.availableFaculties,
       onAliasChanged: (_) {},
       onPostCreated: (_) {
         setState(() {
@@ -448,6 +497,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   }
 
   String _getCategoryLabel(String catId) {
+    final dynamicLabel = widget.categoryLabels?[catId];
+    if (dynamicLabel != null && dynamicLabel.trim().isNotEmpty) {
+      return dynamicLabel;
+    }
     final match = USACConstants.forumCategories.where((c) => c.id == catId);
     return match.isNotEmpty ? match.first.label : 'General';
   }
@@ -531,12 +584,18 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     context,
                     title: 'Reportar Publicación',
                     subtitle: 'Publicación de ${_post.authorAlias}',
-                    onSubmitted: (reason) {
-                      ForumService.reportPost(postId: _post.id, reason: reason);
+                    onSubmitted: (reason) async {
+                      final ok = await ForumService.reportPost(
+                        postId: _post.id,
+                        reason: reason,
+                      );
+                      if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
+                        SnackBar(
                           content: Text(
-                            'Gracias por tu reporte. Se ha enviado al equipo de moderación.',
+                            ok
+                                ? 'Gracias por tu reporte. Se ha enviado al equipo de moderación.'
+                                : 'No se pudo enviar el reporte. Inténtalo de nuevo.',
                           ),
                         ),
                       );
@@ -628,7 +687,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           Expanded(
             child: SingleChildScrollView(
               child: MaxWidthContainer(
-                maxWidth: 900,
+                maxWidth: Responsive.isDesktop(context) ? 620 : 900,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 14,
@@ -1286,15 +1345,18 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             postAuthorUserId: _post.userId ?? '',
                             onReply: _startReplyTo,
                             onDelete: _handleDeleteComment,
-                            onReport: (comment, reason) {
-                              ForumService.reportComment(
+                            onReport: (comment, reason) async {
+                              final ok = await ForumService.reportComment(
                                 commentId: comment.id,
                                 reason: reason,
                               );
+                              if (!mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
+                                SnackBar(
                                   content: Text(
-                                    'Reporte enviado a moderación.',
+                                    ok
+                                        ? 'Reporte enviado a moderación.'
+                                        : 'No se pudo enviar el reporte. Inténtalo de nuevo.',
                                   ),
                                 ),
                               );
@@ -1317,7 +1379,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             child: SafeArea(
               top: false,
               child: MaxWidthContainer(
-                maxWidth: 900,
+                maxWidth: Responsive.isDesktop(context) ? 620 : 900,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 10,

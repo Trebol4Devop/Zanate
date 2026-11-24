@@ -66,6 +66,31 @@ class CampusCommunitySupabaseService {
     }
   }
 
+  /// 2b. Consulta segura de comentarios del mapa mediante RPC con pseudónimo.
+  Future<List<Map<String, dynamic>>> loadTargetComments(
+    String targetId, {
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final client = supabase;
+    if (client == null) return const [];
+
+    try {
+      final List<dynamic> response = await client.rpc(
+        'get_target_comments_with_authors',
+        params: {
+          'p_target_id': targetId,
+          'p_limit': limit,
+          'p_offset': offset,
+        },
+      );
+      return response.cast<Map<String, dynamic>>();
+    } catch (e) {
+      debugPrint('Aviso Supabase: Fallback RPC de comentarios para $targetId ($e)');
+      return const [];
+    }
+  }
+
   /// 3. Publicación o actualización de una reseña de estudiante (Upsert protegido por RLS).
   Future<void> submitReview({
     required String targetId,
@@ -103,7 +128,7 @@ class CampusCommunitySupabaseService {
     }, onConflict: 'user_id,target_id');
   }
 
-  /// 4. Publica un comentario en el foro del lugar con moderación antipalabrotas automática.
+  /// 4. Publica un comentario en el foro del lugar en `public.campus_comments`.
   Future<void> sendComment({
     required String postId,
     required String content,
@@ -120,14 +145,13 @@ class CampusCommunitySupabaseService {
 
     final alias = fallbackAlias ?? 'Estudiante USAC';
 
-    await client.from('comments').insert({
-      'post_id': postId,
+    await client.from('campus_comments').insert({
+      'target_id': postId,
       'user_id': user.id,
       'author_alias': alias,
       'content': content.trim(),
       'parent_id': parentCommentId,
       'moderation_status': 1,
-      'created_at': DateTime.now().toUtc().toIso8601String(),
     });
   }
 }
@@ -164,22 +188,20 @@ class ForumCommentsController {
     final client = supabase;
     if (client == null) return;
 
-    final channelName = 'public:comments:post_$postId';
+    final channelName = 'public:campus_comments:target_$postId';
     _commentsChannel = client.channel(channelName)
       ..onPostgresChanges(
         event: PostgresChangeEvent.insert,
         schema: 'public',
-        table: 'comments',
+        table: 'campus_comments',
         filter: PostgresChangeFilter(
           type: PostgresChangeFilterType.eq,
-          column: 'post_id',
+          column: 'target_id',
           value: postId,
         ),
         callback: (payload) {
           final row = payload.newRecord;
-          // Solo mostrar si está aprobado (1) o si fue escrito por el usuario actual
-          if (row['moderation_status'] == 1 ||
-              row['user_id'] == client.auth.currentUser?.id) {
+          if (row['moderation_status'] == 1) {
             onCommentInserted(row);
           }
         },
@@ -187,10 +209,10 @@ class ForumCommentsController {
       ..onPostgresChanges(
         event: PostgresChangeEvent.update,
         schema: 'public',
-        table: 'comments',
+        table: 'campus_comments',
         filter: PostgresChangeFilter(
           type: PostgresChangeFilterType.eq,
-          column: 'post_id',
+          column: 'target_id',
           value: postId,
         ),
         callback: (payload) {
@@ -200,10 +222,10 @@ class ForumCommentsController {
       ..onPostgresChanges(
         event: PostgresChangeEvent.delete,
         schema: 'public',
-        table: 'comments',
+        table: 'campus_comments',
         filter: PostgresChangeFilter(
           type: PostgresChangeFilterType.eq,
-          column: 'post_id',
+          column: 'target_id',
           value: postId,
         ),
         callback: (payload) {

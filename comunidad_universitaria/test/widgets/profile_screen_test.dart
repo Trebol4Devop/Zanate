@@ -175,6 +175,8 @@ void main() {
       final saveButton = find.text('Guardar Cambios de Perfil');
       expect(saveButton, findsOneWidget);
 
+      await tester.ensureVisible(saveButton);
+      await tester.pumpAndSettle();
       await tester.tap(saveButton);
       await tester.pumpAndSettle();
 

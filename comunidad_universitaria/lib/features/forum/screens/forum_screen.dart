@@ -9,7 +9,6 @@ import '../../../core/constants/zanate_colors.dart';
 import '../../../core/models/post.dart';
 import '../../../core/models/user_profile.dart';
 import '../../../core/services/forum_service.dart';
-import '../../../core/services/share_count_service.dart';
 import '../../../core/services/local_storage_service.dart';
 import '../../../core/services/forum_server_preferences_service.dart';
 import '../../../core/services/supabase_service.dart';
@@ -101,10 +100,23 @@ class _ForumScreenState extends State<ForumScreen> {
   @override
   void initState() {
     super.initState();
-    final generalServer = ForumServer.defaultServers.first;
+    const generalServer = ForumServer(
+      id: 'general',
+      name: 'General',
+      shortCode: 'USAC',
+      icon: Icons.school,
+      facultadId: 'todas',
+      carreraId: 'general',
+      description: 'Espacio general de la comunidad USAC.',
+      serverKind: 'general',
+      scopeKey: 'general',
+      isSystem: true,
+    );
     _servers = [generalServer];
     _activeServer =
-        widget.activeServer != null && !widget.activeServer!.isGroups
+        widget.activeServer != null &&
+            !widget.activeServer!.isGroups &&
+            widget.activeServer!.id != 'todas'
         ? widget.activeServer!
         : generalServer;
     if (!_servers.any((server) => server.id == _activeServer.id)) {
@@ -128,8 +140,29 @@ class _ForumScreenState extends State<ForumScreen> {
     }
     _loadUserProfile();
     _loadForumStructure();
+    ProfileService.profileRevision.addListener(_onProfileRevisionChanged);
     if (!_activeServer.isGroups) {
       _loadPosts();
+    }
+  }
+
+  Future<void> _onProfileRevisionChanged() async {
+    try {
+      final profile = await LocalStorageService.getUserProfile();
+      if (!mounted) return;
+      setState(() {
+        _currentUserProfile = profile;
+        _posts = _posts.map((p) {
+          if (!p.isMine) return p;
+          return p.copyWith(
+            avatarColorIndex: profile.avatarColorIndex,
+            avatarIconIndex: profile.avatarIconIndex,
+          );
+        }).toList();
+      });
+    } catch (_) {}
+    if (mounted) {
+      _loadPosts(showLoadingIndicator: false, forceRefresh: true);
     }
   }
 
@@ -138,7 +171,9 @@ class _ForumScreenState extends State<ForumScreen> {
     if (!mounted || savedServers.isEmpty) return;
     setState(() {
       for (final server in savedServers) {
-        if (!_servers.any((item) => item.id == server.id)) {
+        if (server.id != 'todas' &&
+            !server.isGroups &&
+            !_servers.any((item) => item.id == server.id)) {
           _servers.add(server);
         }
       }
@@ -147,9 +182,17 @@ class _ForumScreenState extends State<ForumScreen> {
 
   Future<void> _loadForumStructure() async {
     try {
-      final channels = await ForumService.fetchForumChannels();
-      final faculties = await ForumService.fetchForumFaculties();
-      final catalog = await ForumService.fetchForumServers();
+      final results = await Future.wait([
+        ForumService.fetchForumChannels(),
+        ForumService.fetchForumFaculties(),
+        ForumService.fetchForumServers(),
+        ForumServerPreferencesService.load(),
+      ]);
+      final channels = results[0] as List<ForumChannel>;
+      final faculties = results[1] as List<ForumFaculty>;
+      final catalog = results[2] as ForumServerCatalog;
+      final savedServers = results[3] as List<ForumServer>;
+
       if (mounted) {
         setState(() {
           _channels = channels;
@@ -159,18 +202,25 @@ class _ForumScreenState extends State<ForumScreen> {
               : catalog.groups;
           _pickerServers = catalog.picker.isEmpty
               ? List<ForumServer>.from(ForumServer.defaultServers)
-                    .where((server) => !server.isGroups)
+                    .where((server) => !server.isGroups && server.id != 'todas')
                     .toList()
               : catalog.picker;
 
-          final extras = _servers
-              .where(
-                (server) =>
-                    !server.isGroups &&
-                    !catalog.rail.any((rail) => rail.id == server.id),
-              )
-              .toList();
-          final nextServers = [...catalog.rail, ...extras];
+          final validExtras = <ForumServer>[];
+          for (final server in [..._servers, ...savedServers]) {
+            if (server.isGroups || server.id == 'todas') continue;
+            if (catalog.rail.any((rail) => rail.id == server.id)) continue;
+            // Verificar que el servidor exista activo en el catálogo de DB
+            final activeMatch = catalog.picker
+                .cast<ForumServer?>()
+                .firstWhere((p) => p?.id == server.id, orElse: () => null);
+            if (activeMatch == null) continue;
+            if (!validExtras.any((e) => e.id == activeMatch.id)) {
+              validExtras.add(activeMatch);
+            }
+          }
+
+          final nextServers = [...catalog.rail, ...validExtras];
           _servers = nextServers;
           _subserversByParent = catalog.children;
           _activeServer = nextServers.firstWhere(
@@ -251,6 +301,7 @@ class _ForumScreenState extends State<ForumScreen> {
 
   @override
   void dispose() {
+    ProfileService.profileRevision.removeListener(_onProfileRevisionChanged);
     _searchDebounce?.cancel();
     _searchController.dispose();
     _feedScrollController.dispose();
@@ -274,23 +325,23 @@ class _ForumScreenState extends State<ForumScreen> {
         category: category,
         facultad: _activeServer.facultadId,
         carrera: _scopeServer.carreraId,
+        forumServerId: _scopeServer.id,
+        serverKind: _scopeServer.serverKind,
+        childServerIds: _activeSubserver == null
+            ? _subservers.map((s) => s.id).toList()
+            : null,
         searchQuery: _searchQuery,
         showOnlyBookmarks: isBookmarks,
         feedMode: _feedMode,
         forceRefresh: forceRefresh,
+        faculties: _faculties,
       );
 
       if (!mounted || currentRequestId != _loadRequestId) return;
 
-      await ShareCountService.preload(posts.map((p) => p.id).toList());
-      final enrichedPosts = posts.map((p) {
-        final count = ShareCountService.getCachedCount(p.id);
-        return count > p.sharesCount ? p.copyWith(sharesCount: count) : p;
-      }).toList();
-
       if (mounted && currentRequestId == _loadRequestId) {
         setState(() {
-          _posts = enrichedPosts;
+          _posts = posts;
           _isLoading = false;
           _isOffline = false;
         });
@@ -310,6 +361,7 @@ class _ForumScreenState extends State<ForumScreen> {
     await ForumCarreraPickerDialog.show(
       context,
       servers: _pickerServers,
+      existingServerIds: _servers.map((s) => s.id).toSet(),
       onServerSelected: (server) {
         selectedServer = server;
         _onAddServer(server);
@@ -356,30 +408,35 @@ class _ForumScreenState extends State<ForumScreen> {
     }
   }
 
-  /// Selecciona el primer subservidor del servidor activo (o el indicado)
-  /// y carga sus canales. Si el servidor no tiene hijos, usa sus canales.
+  /// Selecciona el subservidor indicado (o ninguno para mostrar el servidor padre).
   Future<void> _applyServerScope({ForumServer? subserver}) async {
     final children = _subserversByParent[_activeServer.id] ?? const <ForumServer>[];
-    final next = subserver ?? (children.isNotEmpty ? children.first : null);
     setState(() {
       _subservers = List<ForumServer>.from(children);
-      _activeSubserver = next;
+      _activeSubserver = subserver;
     });
-    await _loadChannelsForServer(next ?? _activeServer);
+    await _loadChannelsForServer(subserver ?? _activeServer);
   }
 
   Future<void> _onSelectSubserver(ForumServer subserver) async {
-    if (_activeSubserver?.id == subserver.id) return;
+    if (_activeSubserver?.id == subserver.id) {
+      setState(() => _activeSubserver = null);
+      await _loadChannelsForServer(_activeServer);
+      return;
+    }
     setState(() => _activeSubserver = subserver);
     await _loadChannelsForServer(subserver);
   }
 
   void _onAddServer(ForumServer newServer) {
-    if (newServer.isGroups) return;
+    if (newServer.isGroups || newServer.id == 'todas') return;
     final exists = _servers.any((server) => server.id == newServer.id);
     if (!exists) {
       setState(() => _servers.add(newServer));
-      ForumServerPreferencesService.save(_servers);
+      ForumServerPreferencesService.addServer(
+        newServer.id,
+        sortOrder: _servers.length,
+      );
     }
   }
 
@@ -577,7 +634,15 @@ class _ForumScreenState extends State<ForumScreen> {
       }
     });
 
-    await ShareCountService.incrementShare(post.id);
+    final persistedCount = await ForumService.incrementShareCount(post.id);
+    if (mounted && persistedCount != null && persistedCount > 0) {
+      setState(() {
+        final idx = _posts.indexWhere((p) => p.id == post.id);
+        if (idx != -1) {
+          _posts[idx] = _posts[idx].copyWith(sharesCount: persistedCount);
+        }
+      });
+    }
 
     final shareText = UrlUtils.currentSiteUrl('/foro/${post.id}');
     try {
@@ -729,6 +794,7 @@ class _ForumScreenState extends State<ForumScreen> {
         content: post.content.isNotEmpty ? post.content : post.title,
         category: post.category,
         carrera: post.carrera,
+        forumServerId: post.forumServerId ?? _scopeServer.id,
         authorAlias: effectiveAlias,
         quotedPostId: post.id,
       );
@@ -780,6 +846,8 @@ class _ForumScreenState extends State<ForumScreen> {
       initialCarrera: _scopeServer.carreraId,
       initialFacultad: _scopeServer.facultadId,
       initialServerId: _scopeServer.id,
+      availableChannels: _channels,
+      availableFaculties: _faculties,
       onAliasChanged: widget.onAliasChanged,
       onPostCreated: (newPost) {
         setState(() {
@@ -830,6 +898,8 @@ class _ForumScreenState extends State<ForumScreen> {
       initialCarrera: _scopeServer.carreraId,
       initialFacultad: _scopeServer.facultadId,
       initialServerId: _scopeServer.id,
+      availableChannels: _channels,
+      availableFaculties: _faculties,
       onAliasChanged: widget.onAliasChanged,
       onPostCreated: (newPost) {
         setState(() {
@@ -845,10 +915,17 @@ class _ForumScreenState extends State<ForumScreen> {
         builder: (_) => PostDetailScreen(
           initialPost: post,
           activeAlias: widget.activeAlias,
+          categoryLabels: {
+            for (final ch in _channels) ch.categoryId: ch.label,
+          },
+          activeServer: _scopeServer,
+          activeChannel: _activeChannel,
+          availableChannels: _channels,
+          availableFaculties: _faculties,
         ),
       ),
     );
-    _loadPosts();
+    _loadPosts(forceRefresh: true);
   }
 
   @override
@@ -953,6 +1030,9 @@ class _ForumScreenState extends State<ForumScreen> {
                   activeServer: _activeServer,
                   activeChannel: currentChannel,
                   channels: currentChannels,
+                  subservers: isGroups ? const [] : _subservers,
+                  activeSubserver: _activeSubserver,
+                  onSelectSubserver: _onSelectSubserver,
                   onSelectChannel: _onSelectChannel,
                   onAddServer: _addServerFromSidebar,
                   onSearch: _openSearchDialog,
@@ -1064,21 +1144,64 @@ class _ForumScreenState extends State<ForumScreen> {
     );
   }
 
-  String _welcomeChannelTitle() {
-    final serverName = _activeServer.name
+  Widget _buildChannelHeaderTitle(bool isDark) {
+    final titleColor = ZanateColors.textPrimary(isDark);
+    final serverName = _scopeServer.name
         .replaceAll(RegExp(r'\s*\([^)]*\)'), '')
-        .trim();
-    return '$serverName · ${_activeChannel.name}';
+        .trim()
+        .toUpperCase();
+    final channelName = _activeChannel.name.replaceAll('#', '').trim();
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          serverName,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.8,
+            color: ZanateColors.textMuted(isDark),
+          ),
+        ),
+        const SizedBox(height: 1),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '#',
+              style: GoogleFonts.outfit(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: titleColor,
+              ),
+            ),
+            const SizedBox(width: 3),
+            Flexible(
+              child: Text(
+                channelName,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
+                  color: titleColor,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
   Widget _buildMobileChannelHeader(ThemeData theme) {
     final isDark = theme.brightness == Brightness.dark;
     final titleColor = ZanateColors.textPrimary(isDark);
-    final serverName = _activeServer.name
-        .replaceAll(RegExp(r'\s*\([^)]*\)'), '')
-        .trim()
-        .toUpperCase();
-    final channelName = _activeChannel.name.replaceAll('#', '').trim();
 
     return Container(
       constraints: const BoxConstraints(minHeight: 56),
@@ -1102,53 +1225,7 @@ class _ForumScreenState extends State<ForumScreen> {
             splashRadius: 22,
           ),
           const SizedBox(width: 4),
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  serverName,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.8,
-                    color: ZanateColors.textMuted(isDark),
-                  ),
-                ),
-                const SizedBox(height: 1),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      '#',
-                      style: GoogleFonts.outfit(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: titleColor,
-                      ),
-                    ),
-                    const SizedBox(width: 3),
-                    Flexible(
-                      child: Text(
-                        channelName,
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.2,
-                          color: titleColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          Expanded(child: _buildChannelHeaderTitle(isDark)),
           const SizedBox(width: 4),
           if (!_activeChannel.isSpecial)
             IconButton(
@@ -1449,6 +1526,8 @@ class _ForumScreenState extends State<ForumScreen> {
       );
     }
 
+    final isDesktop = Responsive.isDesktop(context);
+
     return Scrollbar(
       controller: _feedScrollController,
       child: ListView.builder(
@@ -1458,10 +1537,13 @@ class _ForumScreenState extends State<ForumScreen> {
         itemCount: _posts.length,
         itemBuilder: (ctx, index) {
           final post = _posts[index];
-          return PostCard(
+          final card = PostCard(
             key: ValueKey(post.id),
             post: post,
             isModerator: _currentUserProfile?.isModerator == true,
+            categoryLabels: {
+              for (final ch in _channels) ch.categoryId: ch.label,
+            },
             onTap: () => _openPostDetail(post),
             onLike: () => _handleToggleLike(post),
             onBookmark: () => _handleToggleBookmark(post),
@@ -1473,7 +1555,10 @@ class _ForumScreenState extends State<ForumScreen> {
                     final ok = await ProfileService.deletePost(post.id);
                     if (!mounted) return;
                     if (ok) {
-                      _loadPosts();
+                      setState(() {
+                        _posts.removeWhere((p) => p.id == post.id);
+                      });
+                      _loadPosts(showLoadingIndicator: false, forceRefresh: true);
                     }
                   }
                 : null,
@@ -1494,6 +1579,13 @@ class _ForumScreenState extends State<ForumScreen> {
               );
             },
           );
+          if (!isDesktop) return card;
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: card,
+            ),
+          );
         },
       ),
     );
@@ -1506,9 +1598,9 @@ class _ForumScreenState extends State<ForumScreen> {
       final borderColor = ZanateColors.border(isDark);
 
       return Container(
-        constraints: const BoxConstraints(minHeight: 62),
+        constraints: const BoxConstraints(minHeight: 56),
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: ZanateColors.card(isDark),
           border: Border(bottom: BorderSide(color: borderColor, width: 1.0)),
@@ -1516,72 +1608,22 @@ class _ForumScreenState extends State<ForumScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: ZanateColors.surface(isDark),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: borderColor, width: 1.0),
-              ),
-              child: Center(
-                child: Icon(
-                  _activeChannel.icon,
-                  size: 18,
-                  color: isDark
-                      ? ZanateColors.zanateEyeYellow
-                      : ZanateColors.zanateBlack,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _welcomeChannelTitle(),
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14.5,
-                      letterSpacing: -0.2,
-                      color: isDark ? Colors.white : ZanateColors.zanateBlack,
-                    ),
-                  ),
-                  const SizedBox(height: 1),
-                  Text(
-                    _activeChannel.description,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: isDark
-                          ? const Color(0xFF94A3B8)
-                          : ZanateColors.mutedText,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (!_activeChannel.isSpecial) ...[
-              const SizedBox(width: 10),
+            const SizedBox(width: 52),
+            Expanded(child: _buildChannelHeaderTitle(isDark)),
+            const SizedBox(width: 4),
+            if (!_activeChannel.isSpecial)
               IconButton(
                 tooltip: 'Nueva publicación',
-                style: IconButton.styleFrom(
-                  backgroundColor: isDark
-                      ? ZanateColors.zanateEyeYellow
-                      : ZanateColors.zanateBlack,
-                  foregroundColor: isDark
-                      ? ZanateColors.zanateBlack
-                      : Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                icon: PhosphorIcon(
+                  PhosphorIconsBold.plus,
+                  size: 22,
+                  color: isDark ? Colors.white : ZanateColors.zanateBlack,
                 ),
-                icon: const PhosphorIcon(PhosphorIconsBold.plus, size: 18),
                 onPressed: _openCreateDialog,
-              ),
-            ],
+                splashRadius: 22,
+              )
+            else
+              const SizedBox(width: 48),
           ],
         ),
       );

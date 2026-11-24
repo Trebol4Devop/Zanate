@@ -8,6 +8,7 @@ import 'campus_community_supabase_service.dart';
 /// con la persistencia en tiempo real y RLS de Supabase.
 class SupabaseCampusCommunityRepository extends CampusCommunityRepository {
   final CampusCommunitySupabaseService _supabaseService;
+  final Set<String> _syncedTargets = <String>{};
 
   SupabaseCampusCommunityRepository({
     CampusCommunitySupabaseService? supabaseService,
@@ -131,14 +132,19 @@ class SupabaseCampusCommunityRepository extends CampusCommunityRepository {
     );
   }
 
-  /// Sincroniza en segundo plano las reseñas y agregados de Supabase para un lugar específico.
+  /// Sincroniza en segundo plano las reseñas y comentarios de Supabase para un lugar específico.
   Future<void> syncFromSupabase(String targetId, {String? targetCategory}) async {
-    try {
-      // 1. Cargar agregado de Supabase si existe
-      await _supabaseService.fetchTargetAggregate(targetId);
+    if (!_syncedTargets.add(targetId)) return;
 
-      // 2. Cargar reseñas RPC
-      final reviewsData = await _supabaseService.loadTargetReviews(targetId);
+    try {
+      // 1. Cargar reseñas RPC y comentarios RPC en paralelo
+      final results = await Future.wait([
+        _supabaseService.loadTargetReviews(targetId),
+        _supabaseService.loadTargetComments(targetId),
+      ]);
+      final reviewsData = results[0];
+      final commentsData = results[1];
+
       if (reviewsData.isNotEmpty) {
         for (final r in reviewsData) {
           final authorAlias = r['author_alias'] as String? ?? 'Estudiante USAC';
@@ -167,7 +173,21 @@ class SupabaseCampusCommunityRepository extends CampusCommunityRepository {
           );
         }
       }
+
+      if (commentsData.isNotEmpty) {
+        for (final c in commentsData) {
+          final content = c['content'] as String?;
+          if (content == null || content.trim().isEmpty) continue;
+          super.submitComment(
+            targetId: targetId,
+            content: content,
+            parentId: c['parent_id']?.toString(),
+            authorAlias: c['author_alias'] as String? ?? 'Estudiante USAC',
+          );
+        }
+      }
     } catch (e) {
+      _syncedTargets.remove(targetId);
       debugPrint('Aviso: Fallback offline activo para $targetId: $e');
     }
   }

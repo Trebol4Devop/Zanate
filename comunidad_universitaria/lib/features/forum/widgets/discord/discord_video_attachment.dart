@@ -117,6 +117,10 @@ class _DiscordVideoAttachmentState extends State<DiscordVideoAttachment> {
 
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final viewportMaxHeight = (MediaQuery.sizeOf(context).height * 0.56).clamp(
+      200.0,
+      widget.maxHeight,
+    );
     final radius = widget.borderRadius ?? BorderRadius.circular(14);
     final containerBg = ZanateColors.surface(isDark);
     final borderColor = ZanateColors.border(isDark);
@@ -124,7 +128,7 @@ class _DiscordVideoAttachmentState extends State<DiscordVideoAttachment> {
     final videoCard = ConstrainedBox(
       constraints: BoxConstraints(
         maxWidth: widget.maxWidth ?? double.infinity,
-        maxHeight: widget.maxHeight,
+        maxHeight: viewportMaxHeight,
         minHeight: 160,
       ),
       child: ClipRRect(
@@ -194,7 +198,7 @@ class _DiscordVideoAttachmentState extends State<DiscordVideoAttachment> {
                         : MediaQuery.sizeOf(context).width;
                     final targetHeight = (availableWidth / ar).clamp(
                       160.0,
-                      widget.maxHeight,
+                      viewportMaxHeight,
                     );
                     final videoSize = _controller!.value.size;
                     final childWidth = videoSize.width > 0
@@ -215,7 +219,7 @@ class _DiscordVideoAttachmentState extends State<DiscordVideoAttachment> {
                             Positioned.fill(
                               child: ClipRect(
                                 child: FittedBox(
-                                  fit: BoxFit.cover,
+                                  fit: BoxFit.contain,
                                   child: SizedBox(
                                     width: childWidth,
                                     height: childHeight,

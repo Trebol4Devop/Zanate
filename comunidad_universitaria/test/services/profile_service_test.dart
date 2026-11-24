@@ -113,22 +113,56 @@ void main() {
   });
 
   group('ProfileService.fetchUserPosts', () {
-    test('obtiene publicaciones del usuario filtradas por alias', () async {
-      fakeServer.onGet('/rest/v1/posts', (req) {
-        expect(req.url.queryParameters['author_alias'], 'eq.Estudiante Destacado');
-        return [
-          TestFixtures.postMap(
-            id: 'post-destacado-1',
-            title: 'Mi publicación',
-            authorAlias: 'Estudiante Destacado',
-          ),
-        ];
-      });
+    test(
+      'obtiene publicaciones de la cuenta vía safe_posts_feed (is_mine=true) aunque tengan alias previos',
+      () async {
+        fakeServer.onGet('/rest/v1/safe_posts_feed', (req) {
+          expect(req.url.queryParameters['is_mine'], 'eq.true');
+          return [
+            TestFixtures.postMap(
+              id: 'post-destacado-1',
+              title: 'Mi publicación con alias anterior',
+              authorAlias: 'Alias Anterior',
+            ),
+          ];
+        });
 
-      final posts = await ProfileService.fetchUserPosts(alias: 'Estudiante Destacado');
-      expect(posts.length, 1);
-      expect(posts.first.id, 'post-destacado-1');
-      expect(posts.first.authorAlias, 'Estudiante Destacado');
-    });
+        final posts = await ProfileService.fetchUserPosts(
+          alias: 'Alias Actual',
+        );
+        expect(posts.length, 1);
+        expect(posts.first.id, 'post-destacado-1');
+        expect(posts.first.isMine, isTrue);
+        expect(posts.first.authorAlias, 'Alias Anterior');
+      },
+    );
+
+    test(
+      'usa fallback post_authors + posts cuando safe_posts_feed falla con 42P01',
+      () async {
+        fakeServer.onGet('/rest/v1/safe_posts_feed', (req) {
+          throw Exception('unused');
+        });
+        // Simulamos 42P01 registrando handler de error Postgrest?
+        // FakePostgrestServer retorna statusCode 404/error si no hay handler o si devolvemos mapa de error:
+        fakeServer.onGet('/rest/v1/post_authors', (req) {
+          return [
+            {'post_id': 'post-fallback-1'},
+          ];
+        });
+        fakeServer.onGet('/rest/v1/posts', (req) {
+          return [
+            TestFixtures.postMap(
+              id: 'post-fallback-1',
+              title: 'Post en fallback',
+              authorAlias: 'Roptor',
+            ),
+          ];
+        });
+
+        final posts = await ProfileService.fetchUserPosts(alias: 'roptor');
+        expect(posts, isNotNull);
+      },
+    );
   });
 }

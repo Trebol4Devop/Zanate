@@ -343,7 +343,7 @@ void main() {
 
         final imageWidget = tester.widget<Image>(find.byType(Image));
         expect(imageWidget.width, double.infinity);
-        expect(imageWidget.fit, BoxFit.fitWidth);
+        expect(imageWidget.fit, BoxFit.contain);
       },
     );
 

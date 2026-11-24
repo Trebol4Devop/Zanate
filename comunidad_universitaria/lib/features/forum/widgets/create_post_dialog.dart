@@ -29,6 +29,8 @@ class CreatePostDialog extends StatefulWidget {
   final String? serverName;
   final String? channelName;
   final String? initialServerId;
+  final List<ForumChannel>? availableChannels;
+  final List<ForumFaculty>? availableFaculties;
 
   const CreatePostDialog({
     super.key,
@@ -42,6 +44,8 @@ class CreatePostDialog extends StatefulWidget {
     this.serverName,
     this.channelName,
     this.initialServerId,
+    this.availableChannels,
+    this.availableFaculties,
   });
 
   static Future<void> show(
@@ -56,6 +60,8 @@ class CreatePostDialog extends StatefulWidget {
     String? serverName,
     String? channelName,
     String? initialServerId,
+    List<ForumChannel>? availableChannels,
+    List<ForumFaculty>? availableFaculties,
   }) {
     return Navigator.of(context).push<void>(
       MaterialPageRoute(
@@ -70,6 +76,8 @@ class CreatePostDialog extends StatefulWidget {
           serverName: serverName,
           channelName: channelName,
           initialServerId: initialServerId,
+          availableChannels: availableChannels,
+          availableFaculties: availableFaculties,
         ),
       ),
     );
@@ -92,8 +100,8 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
   bool _showPollForm = false;
   final _pollQuestionController = TextEditingController();
   final List<TextEditingController> _pollOptionControllers = [
-    TextEditingController(text: 'Opción 1'),
-    TextEditingController(text: 'Opción 2'),
+    TextEditingController(),
+    TextEditingController(),
   ];
 
   late String _selectedCategory;
@@ -109,8 +117,28 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
       (widget.initialCarrera == null || widget.initialCarrera == 'todas');
 
   List<ForumCareerItem> get _availableCareers {
-    final fac = ForumFaculty.findByFacultadId(_selectedFacultad);
+    final sourceFaculties =
+        widget.availableFaculties ?? ForumFaculty.defaultFaculties;
+    final fac = sourceFaculties.cast<ForumFaculty?>().firstWhere(
+      (f) => f?.id == _selectedFacultad,
+      orElse: () => ForumFaculty.findByFacultadId(_selectedFacultad),
+    );
     return fac?.careers.where((c) => c.id != 'todas').toList() ?? [];
+  }
+
+  List<ForumChannel> get _selectableChannels {
+    final raw = widget.availableChannels ?? ForumChannel.defaultChannels;
+    final seen = <String>{};
+    final result = <ForumChannel>[];
+    for (final ch in raw) {
+      if (ch.isSpecial) continue;
+      if (seen.add(ch.categoryId)) {
+        result.add(ch);
+      }
+    }
+    return result.isNotEmpty
+        ? result
+        : ForumChannel.defaultChannels.where((c) => !c.isSpecial).toList();
   }
 
   @override
@@ -166,6 +194,12 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
         widget.channelName != 'todos-los-temas') {
       return widget.channelName!;
     }
+    final dynamicMatch = _selectableChannels.where(
+      (c) => c.categoryId == _selectedCategory,
+    );
+    if (dynamicMatch.isNotEmpty) {
+      return dynamicMatch.first.label;
+    }
     final cat = USACConstants.forumCategories.firstWhere(
       (c) => c.id == _selectedCategory,
       orElse: () => USACConstants.forumCategories.first,
@@ -177,7 +211,14 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
     if (widget.serverName != null && widget.serverName!.isNotEmpty) {
       return widget.serverName!;
     }
+    final sourceFaculties =
+        widget.availableFaculties ?? ForumFaculty.defaultFaculties;
     if (_selectedCarrera != 'todas') {
+      for (final fac in sourceFaculties) {
+        for (final c in fac.careers) {
+          if (c.id == _selectedCarrera) return c.name;
+        }
+      }
       for (var fac in USACConstants.facultades) {
         final carreras = fac['carreras'] as List<dynamic>? ?? [];
         for (var c in carreras) {
@@ -186,6 +227,11 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
       }
     }
     if (_selectedFacultad != 'todas') {
+      final loadedFac = sourceFaculties.cast<ForumFaculty?>().firstWhere(
+        (f) => f?.id == _selectedFacultad,
+        orElse: () => null,
+      );
+      if (loadedFac != null) return loadedFac.name;
       final fac = USACConstants.facultades.firstWhere(
         (f) => f['id'] == _selectedFacultad,
         orElse: () => USACConstants.facultades.first,
@@ -341,12 +387,32 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
             .toList();
       }
 
+      final rawCarrera = _selectedCarrera.trim();
+      final effectiveCarrera =
+          (rawCarrera.isEmpty ||
+              rawCarrera == 'general' ||
+              rawCarrera == 'desmadre' ||
+              rawCarrera == 'objetos_perdidos' ||
+              rawCarrera == 'congresos_ingenieria' ||
+              rawCarrera == 'becas' ||
+              rawCarrera == 'empleos_practicas' ||
+              rawCarrera == 'deportes' ||
+              rawCarrera == 'arte_cultura' ||
+              rawCarrera == 'eventos' ||
+              rawCarrera == 'tramites' ||
+              rawCarrera == 'compras_ventas')
+          ? 'todas'
+          : rawCarrera;
+      final effectiveServerId = _canSelectCarrera
+          ? _selectedCarrera
+          : widget.initialServerId;
+
       final newPost = await ForumService.createPost(
         title: _titleController.text.trim(),
         content: _contentController.text.trim(),
         category: _selectedCategory,
-        carrera: _selectedCarrera,
-        forumServerId: widget.initialServerId,
+        carrera: effectiveCarrera,
+        forumServerId: effectiveServerId,
         authorAlias: _authorAlias,
         imageUrl: uploadedImageUrl,
         gifUrl: _selectedGifUrl,
@@ -511,7 +577,11 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
                 DropdownButtonFormField<String>(
                   isExpanded: true,
                   itemHeight: null,
-                  initialValue: _selectedCategory,
+                  initialValue: _selectableChannels.any(
+                          (c) => c.categoryId == _selectedCategory,
+                        )
+                      ? _selectedCategory
+                      : _selectableChannels.first.categoryId,
                   dropdownColor: ZanateColors.card(isDark),
                   decoration: InputDecoration(
                     labelText: 'Canal de publicación',
@@ -547,38 +617,14 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
                       ),
                     ),
                   ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'todos',
-                      child: Text(
-                        '#todos-los-temas · Todas las áreas / General',
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: 'prerrequisitos',
-                      child: Text(
-                        '#dudas-y-pensum · Dudas & Pensum',
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: 'catedraticos',
-                      child: Text(
-                        '#catedraticos-opiniones · Catedráticos',
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: 'apuntes',
-                      child: Text(
-                        '#apuntes-y-recursos · Apuntes & Exámenes',
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: 'horarios',
-                      child: Text(
-                        '#horarios-y-secciones · Horarios & Secciones',
-                      ),
-                    ),
-                  ],
+                  items: _selectableChannels
+                      .map(
+                        (ch) => DropdownMenuItem<String>(
+                          value: ch.categoryId,
+                          child: Text('#${ch.name} · ${ch.label}'),
+                        ),
+                      )
+                      .toList(),
                   onChanged: (val) {
                     if (val != null) {
                       setState(() => _selectedCategory = val);
@@ -1033,6 +1079,7 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
                                   decoration: _zanateInput(
                                     isDark,
                                     labelText: 'Opción ${idx + 1}',
+                                    hintText: 'Opción ${idx + 1}',
                                     isDense: true,
                                     fillColor: ZanateColors.bg(isDark),
                                   ),

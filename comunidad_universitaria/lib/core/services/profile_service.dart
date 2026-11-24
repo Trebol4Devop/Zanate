@@ -6,6 +6,7 @@ import '../models/marketplace_item.dart';
 import '../models/post.dart';
 import '../models/user_profile.dart';
 import '../models/whatsapp_group.dart';
+import 'cache_service.dart';
 import 'local_storage_service.dart';
 import 'supabase_service.dart';
 
@@ -22,8 +23,17 @@ class AliasException implements Exception {
 class ProfileService {
   static const String termsVersion = 'v1.0-2026';
 
+  /// Notificador global para sincronizar al instante cambios de avatar/perfil en pantallas activas.
+  static final ValueNotifier<int> profileRevision = ValueNotifier<int>(0);
+
+  static const String _safePostsColumns =
+      'id, title, category, content, author_alias, author_hash, likes, carrera, forum_server_id, image_url, gif_url, video_url, is_pinned, quoted_post_id, reposts_count, shares_count, moderation_status, created_at, comments_count, hot_score, expires_at, deleted_at, is_legal_hold, is_mine';
+
+  static const String _postsFallbackColumns =
+      'id, title, category, content, author_alias, author_hash, likes, carrera, forum_server_id, image_url, gif_url, video_url, is_pinned, quoted_post_id, reposts_count, shares_count, moderation_status, created_at, comments_count, hot_score, expires_at, deleted_at, is_legal_hold';
+
   static const String _safeStudentGroupsColumns =
-      'id, title, carrera, curso, section, link, description, author_alias, upvotes, reported_count, created_at, image_url, moderation_status, moderation_label, moderation_confidence, moderation_reason, moderated_at, moderated_by, platform, updated_at, deleted_at, is_legal_hold, is_mine';
+      'id, title, carrera, curso, section, link, description, author_alias, upvotes, reported_count, shares_count, created_at, image_url, moderation_status, moderation_label, moderation_confidence, moderation_reason, moderated_at, moderated_by, platform, updated_at, deleted_at, is_legal_hold, is_mine';
 
   static const String _safeMarketplaceItemsColumns =
       'id, title, description, price, is_free, category, facultad, sede, building_code, location_detail, contact_whatsapp, contact_telegram, contact_instagram, contact_messenger, social_links, image_urls, video_url, is_sponsored, sponsor_badge_text, author_alias, upvotes, reported_count, shares_count, status, moderation_status, moderation_label, moderation_confidence, moderation_reason, moderated_at, moderated_by, created_at, updated_at, expires_at, deleted_at, is_legal_hold, seller_public_id, seller_business_name, seller_plan_id, seller_plan_name, seller_badge_text, seller_is_verified, seller_is_on_campus, seller_building_code, is_mine, is_upvoted_by_me, is_bookmarked_by_me';
@@ -60,11 +70,30 @@ class ProfileService {
     if (uid == null) return null;
 
     try {
-      final res = await SupabaseService.client
-          .from('profiles')
-          .select('alias')
-          .eq('id', uid)
-          .maybeSingle();
+      Map<String, dynamic>? res;
+      try {
+        res = await SupabaseService.client
+            .from('profiles')
+            .select('alias, avatar_color_index, avatar_icon_index')
+            .eq('id', uid)
+            .maybeSingle();
+      } on PostgrestException catch (e) {
+        if (e.code == '42703') {
+          res = await SupabaseService.client
+              .from('profiles')
+              .select('alias')
+              .eq('id', uid)
+              .maybeSingle();
+        } else {
+          rethrow;
+        }
+      }
+
+      final colorIdx = res?['avatar_color_index'];
+      final iconIdx = res?['avatar_icon_index'];
+      if (colorIdx is int && iconIdx is int) {
+        await LocalStorageService.saveAvatar(colorIdx, iconIdx);
+      }
 
       final alias = res?['alias']?.toString().trim();
       if (alias != null && alias.isNotEmpty) {
@@ -156,9 +185,34 @@ class ProfileService {
 
   static Future<void> saveProfile(UserProfile profile) async {
     final savedAlias = await saveAccountAlias(profile.alias);
+    if (SupabaseConfig.isConfigured && SupabaseService.isAuthenticated) {
+      final uid = SupabaseService.currentUserId;
+      if (uid != null) {
+        try {
+          await SupabaseService.client
+              .from('profiles')
+              .update({
+                'avatar_color_index': profile.avatarColorIndex,
+                'avatar_icon_index': profile.avatarIconIndex,
+              })
+              .eq('id', uid);
+        } on PostgrestException catch (e) {
+          if (e.code != '42703') {
+            debugPrint(
+              'Aviso guardando avatar en profiles (${e.code}): ${e.message}',
+            );
+          }
+        } catch (e) {
+          debugPrint('Aviso guardando avatar en profiles: $e');
+        }
+      }
+    }
     await LocalStorageService.saveUserProfile(
       profile.copyWith(alias: savedAlias),
     );
+    await CacheService.invalidateAll('forum_posts');
+    await CacheService.invalidateAll('student_groups');
+    profileRevision.value++;
   }
 
   /// Verifica si el usuario actual ha aceptado la versión vigente de términos y condiciones.
@@ -260,65 +314,69 @@ class ProfileService {
       return [];
     }
 
+    int? myColorIndex;
+    int? myIconIndex;
     try {
-      var query = SupabaseService.client
-          .from('posts')
-          .select(
-            'id, title, category, content, author_alias, author_hash, likes, carrera, image_url, gif_url, video_url, is_pinned, quoted_post_id, reposts_count, moderation_status, created_at, comments_count, hot_score, expires_at, deleted_at, is_legal_hold',
-          )
-          .isFilter('deleted_at', null)
-          .neq('moderation_status', 2);
+      final profile = await LocalStorageService.getUserProfile();
+      myColorIndex = profile.avatarColorIndex;
+      myIconIndex = profile.avatarIconIndex;
+    } catch (_) {}
 
-      if (alias.trim().isNotEmpty) {
-        query = query.eq('author_alias', alias.trim());
-      }
-
-      final response = await query
-          .order('created_at', ascending: false)
-          .limit(50);
-      final List<dynamic> data = response as List<dynamic>;
-
+    List<Post> mapPosts(List<dynamic> data) {
       return data.map((item) {
         final map = Map<String, dynamic>.from(item);
-        final commentCount = (map['comment_count'] is int)
-            ? map['comment_count'] as int
-            : int.tryParse(map['comment_count']?.toString() ?? '0') ?? 0;
+        final rawCount = map['comments_count'] ?? map['comment_count'];
+        final commentCount = (rawCount is int)
+            ? rawCount
+            : int.tryParse(rawCount?.toString() ?? '0') ?? 0;
 
         return Post.fromMap(
           map,
           isLikedByMe: false,
           commentCount: commentCount,
+        ).copyWith(
+          isMine: true,
+          avatarColorIndex: myColorIndex,
+          avatarIconIndex: myIconIndex,
         );
       }).toList();
+    }
+
+    try {
+      final response = await SupabaseService.client
+          .from('safe_posts_feed')
+          .select(_safePostsColumns)
+          .eq('is_mine', true)
+          .order('created_at', ascending: false)
+          .limit(50);
+      return mapPosts(response as List<dynamic>);
     } catch (e) {
       if (e is PostgrestException &&
           (e.code == '42501' ||
+              e.code == '42703' ||
               e.message.contains('generate_author_hash') ||
               e.code == '42P01')) {
         try {
-          var fallbackQuery = SupabaseService.client
+          final authorsRes = await SupabaseService.client
+              .from('post_authors')
+              .select('post_id');
+          final myPostIds = (authorsRes as List<dynamic>)
+              .map((row) => row['post_id']?.toString() ?? '')
+              .where((id) => id.isNotEmpty)
+              .toList();
+          if (myPostIds.isEmpty) return [];
+
+          final response = await SupabaseService.client
               .from('posts')
-              .select(
-                'id, title, category, content, author_alias, author_hash, likes, carrera, image_url, gif_url, video_url, is_pinned, quoted_post_id, reposts_count, moderation_status, created_at, comments_count, hot_score, expires_at, deleted_at, is_legal_hold',
-              )
+              .select(_postsFallbackColumns)
               .isFilter('deleted_at', null)
-              .neq('moderation_status', 2);
-          if (alias.trim().isNotEmpty) {
-            fallbackQuery = fallbackQuery.eq('author_alias', alias.trim());
-          }
-          final response = await fallbackQuery
+              .neq('moderation_status', 2)
+              .inFilter('id', myPostIds)
               .order('created_at', ascending: false)
               .limit(50);
-          final List<dynamic> data = response as List<dynamic>;
-          return data.map((item) {
-            return Post.fromMap(
-              Map<String, dynamic>.from(item),
-              isLikedByMe: false,
-              commentCount: 0,
-            );
-          }).toList();
+          return mapPosts(response as List<dynamic>);
         } catch (inner) {
-          debugPrint('Error en fallback directo a posts en perfil: $inner');
+          debugPrint('Error en fallback post_authors/posts en perfil: $inner');
         }
       }
       debugPrint('Error al obtener posts del usuario: $e');
@@ -342,10 +400,20 @@ class ProfileService {
           .order('created_at', ascending: false)
           .limit(50);
       final List<dynamic> data = response as List<dynamic>;
+      int? myColorIndex;
+      int? myIconIndex;
+      try {
+        final profile = await LocalStorageService.getUserProfile();
+        myColorIndex = profile.avatarColorIndex;
+        myIconIndex = profile.avatarIconIndex;
+      } catch (_) {}
 
       return data.map((item) {
         final map = Map<String, dynamic>.from(item);
-        return WhatsAppGroup.fromMap(map, isUpvotedByMe: false);
+        return WhatsAppGroup.fromMap(map, isUpvotedByMe: false).copyWith(
+          avatarColorIndex: myColorIndex,
+          avatarIconIndex: myIconIndex,
+        );
       }).toList();
     } catch (e) {
       debugPrint('Error al obtener grupos del usuario: $e');
@@ -401,6 +469,7 @@ class ProfileService {
           .from('posts')
           .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
           .eq('id', postId);
+      await CacheService.invalidateAll('forum_posts');
       return true;
     } on PostgrestException catch (e) {
       debugPrint('Error Postgrest al eliminar post: $e');
@@ -430,6 +499,7 @@ class ProfileService {
           .from('student_groups')
           .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
           .eq('id', groupId);
+      await CacheService.invalidateAll('student_groups');
       return true;
     } on PostgrestException catch (e) {
       debugPrint('Error Postgrest al eliminar grupo: $e');

@@ -59,6 +59,8 @@ class CommentItemWidget extends StatelessWidget {
                 AnonymousAuthorHeader(
                   authorAlias: comment.authorAlias,
                   authorHash: comment.authorHash,
+                  avatarColorIndex: comment.avatarColorIndex,
+                  avatarIconIndex: comment.avatarIconIndex,
                   isOp: comment.isOp,
                   isMine: comment.isMine,
                   createdAt: comment.createdAt,

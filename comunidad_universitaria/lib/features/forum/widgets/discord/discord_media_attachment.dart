@@ -39,6 +39,10 @@ class DiscordMediaAttachment extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final radius = borderRadius ?? BorderRadius.circular(14);
+    final effectiveMaxHeight = (MediaQuery.sizeOf(context).height * 0.56).clamp(
+      200.0,
+      maxHeight,
+    );
 
     final containerBg = ZanateColors.surface(isDark);
     final borderColor = ZanateColors.border(isDark);
@@ -46,7 +50,7 @@ class DiscordMediaAttachment extends StatelessWidget {
     final mediaCard = ConstrainedBox(
       constraints: BoxConstraints(
         maxWidth: maxWidth ?? double.infinity,
-        maxHeight: maxHeight,
+        maxHeight: effectiveMaxHeight,
       ),
       child: ClipRRect(
         borderRadius: radius,
@@ -70,12 +74,14 @@ class DiscordMediaAttachment extends StatelessWidget {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  SizedBox(
-                    width: double.infinity,
-                    child: Image.network(
-                      imageUrl,
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: effectiveMaxHeight),
+                    child: SizedBox(
                       width: double.infinity,
-                      fit: BoxFit.fitWidth,
+                      child: Image.network(
+                        imageUrl,
+                        width: double.infinity,
+                        fit: BoxFit.contain,
                     loadingBuilder: (context, child, loadingProgress) {
                       if (loadingProgress == null) return child;
                       return Container(
@@ -129,6 +135,7 @@ class DiscordMediaAttachment extends StatelessWidget {
                         ),
                       );
                     },
+                  ),
                   ),
                   ),
 

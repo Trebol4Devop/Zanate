@@ -12,22 +12,28 @@ class ForumCarreraPickerDialog extends StatefulWidget {
   /// catálogo académico local (respaldo offline).
   final List<ForumServer>? servers;
 
+  /// IDs de servidores ya presentes en el rail para evitar duplicados.
+  final Set<String> existingServerIds;
+
   const ForumCarreraPickerDialog({
     super.key,
     required this.onServerSelected,
     this.servers,
+    this.existingServerIds = const {},
   });
 
   static Future<void> show(
     BuildContext context, {
     required Function(ForumServer server) onServerSelected,
     List<ForumServer>? servers,
+    Set<String> existingServerIds = const {},
   }) {
     return showDialog(
       context: context,
       builder: (ctx) => ForumCarreraPickerDialog(
         onServerSelected: onServerSelected,
         servers: servers,
+        existingServerIds: existingServerIds,
       ),
     );
   }
@@ -54,6 +60,7 @@ class _ForumCarreraPickerDialogState extends State<ForumCarreraPickerDialog> {
     final catalog = widget.servers;
     if (catalog != null && catalog.isNotEmpty) {
       for (final server in catalog) {
+        if (widget.existingServerIds.contains(server.id)) continue;
         results.add({
           'facultadId': server.facultadId,
           'facultadNombre': server.facultadNombre.isEmpty
@@ -340,10 +347,13 @@ class _ForumCarreraPickerDialogState extends State<ForumCarreraPickerDialog> {
                           final carreraName = item['carreraNombre'] as String;
                           final facultadName = item['facultadNombre'] as String;
                           final carreraId = item['carreraId'] as String;
-                          final logoAsset = ForumServer.getLogoAssetFor(
-                            id: carreraId,
-                            facultadId: facId,
-                          );
+                          final dbServer = item['server'];
+                          final logoAsset = (dbServer is ForumServer)
+                              ? dbServer.resolvedLogoAsset
+                              : ForumServer.getLogoAssetFor(
+                                  id: carreraId,
+                                  facultadId: facId,
+                                );
 
                           return ListTile(
                             shape: RoundedRectangleBorder(
