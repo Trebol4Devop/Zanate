@@ -17,7 +17,7 @@ const ALLOWED_FOLDERS = {
   forum_videos: {
     kind: 'video',
     mimes: new Set(['video/mp4', 'video/webm', 'video/quicktime']),
-    maxBytes: 15 * 1024 * 1024,
+    maxBytes: 50 * 1024 * 1024,
   },
 };
 
