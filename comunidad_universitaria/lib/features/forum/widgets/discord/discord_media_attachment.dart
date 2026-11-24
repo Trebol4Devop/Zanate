@@ -14,6 +14,8 @@ class DiscordMediaAttachment extends StatelessWidget {
   final double maxHeight;
   final double minHeight;
   final BorderRadius? borderRadius;
+  final bool showBorder;
+  final bool showZoomBadge;
   final VoidCallback? onTap;
 
   const DiscordMediaAttachment({
@@ -25,6 +27,8 @@ class DiscordMediaAttachment extends StatelessWidget {
     this.maxHeight = 560,
     this.minHeight = 120,
     this.borderRadius,
+    this.showBorder = true,
+    this.showZoomBadge = true,
     this.onTap,
   });
 
@@ -51,7 +55,7 @@ class DiscordMediaAttachment extends StatelessWidget {
           decoration: BoxDecoration(
             color: containerBg,
             borderRadius: radius,
-            border: Border.all(color: borderColor, width: 1),
+            border: showBorder ? Border.all(color: borderColor, width: 1) : null,
           ),
           child: Material(
             color: Colors.transparent,
@@ -129,51 +133,52 @@ class DiscordMediaAttachment extends StatelessWidget {
                   ),
 
                   // Badge GIF or Zoom Pill
-                  Positioned(
-                    bottom: 8,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.72),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (isGif) ...[
-                            const Text(
-                              'GIF',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.5,
+                  if (isGif || showZoomBadge)
+                    Positioned(
+                      bottom: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.72),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (isGif) ...[
+                              const Text(
+                                'GIF',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
                               ),
-                            ),
-                          ] else ...[
-                            const Icon(
-                              PhosphorIconsRegular.magnifyingGlassPlus,
-                              color: Colors.white,
-                              size: 13,
-                            ),
-                            const SizedBox(width: 4),
-                            const Text(
-                              'Ampliar',
-                              style: TextStyle(
+                            ] else ...[
+                              const Icon(
+                                PhosphorIconsRegular.magnifyingGlassPlus,
                                 color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
+                                size: 13,
                               ),
-                            ),
+                              const SizedBox(width: 4),
+                              const Text(
+                                'Ampliar',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),
