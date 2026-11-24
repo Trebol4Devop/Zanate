@@ -15,6 +15,8 @@ import 'package:comunidad_universitaria/core/services/supabase_service.dart';
 import 'package:comunidad_universitaria/core/utils/input_sanitizer.dart';
 import 'package:comunidad_universitaria/core/utils/square_image_crop.dart';
 import 'package:comunidad_universitaria/features/forum/widgets/discord/discord_media_attachment.dart';
+import 'package:comunidad_universitaria/features/forum/widgets/discord/discord_video_attachment.dart';
+import 'package:comunidad_universitaria/features/forum/widgets/post_card.dart';
 import 'package:comunidad_universitaria/features/groups/widgets/group_card.dart';
 import 'package:comunidad_universitaria/features/shared/widgets/square_image_crop_dialog.dart';
 import 'helpers/fake_postgrest.dart';
@@ -379,8 +381,8 @@ void main() {
         );
         expect(imageClip, findsOneWidget);
         final renderedSize = tester.getSize(imageClip);
-        expect(renderedSize.width, 368.0);
-        expect(renderedSize.height, 368.0);
+        expect(renderedSize.width, 400.0);
+        expect(renderedSize.height, 400.0);
 
         final imageWidget = tester.widget<Image>(
           find.descendant(
@@ -390,6 +392,192 @@ void main() {
         );
         expect(imageWidget.width, double.infinity);
         expect(imageWidget.fit, BoxFit.cover);
+      },
+    );
+
+    testWidgets(
+      'PostCard renderiza fotos, GIFs y videos al ancho exacto sin bordes ni esquinas redondeadas',
+      (tester) async {
+        tester.view.physicalSize = const Size(400, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+        GoogleFonts.config.allowRuntimeFetching = false;
+
+        final post = Post(
+          id: 'post-media-1',
+          title: 'Media full width',
+          content: 'Contenido de prueba',
+          category: 'general',
+          authorAlias: 'Zanate #01',
+          authorHash: 'hash-1',
+          createdAt: DateTime(2026, 11, 23),
+          likes: 0,
+          imageUrl: 'https://example.com/foto.jpg',
+          gifUrl: 'https://example.com/clip.gif',
+          videoUrl: 'https://example.com/video.mp4',
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: PostCard(
+                  post: post,
+                  onTap: () {},
+                  onLike: () {},
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final mediaWidgets = tester
+            .widgetList<DiscordMediaAttachment>(
+              find.byType(DiscordMediaAttachment),
+            )
+            .toList();
+        expect(mediaWidgets.length, 2);
+        for (final media in mediaWidgets) {
+          expect(media.borderRadius, BorderRadius.zero);
+          expect(media.showBorder, isFalse);
+        }
+
+        for (final finder in [
+          find.byType(DiscordMediaAttachment).at(0),
+          find.byType(DiscordMediaAttachment).at(1),
+          find.byType(DiscordVideoAttachment),
+        ]) {
+          expect(tester.getSize(finder).width, 400.0);
+        }
+
+        final videoWidget = tester.widget<DiscordVideoAttachment>(
+          find.byType(DiscordVideoAttachment),
+        );
+        expect(videoWidget.borderRadius, BorderRadius.zero);
+        expect(videoWidget.showBorder, isFalse);
+      },
+    );
+
+    testWidgets(
+      'Tocar la imagen en PostCard abre la publicación en lugar del zoom',
+      (tester) async {
+        tester.view.physicalSize = const Size(400, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+        GoogleFonts.config.allowRuntimeFetching = false;
+
+        var opened = false;
+        final post = Post(
+          id: 'post-tap-1',
+          title: 'Post con imagen',
+          content: 'Descripción corta',
+          category: 'general',
+          authorAlias: 'Zanate #03',
+          authorHash: 'hash-3',
+          createdAt: DateTime(2026, 11, 23),
+          likes: 0,
+          imageUrl: 'https://example.com/foto.jpg',
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: PostCard(
+                  post: post,
+                  onTap: () => opened = true,
+                  onLike: () {},
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text('Ampliar'), findsNothing);
+        await tester.tap(find.byType(DiscordMediaAttachment));
+        await tester.pump();
+        expect(opened, isTrue);
+      },
+    );
+
+    testWidgets(
+      'PostCard sigue el orden Header -> Media -> Encuesta -> Acciones -> Título -> Descripción (Ver más/Ver menos) -> Fecha',
+      (tester) async {
+        tester.view.physicalSize = const Size(400, 1400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+        GoogleFonts.config.allowRuntimeFetching = false;
+
+        final longDescription = List.filled(
+          15,
+          'Descripción extensa de prueba para verificar que el texto se contraiga.',
+        ).join(' ');
+
+        final post = Post(
+          id: 'post-order-1',
+          title: 'Título de la publicación',
+          content: longDescription,
+          category: 'general',
+          authorAlias: 'Zanate #02',
+          authorHash: 'hash-2',
+          createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+          likes: 3,
+          imageUrl: 'https://example.com/foto.jpg',
+          poll: TestFixtures.postPoll(
+            id: 'poll-order-1',
+            postId: 'post-order-1',
+            question: '¿Te gusta el nuevo orden?',
+          ),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: PostCard(
+                  post: post,
+                  onTap: () {},
+                  onLike: () {},
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final headerY = tester.getTopLeft(find.text('Zanate #02')).dy;
+        final mediaY = tester.getTopLeft(find.byType(DiscordMediaAttachment)).dy;
+        final pollY = tester.getTopLeft(find.text('¿Te gusta el nuevo orden?')).dy;
+        final likeY = tester.getTopLeft(find.byTooltip('Me gusta')).dy;
+        final titleY = tester.getTopLeft(find.text('Título de la publicación')).dy;
+        final descY = tester.getTopLeft(find.text(longDescription)).dy;
+        final timeY = tester.getTopLeft(find.text('Hace 2 horas')).dy;
+
+        expect(headerY, lessThan(mediaY));
+        expect(mediaY, lessThan(pollY));
+        expect(pollY, lessThan(likeY));
+        expect(likeY, lessThan(titleY));
+        expect(titleY, lessThan(descY));
+        expect(descY, lessThan(timeY));
+
+        expect(find.text('Ver más'), findsOneWidget);
+        expect(find.text('Ver menos'), findsNothing);
+
+        await tester.tap(find.text('Ver más'));
+        await tester.pump();
+
+        expect(find.text('Ver menos'), findsOneWidget);
+        expect(find.text('Ver más'), findsNothing);
+
+        await tester.tap(find.text('Ver menos'));
+        await tester.pump();
+
+        expect(find.text('Ver más'), findsOneWidget);
       },
     );
   });

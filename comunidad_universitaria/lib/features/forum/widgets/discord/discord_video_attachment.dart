@@ -10,6 +10,7 @@ class DiscordVideoAttachment extends StatefulWidget {
   final double? maxWidth;
   final double maxHeight;
   final BorderRadius? borderRadius;
+  final bool showBorder;
 
   const DiscordVideoAttachment({
     super.key,
@@ -17,6 +18,7 @@ class DiscordVideoAttachment extends StatefulWidget {
     this.maxWidth,
     this.maxHeight = 420,
     this.borderRadius,
+    this.showBorder = true,
   });
 
   @override
@@ -132,7 +134,9 @@ class _DiscordVideoAttachmentState extends State<DiscordVideoAttachment> {
           decoration: BoxDecoration(
             color: Colors.black,
             borderRadius: radius,
-            border: Border.all(color: borderColor, width: 1),
+            border: widget.showBorder
+                ? Border.all(color: borderColor, width: 1)
+                : null,
           ),
           child: _hasError
               ? Container(
@@ -180,19 +184,46 @@ class _DiscordVideoAttachmentState extends State<DiscordVideoAttachment> {
                     ),
                   ),
                 )
-              : GestureDetector(
-                  onTap: _togglePlayPause,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Center(
-                        child: AspectRatio(
-                          aspectRatio: _controller!.value.aspectRatio > 0
-                              ? _controller!.value.aspectRatio
-                              : 16 / 9,
-                          child: VideoPlayer(_controller!),
-                        ),
-                      ),
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    final ar = _controller!.value.aspectRatio > 0
+                        ? _controller!.value.aspectRatio
+                        : 16 / 9;
+                    final availableWidth = constraints.maxWidth.isFinite
+                        ? constraints.maxWidth
+                        : MediaQuery.sizeOf(context).width;
+                    final targetHeight = (availableWidth / ar).clamp(
+                      160.0,
+                      widget.maxHeight,
+                    );
+                    final videoSize = _controller!.value.size;
+                    final childWidth = videoSize.width > 0
+                        ? videoSize.width
+                        : availableWidth;
+                    final childHeight = videoSize.height > 0
+                        ? videoSize.height
+                        : availableWidth / ar;
+
+                    return GestureDetector(
+                      onTap: _togglePlayPause,
+                      child: SizedBox(
+                        width: availableWidth,
+                        height: targetHeight,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Positioned.fill(
+                              child: ClipRect(
+                                child: FittedBox(
+                                  fit: BoxFit.cover,
+                                  child: SizedBox(
+                                    width: childWidth,
+                                    height: childHeight,
+                                    child: VideoPlayer(_controller!),
+                                  ),
+                                ),
+                              ),
+                            ),
                       if (!_controller!.value.isPlaying)
                         Container(
                           padding: const EdgeInsets.all(12),
@@ -248,6 +279,9 @@ class _DiscordVideoAttachmentState extends State<DiscordVideoAttachment> {
                       ),
                     ],
                   ),
+                ),
+              );
+                  },
                 ),
         ),
       ),
