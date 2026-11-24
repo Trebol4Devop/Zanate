@@ -409,12 +409,20 @@ export async function cleanupOrphanObjects(env, fetchImpl = fetch, nowMs = Date.
     }
   }
 
-  const marketRes = await fetchSupabaseJson(
+  let marketRes = await fetchSupabaseJson(
     supabaseUrl,
     serviceKey,
-    'marketplace_items?select=image_urls&limit=1000',
+    'marketplace_items?select=image_urls,video_url&limit=1000',
     fetchImpl
   );
+  if (!marketRes.ok) {
+    marketRes = await fetchSupabaseJson(
+      supabaseUrl,
+      serviceKey,
+      'marketplace_items?select=image_urls&limit=1000',
+      fetchImpl
+    );
+  }
   if (marketRes.ok) {
     const items = await marketRes.json();
     for (const row of items) {
@@ -423,6 +431,8 @@ export async function cleanupOrphanObjects(env, fetchImpl = fetch, nowMs = Date.
         const key = extractKeyFromMediaUrl(u);
         if (key) referencedKeys.add(key);
       }
+      const videoKey = extractKeyFromMediaUrl(row?.video_url);
+      if (videoKey) referencedKeys.add(videoKey);
     }
   }
 

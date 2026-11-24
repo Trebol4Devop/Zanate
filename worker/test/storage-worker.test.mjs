@@ -439,6 +439,7 @@ test('cleanupOrphanObjects elimina objetos viejos sin referencia y conserva los 
 
   await bucket.put('forum/user-1_keep.jpg', VALID_JPEG, { uploaded: oldDate });
   await bucket.put('forum/user-1_orphan.jpg', VALID_JPEG, { uploaded: oldDate });
+  await bucket.put('forum_videos/user-1_market.mp4', VALID_MP4, { uploaded: oldDate });
   await bucket.put('groups/user-1_recent.jpg', VALID_JPEG, { uploaded: recentDate });
 
   const env = {
@@ -456,6 +457,17 @@ test('cleanupOrphanObjects elimina objetos viejos sin referencia y conserva los 
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
     }
+    if (u.includes('/rest/v1/marketplace_items')) {
+      return new Response(
+        JSON.stringify([
+          {
+            image_urls: [],
+            video_url: 'https://worker.test/images/forum_videos/user-1_market.mp4',
+          },
+        ]),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
     return new Response(JSON.stringify([]), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -466,6 +478,7 @@ test('cleanupOrphanObjects elimina objetos viejos sin referencia y conserva los 
   assert.equal(result.deletedCount, 1);
   assert.deepEqual(result.deletedKeys, ['forum/user-1_orphan.jpg']);
   assert.ok(bucket.store.has('forum/user-1_keep.jpg'));
+  assert.ok(bucket.store.has('forum_videos/user-1_market.mp4'));
   assert.ok(bucket.store.has('groups/user-1_recent.jpg'));
   assert.ok(!bucket.store.has('forum/user-1_orphan.jpg'));
 });
