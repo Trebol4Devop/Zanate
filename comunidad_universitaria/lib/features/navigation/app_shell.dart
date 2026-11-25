@@ -210,7 +210,6 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isMobile = Responsive.isMobile(context);
-    final isDesktop = Responsive.isDesktop(context);
 
     final brandTitle = Padding(
       padding: const EdgeInsets.symmetric(
@@ -239,7 +238,7 @@ class _AppShellState extends State<AppShell> {
       appBar: isMobile
           ? null
           : AppBar(
-              toolbarHeight: 60,
+              toolbarHeight: 58,
               elevation: 0,
               backgroundColor: ZanateColors.card(widget.isDarkMode),
               shape: Border(
@@ -248,85 +247,67 @@ class _AppShellState extends State<AppShell> {
                   width: 0.8,
                 ),
               ),
-              centerTitle: false,
               titleSpacing: 16,
-              title: isDesktop
-                  ? brandTitle
-                  : InkWell(
-                      onTap: _showDisclaimerModal,
-                      borderRadius: BorderRadius.circular(8),
-                      child: brandTitle,
-                    ),
-              actions: isDesktop
-                  ? null
-                  : [
-                      IconButton(
-                        icon: PhosphorIcon(
-                          widget.isDarkMode
-                              ? PhosphorIconsRegular.sun
-                              : PhosphorIconsRegular.moon,
-                          size: 20,
-                        ),
-                        tooltip: 'Cambiar tema',
-                        onPressed: widget.onToggleTheme,
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-              bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(48),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: ZanateColors.card(widget.isDarkMode),
-                    border: Border(
-                      bottom: BorderSide(
-                        color: ZanateColors.border(widget.isDarkMode),
-                        width: 1.5,
-                      ),
-                    ),
+              title: Row(
+                children: [
+                  InkWell(
+                    onTap: _showDisclaimerModal,
+                    borderRadius: BorderRadius.circular(8),
+                    child: brandTitle,
                   ),
-                  child: MaxWidthContainer(
-                    maxWidth: 1200,
-                    padding: EdgeInsets.zero,
-                    child: FocusTraversalGroup(
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Semantics(
-                          container: true,
-                          explicitChildNodes: true,
-                          role: SemanticsRole.tabBar,
-                          child: Row(
-                            children: [
-                              _buildNavTab(
-                                index: 0,
-                                label: 'Foro Estudiantil',
-                                activeIcon: PhosphorIconsFill.chatsCircle,
-                                inactiveIcon: PhosphorIconsRegular.chatsCircle,
-                              ),
-                              _buildNavTab(
-                                index: 1,
-                                label: 'Grupos de Estudio',
-                                activeIcon: PhosphorIconsFill.usersThree,
-                                inactiveIcon: PhosphorIconsRegular.usersThree,
-                              ),
-                              _buildNavTab(
-                                index: 2,
-                                label: 'Mapa',
-                                activeIcon: PhosphorIconsFill.mapTrifold,
-                                inactiveIcon: PhosphorIconsRegular.mapTrifold,
-                              ),
-                              _buildNavTab(
-                                index: 3,
-                                label: 'Marketplace & Tutorías',
-                                activeIcon: PhosphorIconsFill.shoppingBag,
-                                inactiveIcon: PhosphorIconsRegular.shoppingBag,
-                              ),
-                            ],
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: FocusTraversalGroup(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Semantics(
+                            container: true,
+                            explicitChildNodes: true,
+                            role: SemanticsRole.tabBar,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _buildNavTab(
+                                  index: 0,
+                                  label: 'Foro',
+                                  activeIcon: PhosphorIconsFill.chatsCircle,
+                                  inactiveIcon:
+                                      PhosphorIconsRegular.chatsCircle,
+                                ),
+                                const SizedBox(width: 6),
+                                _buildNavTab(
+                                  index: 1,
+                                  label: 'Grupos',
+                                  activeIcon: PhosphorIconsFill.usersThree,
+                                  inactiveIcon:
+                                      PhosphorIconsRegular.usersThree,
+                                ),
+                                const SizedBox(width: 6),
+                                _buildNavTab(
+                                  index: 2,
+                                  label: 'Mapa',
+                                  activeIcon: PhosphorIconsFill.mapTrifold,
+                                  inactiveIcon:
+                                      PhosphorIconsRegular.mapTrifold,
+                                ),
+                                const SizedBox(width: 6),
+                                _buildNavTab(
+                                  index: 3,
+                                  label: 'Marketplace',
+                                  activeIcon: PhosphorIconsFill.shoppingBag,
+                                  inactiveIcon:
+                                      PhosphorIconsRegular.shoppingBag,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
             ),
       body: NotificationListener<ScrollNotification>(
@@ -628,8 +609,9 @@ class _AppShellState extends State<AppShell> {
     required IconData inactiveIcon,
   }) {
     final isSelected = _currentIndex == _desktopScreenIndices[index];
-    final activeColor = ZanateColors.textPrimary(widget.isDarkMode);
-    final inactiveColor = ZanateColors.textMuted(widget.isDarkMode);
+    final isDark = widget.isDarkMode;
+    final activeColor = ZanateColors.textPrimary(isDark);
+    final inactiveColor = ZanateColors.textMuted(isDark);
 
     return Semantics(
       container: true,
@@ -646,11 +628,15 @@ class _AppShellState extends State<AppShell> {
             cursor: SystemMouseCursors.click,
             child: InkWell(
               canRequestFocus: false,
+              hoverColor: Colors.transparent,
+              splashColor: Colors.transparent,
+              highlightColor: Colors.transparent,
+              focusColor: Colors.transparent,
               onTap: () => _selectDesktopTab(index),
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
+                  horizontal: 14,
+                  vertical: 14,
                 ),
                 decoration: BoxDecoration(
                   border: Border(
@@ -667,14 +653,14 @@ class _AppShellState extends State<AppShell> {
                   children: [
                     PhosphorIcon(
                       isSelected ? activeIcon : inactiveIcon,
-                      size: 18,
+                      size: 17,
                       color: isSelected ? activeColor : inactiveColor,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 7),
                     Text(
                       label,
                       style: GoogleFonts.outfit(
-                        fontSize: 13.5,
+                        fontSize: 13,
                         fontWeight: isSelected
                             ? FontWeight.w700
                             : FontWeight.w500,
