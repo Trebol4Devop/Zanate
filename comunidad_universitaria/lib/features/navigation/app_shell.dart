@@ -579,7 +579,6 @@ class _AppShellState extends State<AppShell> {
                     activeAlias: widget.activeAlias,
                     onAliasChanged: widget.onAliasChanged,
                     onToggleTheme: widget.onToggleTheme,
-                    showFloatingActionButton: !isMobile,
                   ),
                 ),
               )
