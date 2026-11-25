@@ -35,14 +35,12 @@ class MarketplaceScreen extends StatefulWidget {
   final String activeAlias;
   final Function(String newAlias) onAliasChanged;
   final VoidCallback? onToggleTheme;
-  final bool showFloatingActionButton;
 
   const MarketplaceScreen({
     super.key,
     required this.activeAlias,
     required this.onAliasChanged,
     this.onToggleTheme,
-    this.showFloatingActionButton = true,
   });
 
   @override
@@ -879,27 +877,6 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
               child: const Text(
                 'Conocer planes',
                 style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
-              ),
-            ),
-            const SizedBox(width: 8),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: ZanateColors.ctaBg(isDark),
-                foregroundColor: ZanateColors.ctaFg(isDark),
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 11,
-                ),
-              ),
-              onPressed: _handleCreateListingClick,
-              icon: const Icon(PhosphorIconsBold.plus, size: 15),
-              label: const Text(
-                'Publicar Anuncio',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
               ),
             ),
           ] else
@@ -1764,6 +1741,12 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
               ],
             ),
           ),
+          IconButton(
+            tooltip: 'Publicar Anuncio',
+            onPressed: _handleCreateListingClick,
+            icon: Icon(PhosphorIconsBold.plus, size: 22, color: textPrimary),
+            splashRadius: 22,
+          ),
         ],
       ),
     );
@@ -2186,23 +2169,6 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                   scrollBody,
                 ],
               ),
-        floatingActionButton: widget.showFloatingActionButton
-            ? FloatingActionButton.extended(
-                heroTag: 'marketplace_fab',
-                onPressed: _handleCreateListingClick,
-                backgroundColor: ZanateColors.ctaBg(isDark),
-                foregroundColor: ZanateColors.ctaFg(isDark),
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                icon: const Icon(PhosphorIconsBold.plus, size: 18),
-                label: const Text(
-                  'Publicar Anuncio',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                ),
-              )
-            : null,
       ),
     );
   }
