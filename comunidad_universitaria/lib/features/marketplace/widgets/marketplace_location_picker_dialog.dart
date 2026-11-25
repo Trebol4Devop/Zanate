@@ -262,8 +262,6 @@ class _MarketplaceLocationPickerDialogState
                         _selectedLabel.isNotEmpty
                             ? _selectedLabel
                             : 'Toca un edificio en el mapa o elige en la lista',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w700,
@@ -363,8 +361,6 @@ class _MarketplaceLocationPickerDialogState
                     ),
                     title: Text(
                       '${b['building_code']} · ${b['nombre']}',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -399,8 +395,6 @@ class _MarketplaceLocationPickerDialogState
                     leading: const Icon(PhosphorIconsRegular.mapPin, size: 17),
                     title: Text(
                       s['nombre'] ?? '',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,

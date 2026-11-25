@@ -715,8 +715,6 @@ class _CreateListingDialogState extends State<CreateListingDialog> {
                             const SizedBox(height: 2),
                             Text(
                               _selectedLocationLabel,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,

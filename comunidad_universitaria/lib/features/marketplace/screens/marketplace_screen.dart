@@ -1103,8 +1103,8 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       onTap: _openLocationMapPicker,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        height: 42,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        constraints: const BoxConstraints(minHeight: 42),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: active
               ? ZanateColors.zanateEyeYellow
@@ -1125,8 +1125,6 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
             Expanded(
               child: Text(
                 active ? _resolvedLocationLabel : 'Elegir ubicación en el mapa',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: active ? FontWeight.w700 : FontWeight.w600,
@@ -1271,8 +1269,6 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                           Text(
                             cat.label,
                             textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: isSelected
@@ -1451,8 +1447,6 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                           const SizedBox(height: 6),
                           Text(
                             item.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.outfit(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
@@ -1473,8 +1467,6 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                                   item.locationDetail.isNotEmpty
                                       ? item.locationDetail
                                       : item.sede,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
                                     fontSize: 10.5,
                                     color: Color(0xFF94A3B8),
@@ -1793,8 +1785,8 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
           borderRadius: BorderRadius.circular(12),
           onTap: onTap,
           child: Container(
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            constraints: const BoxConstraints(minHeight: 40),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
@@ -1809,8 +1801,6 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                 Expanded(
                   child: Text(
                     label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
