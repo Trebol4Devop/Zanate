@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import '../../../core/constants/zanate_colors.dart';
 import '../../rules/screens/rules_screen.dart';
+import '../../shared/widgets/zanate_ui.dart';
 import '../../verification/state/verification_controller.dart';
 import '../state/session_controller.dart';
 import 'auth_gateway_screen.dart';
@@ -330,15 +331,23 @@ class _CompactMobileHeader extends StatelessWidget {
           ),
         ),
         SizedBox(height: compact ? 6 : 10),
-        Text(
-          'Zanate',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.croissantOne(
-            fontSize: titleSize,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.5,
-            color: textPrimary,
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              'Zanate',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.croissantOne(
+                fontSize: titleSize,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+                color: textPrimary,
+              ),
+            ),
+            const SizedBox(width: 8),
+            const ZanateBetaBadge(),
+          ],
         ),
         SizedBox(height: compact ? 8 : 12),
         Wrap(
@@ -419,15 +428,23 @@ class _BrandHero extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        Text(
-          'Zanate',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.croissantOne(
-            fontSize: titleSize,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.6,
-            color: textPrimary,
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              'Zanate',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.croissantOne(
+                fontSize: titleSize,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.6,
+                color: textPrimary,
+              ),
+            ),
+            const SizedBox(width: 8),
+            const ZanateBetaBadge(),
+          ],
         ),
       ],
     );
@@ -776,7 +793,7 @@ class _AnonymousModeNoticeCard extends StatelessWidget {
                   ),
                   const TextSpan(
                     text:
-                        'podrás explorar el foro y el marketplace, pero necesitas una cuenta para publicar.',
+                        'podrás explorar el foro y los grupos de estudio, pero necesitas una cuenta para publicar.',
                   ),
                 ],
               ),

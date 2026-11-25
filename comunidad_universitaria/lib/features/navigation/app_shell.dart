@@ -9,10 +9,8 @@ import '../../core/constants/zanate_colors.dart';
 import '../../core/utils/responsive.dart';
 import '../forum/screens/forum_screen.dart';
 import '../groups/screens/groups_screen.dart';
-import '../marketplace/marketplace_theme.dart';
-import '../marketplace/screens/marketplace_screen.dart';
-import '../map/screens/campus_map_screen.dart';
 import '../rules/screens/rules_screen.dart';
+import '../shared/widgets/zanate_ui.dart';
 
 class AppShell extends StatefulWidget {
   final String activeAlias;
@@ -36,10 +34,10 @@ class _AppShellState extends State<AppShell> {
   int _currentIndex = 0;
   bool _showMobileTopBar = true;
   final Set<int> _visitedTabs = {0};
-  static const List<int> _desktopScreenIndices = [0, 2, 3, 1];
+  static const List<int> _desktopScreenIndices = [0, 2];
 
   final List<FocusNode> _desktopTabFocusNodes = List.generate(
-    4,
+    2,
     (index) => FocusNode(debugLabel: 'Desktop tab $index'),
   );
 
@@ -230,6 +228,8 @@ class _AppShellState extends State<AppShell> {
               color: ZanateColors.textPrimary(widget.isDarkMode),
             ),
           ),
+          const SizedBox(width: 6),
+          const ZanateBetaBadge(),
         ],
       ),
     );
@@ -283,22 +283,6 @@ class _AppShellState extends State<AppShell> {
                                   activeIcon: PhosphorIconsFill.usersThree,
                                   inactiveIcon:
                                       PhosphorIconsRegular.usersThree,
-                                ),
-                                const SizedBox(width: 6),
-                                _buildNavTab(
-                                  index: 2,
-                                  label: 'Mapa',
-                                  activeIcon: PhosphorIconsFill.mapTrifold,
-                                  inactiveIcon:
-                                      PhosphorIconsRegular.mapTrifold,
-                                ),
-                                const SizedBox(width: 6),
-                                _buildNavTab(
-                                  index: 3,
-                                  label: 'Marketplace',
-                                  activeIcon: PhosphorIconsFill.shoppingBag,
-                                  inactiveIcon:
-                                      PhosphorIconsRegular.shoppingBag,
                                 ),
                               ],
                             ),
@@ -411,18 +395,6 @@ class _AppShellState extends State<AppShell> {
                               activeIcon: PhosphorIconsFill.usersThree,
                               inactiveIcon: PhosphorIconsRegular.usersThree,
                             ),
-                            _buildBottomNavItem(
-                              navIndex: 2,
-                              label: 'Mapa',
-                              activeIcon: PhosphorIconsFill.mapTrifold,
-                              inactiveIcon: PhosphorIconsRegular.mapTrifold,
-                            ),
-                            _buildBottomNavItem(
-                              navIndex: 3,
-                              label: 'Marketplace',
-                              activeIcon: PhosphorIconsFill.shoppingBag,
-                              inactiveIcon: PhosphorIconsRegular.shoppingBag,
-                            ),
                           ],
                         ),
                       )
@@ -487,17 +459,11 @@ class _AppShellState extends State<AppShell> {
   }
 
   int _screenIndexForNavigation(int navigationIndex) {
-    return const [0, 2, 3, 1][navigationIndex];
+    return navigationIndex == 1 ? 2 : 0;
   }
 
   int _navigationIndexForScreen(int screenIndex) {
-    return switch (screenIndex) {
-      0 => 0,
-      2 => 1,
-      3 => 2,
-      1 => 3,
-      _ => 0,
-    };
+    return screenIndex == 2 ? 1 : 0;
   }
 
   Widget _buildMobileHeader(ThemeData theme) {
@@ -530,6 +496,8 @@ class _AppShellState extends State<AppShell> {
                 color: ZanateColors.textPrimary(isDark),
               ),
             ),
+            const SizedBox(width: 6),
+            const ZanateBetaBadge(),
           ],
         ),
       ),
@@ -551,19 +519,8 @@ class _AppShellState extends State<AppShell> {
                 ),
               )
             : const SizedBox.shrink(),
-        _visitedTabs.contains(1)
-            ? ExcludeSemantics(
-                excluding: _currentIndex != 1,
-                child: MarketplaceTheme.wrap(
-                  context,
-                  MarketplaceScreen(
-                    activeAlias: widget.activeAlias,
-                    onAliasChanged: widget.onAliasChanged,
-                    onToggleTheme: widget.onToggleTheme,
-                  ),
-                ),
-              )
-            : const SizedBox.shrink(),
+        // Marketplace bloqueado en versión beta
+        const SizedBox.shrink(),
         _visitedTabs.contains(2)
             ? ExcludeSemantics(
                 excluding: _currentIndex != 2,
@@ -576,16 +533,8 @@ class _AppShellState extends State<AppShell> {
                 ),
               )
             : const SizedBox.shrink(),
-        _visitedTabs.contains(3)
-            ? ExcludeSemantics(
-                excluding: _currentIndex != 3,
-                child: CampusMapScreen(
-                  activeAlias: widget.activeAlias,
-                  onAliasChanged: widget.onAliasChanged,
-                  onToggleTheme: widget.onToggleTheme,
-                ),
-              )
-            : const SizedBox.shrink(),
+        // Mapa bloqueado en versión beta
+        const SizedBox.shrink(),
       ],
     );
   }

@@ -409,14 +409,22 @@ class _AuthGatewayScreenState extends State<AuthGatewayScreen>
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  'Zanate',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.croissantOne(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    color: accentColor,
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Zanate',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.croissantOne(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                        color: accentColor,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const ZanateBetaBadge(),
+                  ],
                 ),
               ],
             ),
@@ -899,15 +907,23 @@ class _AuthBrandPanel extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          'Zanate',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.croissantOne(
-                            fontSize: 56,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.6,
-                            color: textPrimary,
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Zanate',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.croissantOne(
+                                fontSize: 56,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.6,
+                                color: textPrimary,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            const ZanateBetaBadge(fontSize: 11),
+                          ],
                         ),
                       ],
                     ),

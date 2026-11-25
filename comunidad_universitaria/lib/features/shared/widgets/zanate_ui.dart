@@ -301,3 +301,31 @@ class _ZanateGooglePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+
+/// Etiqueta compacta para identificar compilaciones beta junto al título Zanate.
+class ZanateBetaBadge extends StatelessWidget {
+  final double fontSize;
+
+  const ZanateBetaBadge({super.key, this.fontSize = 9.5});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+      decoration: BoxDecoration(
+        color: ZanateColors.zanateEyeYellow,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        'BETA',
+        style: GoogleFonts.outfit(
+          fontSize: fontSize,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1.1,
+          height: 1.1,
+          color: ZanateColors.zanateBlack,
+        ),
+      ),
+    );
+  }
+}

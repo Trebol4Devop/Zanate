@@ -387,19 +387,17 @@ class _NoInstitutionalEmailScreenState
 
         const SizedBox(height: 16),
 
-        // Tarjeta 2: Comerciante
+        // Tarjeta 2: Comerciante (deshabilitada en versión beta)
         _VerificationOptionCard(
           title: 'Comerciante del Campus',
-          subtitle: 'Quiero registrar mi negocio en el campus',
+          subtitle: 'Registro de comercios del campus disponible próximamente',
           icon: PhosphorIconsRegular.storefront,
-          buttonBg: isDark
-              ? ZanateColors.darkSurfaceSubtle
-              : ZanateColors.zanateBlack,
-          buttonFg: isDark ? ZanateColors.darkTextPrimary : Colors.white,
+          buttonBg: ZanateColors.surface(isDark),
+          buttonFg: ZanateColors.textMuted(isDark),
           isBusy: _isBusy,
-          buttonLabel: 'Contactar con soporte',
+          buttonLabel: 'Aún no disponible',
           buttonKey: const Key('merchant_support_button'),
-          onTap: () => _handleSelection(isStudent: false),
+          onTap: null,
         ),
 
         const SizedBox(height: 16),
@@ -634,15 +632,23 @@ class _NoInstBrandPanel extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          'Zanate',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.croissantOne(
-                            fontSize: 56,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.6,
-                            color: textPrimary,
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Zanate',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.croissantOne(
+                                fontSize: 56,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.6,
+                                color: textPrimary,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            const ZanateBetaBadge(fontSize: 11),
+                          ],
                         ),
                       ],
                     ),
@@ -743,7 +749,7 @@ class _VerificationOptionCard extends StatelessWidget {
   final bool isBusy;
   final String buttonLabel;
   final Key? buttonKey;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _VerificationOptionCard({
     required this.title,
@@ -754,14 +760,17 @@ class _VerificationOptionCard extends StatelessWidget {
     required this.isBusy,
     required this.buttonLabel,
     this.buttonKey,
-    required this.onTap,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary = ZanateColors.textPrimary(isDark);
-    return Container(
+    final isDisabled = onTap == null;
+    return Opacity(
+      opacity: isDisabled ? 0.72 : 1.0,
+      child: Container(
       decoration: BoxDecoration(
         color: ZanateColors.card(isDark),
         borderRadius: BorderRadius.circular(18),
@@ -842,7 +851,7 @@ class _VerificationOptionCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                onPressed: isBusy ? null : onTap,
+                onPressed: (isBusy || onTap == null) ? null : onTap,
                 child: Text(
                   buttonLabel,
                   style: const TextStyle(
@@ -854,6 +863,7 @@ class _VerificationOptionCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
