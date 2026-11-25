@@ -719,7 +719,7 @@ class _ExpandableDescription extends StatefulWidget {
 }
 
 class _ExpandableDescriptionState extends State<_ExpandableDescription> {
-  static const int _collapsedMaxLines = 3;
+  static const int _collapsedMaxLines = 2;
   bool _isExpanded = false;
 
   @override
