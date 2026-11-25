@@ -725,8 +725,8 @@ class GroupsScreenState extends State<GroupsScreen> {
                 onTap: () => _showPreferencesSheet(context, isDark),
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
-                  height: 40,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  constraints: const BoxConstraints(minHeight: 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: _hasActivePreferences
                         ? ZanateColors.zanateEyeYellow
@@ -752,8 +752,6 @@ class GroupsScreenState extends State<GroupsScreen> {
                       Flexible(
                         child: Text(
                           _getActivePreferencesLabel(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: _hasActivePreferences
@@ -1086,8 +1084,8 @@ class GroupsScreenState extends State<GroupsScreen> {
                   },
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
-                    height: 40,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    constraints: const BoxConstraints(minHeight: 40),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: _hasActivePreferences
                           ? ZanateColors.zanateEyeYellow
@@ -1112,8 +1110,6 @@ class GroupsScreenState extends State<GroupsScreen> {
                         Expanded(
                           child: Text(
                             _getActivePreferencesLabel(),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 12.5,
                               fontWeight: _hasActivePreferences
@@ -1173,8 +1169,6 @@ class GroupsScreenState extends State<GroupsScreen> {
                               Expanded(
                                 child: Text(
                                   'Filtrar por Facultad',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w700,
@@ -1251,8 +1245,6 @@ class GroupsScreenState extends State<GroupsScreen> {
                                           Expanded(
                                             child: Text(
                                               facName,
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
                                               style: TextStyle(
                                                 fontSize: 12.5,
                                                 fontWeight: isSelected

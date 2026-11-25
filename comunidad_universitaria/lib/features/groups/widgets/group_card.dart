@@ -318,8 +318,6 @@ class GroupCard extends StatelessWidget {
                                         Expanded(
                                           child: Text(
                                             group.authorAlias,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
                                             style: const TextStyle(
                                               fontWeight: FontWeight.w700,
                                               fontSize: 13,
@@ -375,8 +373,6 @@ class GroupCard extends StatelessWidget {
                                               ),
                                             ],
                                           ),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
                                           style: GoogleFonts.outfit(
                                             fontWeight: FontWeight.w700,
                                             fontSize: 17,
@@ -394,8 +390,6 @@ class GroupCard extends StatelessWidget {
                                           const SizedBox(height: 2),
                                           Text(
                                             group.title,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
                                             style: const TextStyle(
                                               fontSize: 12.5,
                                               fontWeight: FontWeight.w500,
@@ -436,8 +430,6 @@ class GroupCard extends StatelessWidget {
                           Expanded(
                             child: Text(
                               group.authorAlias,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 13,
