@@ -210,10 +210,10 @@ class ForumChannelSidebar extends StatelessWidget {
                 child: InkWell(
                   onTap: onAddServer,
                   borderRadius: BorderRadius.circular(12),
-                  child: const SizedBox(
-                    height: 40,
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 40),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -226,8 +226,6 @@ class ForumChannelSidebar extends StatelessWidget {
                           Flexible(
                             child: Text(
                               'Agregar servidor',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
@@ -327,8 +325,6 @@ class ForumChannelSidebar extends StatelessWidget {
                 Expanded(
                   child: Text(
                     server.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
