@@ -141,7 +141,7 @@ class ForumChannelSidebar extends StatelessWidget {
                     isDark,
                   ),
                   const SizedBox(height: 6),
-                  for (final subserver in subservers.reversed)
+                  for (final subserver in subservers)
                     _subserverTile(
                       subserver,
                       activeSubserver?.id == subserver.id,
@@ -156,7 +156,7 @@ class ForumChannelSidebar extends StatelessWidget {
                   isDark,
                 ),
                 const SizedBox(height: 6),
-                for (final channel in channelList.reversed)
+                for (final channel in channelList)
                   _channelTile(
                     channel,
                     activeChannel.id == channel.id,
@@ -381,7 +381,7 @@ class ForumChannelSidebar extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    channel.name,
+                    channel.label.isNotEmpty ? channel.label : channel.name,
                     style: TextStyle(
                       fontSize: 13.5,
                       fontWeight:
