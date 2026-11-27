@@ -1,13 +1,5 @@
--- =============================================================================
--- Migración: 20261127010000_billing_subscription_hardening.sql
--- Endurece billing_apply_subscription_event:
---   1. Un plan `active` nunca queda con plan_expires_at NULL (vigencia infinita).
---      Si el webhook no trae período, se conserva la vigencia existente o se usa
---      un mes como respaldo (la fuente normal es GET /subscriptions/{id}).
---   2. Las notificaciones de facturación son idempotentes ante reintentos de Svix.
--- =============================================================================
-
-BEGIN;
+-- Fuente remota: supabase_migrations.schema_migrations (20261127022755_billing_subscription_hardening)
+-- Equivalente funcional de Comunidad_USAC:supabase/migrations/20261127010000_billing_subscription_hardening.sql
 
 CREATE OR REPLACE FUNCTION public.billing_apply_subscription_event(
   p_user_id uuid,
@@ -49,7 +41,6 @@ BEGIN
     RAISE EXCEPTION 'p_status inválido: %', p_status USING ERRCODE = '22023';
   END IF;
 
-  -- Si entra una suscripción abierta nueva, cerrar cualquier otra suscripción abierta previa del mismo usuario
   IF p_status IN ('active', 'past_due', 'paused') THEN
     UPDATE public.marketplace_subscriptions
     SET status = 'cancelled',
@@ -60,28 +51,14 @@ BEGIN
   END IF;
 
   INSERT INTO public.marketplace_subscriptions (
-    user_id,
-    plan_id,
-    recurrente_customer_id,
-    recurrente_subscription_id,
-    status,
-    current_period_start,
-    current_period_end,
-    cancel_at_period_end,
-    sandbox_id,
-    live_mode
+    user_id, plan_id, recurrente_customer_id, recurrente_subscription_id,
+    status, current_period_start, current_period_end, cancel_at_period_end,
+    sandbox_id, live_mode
   )
   VALUES (
-    p_user_id,
-    p_plan_id,
-    p_recurrente_customer_id,
-    p_recurrente_subscription_id,
-    p_status,
-    p_period_start,
-    p_period_end,
-    v_cancel_at_end,
-    p_sandbox_id,
-    COALESCE(p_live_mode, true)
+    p_user_id, p_plan_id, p_recurrente_customer_id, p_recurrente_subscription_id,
+    p_status, p_period_start, p_period_end, v_cancel_at_end,
+    p_sandbox_id, COALESCE(p_live_mode, true)
   )
   ON CONFLICT (recurrente_subscription_id) DO UPDATE
   SET plan_id = EXCLUDED.plan_id,
@@ -95,13 +72,11 @@ BEGIN
       updated_at = now()
   RETURNING id INTO v_sub_id;
 
-  -- Sincronizar seller_profiles según estado y vigencia
   v_should_degrade :=
     (p_status = 'cancelled' AND (NOT v_cancel_at_end OR p_period_end IS NULL OR p_period_end <= now()))
     OR (p_period_end IS NOT NULL AND p_period_end <= now() AND p_status <> 'active');
 
   IF p_status = 'active' OR (p_status = 'cancelled' AND v_cancel_at_end AND p_period_end IS NOT NULL AND p_period_end > now()) THEN
-    -- Defensa: un plan activo sin período no debe quedar vigente para siempre.
     IF v_effective_expiry IS NULL AND p_status = 'active' THEN
       SELECT sp.plan_expires_at
       INTO v_effective_expiry
@@ -130,36 +105,27 @@ BEGIN
     PERFORM public.reconcile_seller_plan_limits(p_user_id);
   END IF;
 
-  -- Notificaciones de facturación al vendedor (idempotentes ante reintentos de Svix)
   IF p_status = 'past_due' THEN
     IF NOT EXISTS (
-      SELECT 1
-      FROM public.user_notifications un
-      WHERE un.user_id = p_user_id
-        AND un.type = 'billing_past_due'
+      SELECT 1 FROM public.user_notifications un
+      WHERE un.user_id = p_user_id AND un.type = 'billing_past_due'
         AND un.created_at > now() - interval '24 hours'
     ) THEN
       INSERT INTO public.user_notifications (user_id, type, title, body)
       VALUES (
-        p_user_id,
-        'billing_past_due',
-        'Problema con tu método de pago',
+        p_user_id, 'billing_past_due', 'Problema con tu método de pago',
         'No pudimos renovar tu suscripción del Marketplace. Actualiza tu tarjeta para conservar tus beneficios.'
       );
     END IF;
   ELSIF p_status = 'cancelled' THEN
     IF NOT EXISTS (
-      SELECT 1
-      FROM public.user_notifications un
-      WHERE un.user_id = p_user_id
-        AND un.type = 'billing_cancelled'
+      SELECT 1 FROM public.user_notifications un
+      WHERE un.user_id = p_user_id AND un.type = 'billing_cancelled'
         AND un.created_at > now() - interval '1 hour'
     ) THEN
       INSERT INTO public.user_notifications (user_id, type, title, body)
       VALUES (
-        p_user_id,
-        'billing_cancelled',
-        'Suscripción cancelada',
+        p_user_id, 'billing_cancelled', 'Suscripción cancelada',
         CASE
           WHEN v_cancel_at_end AND p_period_end IS NOT NULL AND p_period_end > now() THEN
             'Tu suscripción no se renovará al finalizar el período actual.'
@@ -186,5 +152,3 @@ REVOKE ALL ON FUNCTION public.billing_apply_subscription_event(
 GRANT EXECUTE ON FUNCTION public.billing_apply_subscription_event(
   uuid, text, text, text, text, timestamptz, timestamptz, boolean, text, boolean, text
 ) TO service_role, postgres;
-
-COMMIT;
