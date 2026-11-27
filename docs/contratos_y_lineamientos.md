@@ -6,13 +6,13 @@
 
 Este documento establece los contratos vinculantes y reglas de implementación para todo el equipo de desarrollo de **Zanate**. Su objetivo es eliminar el _drift_ entre cliente, base de datos, workers y el panel administrativo (`Zanate-admin`), previniendo discrepancias funcionales, fallos silenciosos por permisos RLS/GRANT o filtraciones de datos personales.
 
-> **Regla fundamental:** Cualquier divergencia entre el código implementado y los contratos definidos aquí (o en `docs/verification/zero-pii.md`) se considera un **bug bloqueante** y debe corregirse antes de integrar a `develop` o `main`.
+> **Regla fundamental:** Cualquier divergencia entre el código implementado y los contratos definidos aquí, en [`docs/contracts/SYNC_PROTOCOL.md`](./contracts/SYNC_PROTOCOL.md) o en `docs/verification/zero-pii.md` se considera un **bug bloqueante** y debe corregirse antes de integrar a `develop` o `main`.
 
 ---
 
 ## 1. Arquitectura y Fuente de Verdad
 
-El ecosistema comparte un único proyecto oficial de Supabase (`hfvsstkfqszpjrsrwhql`) con `Zanate-admin` (el identificador histórico `jsdshvnkbrkwobfhdysh` está formalmente deprecado y prohibido). Por ello, todo cambio de datos impacta dos clientes simultáneamente.
+El ecosistema comparte un único proyecto oficial de Supabase (`hfvsstkfqszpjrsrwhql`) con `PEMTREE-admin` (**Zanate Admin**, repositorio hermano `Trebol4Devop/PEMTREE-admin`; el identificador histórico `jsdshvnkbrkwobfhdysh` está formalmente deprecado y prohibido). Por ello, todo cambio de datos impacta dos clientes simultáneamente y se rige por [`docs/contracts/SYNC_PROTOCOL.md`](./contracts/SYNC_PROTOCOL.md) y [`docs/contracts/shared-ecosystem-contract.json`](./contracts/shared-ecosystem-contract.json).
 
 | Componente                   | Ruta en el repositorio                  | Responsabilidad principal                                                                         |
 | :--------------------------- | :-------------------------------------- | :------------------------------------------------------------------------------------------------ |
@@ -56,7 +56,7 @@ La base de datos aplica seguridad a nivel de columna y triggers defensivos (`enf
 1. **Escritura en `public.profiles` desde `authenticated`:** solo se permite `UPDATE` sobre `carrera`, `accepted_terms_version` y `accepted_terms_at`. Cualquier intento de actualizar `is_verified`, `verification_status`, `seller_verification_status`, `carne_hash` o campos inexistentes fallará con `42501` o `42703`.
 2. **Campos controlados por el sistema (prohibido enviarlos o mutarlos directo desde el cliente):** `moderation_status`, `is_sponsored`, `upvotes`, `reported_count`, `shares_count`, `is_legal_hold`, `moderated_at`, `moderated_by`, `seller_verification_status`.
 3. **Preferencias de notificaciones:** las carreras seleccionadas se persisten en la tabla normalizada `notification_preference_carreras`, **nunca** como una clave `carreras` dentro de `notification_preferences`.
-4. **Columnas inexistentes o retiradas (prohibido referenciarlas en código nuevo):** `profiles.full_name`, `profiles.alias`, `profiles.cui`, `profiles.cui_hash`, `verification_requests.extracted_ocr_text`, `merchant_verification_requests.dpi_hash`, `dpi_front_key`, `dpi_back_key`. (Nota: la columna `profiles.seller_verification_status` **sí existe** en el esquema activo desde `20261113120000_marketplace_ux_backend.sql`, configurada como columna protegida de solo lectura para `authenticated`; ver ADR-005).
+4. **Columnas inexistentes o retiradas vs. `profiles.alias`:** sigue prohibido referenciar `profiles.full_name`, `profiles.cui`, `profiles.cui_hash`, `verification_requests.extracted_ocr_text`, `merchant_verification_requests.dpi_hash`, `dpi_front_key` y `dpi_back_key`. En cambio, **`profiles.alias` SÍ existe** en el esquema activo desde `20261123164346_media_video_unique_alias_and_cooldown.sql` (alias único no-PII gestionado vía `claim_unique_alias`, usado por la app y `PEMTREE-admin`). Asimismo, `profiles.seller_verification_status` existe desde `20261113120000_marketplace_ux_backend.sql` como columna protegida de solo lectura para `authenticated` (ver ADR-005).
 5. **Contenido bajo retención legal (`is_legal_hold = true`):** no puede editarse ni eliminarse; el cliente debe capturar y traducir el error mediante `LegalHoldException`.
 6. **Contadores locales vs. persistidos:** `shares_count` no tiene `GRANT UPDATE` para `authenticated`; el conteo de compartidos se gestiona localmente vía `ShareCountService` hasta que exista un RPC específico.
 
@@ -221,7 +221,7 @@ El estado de arranque se centraliza en `SessionController` (`SessionPhase`: `loa
 - [ ] **Cumplimiento Zero-PII:** cero referencias a `full_name`, `cui`/`dpi` o OCR en claro en base de datos; hashes HMAC en servidor; cero tokens o PII en logs (riesgo residual de `LocalStorageService` formalmente aceptado según ADR-002).
 - [ ] **Migraciones y pgTAP (si aplica):** migración nueva versionada e idempotente + `supabase test db --local` pasando (especialmente `marketplace_ux_test.sql` y pruebas del módulo modificado).
 - [ ] **Worker (si aplica):** pruebas `vitest` pasando en `workers/verification/` y contrato de endpoints/errores respetado.
-- [ ] **Impacto en `Zanate-admin`:** si se modificó una tabla, vista, trigger o RPC compartido, quedó documentado en la descripción del PR y coordinado con el equipo del panel.
+- [ ] **Sincronización y paridad con `PEMTREE-admin`:** `python3 scripts/ci/check_ecosystem_sync.py` y `./scripts/sync-supabase-migrations.sh --check` (local con repo hermano) en verde; si se modificó una tabla, vista, trigger, RPC o endpoint de Worker compartido, quedó reflejado en el panel y documentado en el PR.
 
 ### 7.3 Protocolo para Cambiar un Contrato Acordado
 

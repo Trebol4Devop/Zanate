@@ -55,6 +55,9 @@ jobs:
       - name: Verificar contratos SQL vs Dart
         run: python3 scripts/ci/check_sql_contracts.py
 
+      - name: Verificar contrato de sincronización del ecosistema
+        run: python3 scripts/ci/check_ecosystem_sync.py
+
       - name: Ejecutar pruebas unitarias y de widgets con cobertura
         working-directory: comunidad_universitaria
         run: flutter test --coverage
