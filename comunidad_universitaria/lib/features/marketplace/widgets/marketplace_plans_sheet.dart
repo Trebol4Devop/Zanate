@@ -375,7 +375,7 @@ class _MarketplacePlansSheetState extends State<MarketplacePlansSheet>
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'La coordinación y el pago del plan se realizan fuera de la app con el equipo. La plataforma no cobra comisiones por tus ventas.',
+                          'Tu plan se activa automáticamente cuando la pasarela confirma el pago. La plataforma no cobra comisiones por tus ventas.',
                           style: TextStyle(
                             fontSize: 11,
                             color: ZanateColors.textSecondary(isDark),
@@ -520,9 +520,19 @@ class _MarketplacePlansSheetState extends State<MarketplacePlansSheet>
           ),
           const SizedBox(width: 10),
           const Expanded(
-            child: Text(
-              'Confirmando pago… Estamos esperando la confirmación de la pasarela.',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Confirmando pago… Estamos esperando la confirmación de la pasarela.',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Puede tardar unos segundos. Si ya pagaste y no ves tu plan, pulsa «Ya completé mi pago».',
+                  style: TextStyle(fontSize: 11),
+                ),
+              ],
             ),
           ),
           TextButton(

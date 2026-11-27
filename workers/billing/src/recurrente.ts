@@ -53,6 +53,21 @@ export function createRecurrenteCheckout(
   });
 }
 
+/**
+ * Los webhooks de Recurrente no incluyen las fechas del período de facturación.
+ * La suscripción es la fuente de verdad para período, estado, cancelación y metadata.
+ */
+export function getRecurrenteSubscription(
+  env: Env,
+  subscriptionId: string
+): Promise<RecurrenteSubscriptionResponse> {
+  return recurrenteFetch<RecurrenteSubscriptionResponse>(
+    env,
+    `/subscriptions/${encodeURIComponent(subscriptionId)}`,
+    { method: 'GET' }
+  );
+}
+
 export function updateRecurrenteSubscription(
   env: Env,
   subscriptionId: string,

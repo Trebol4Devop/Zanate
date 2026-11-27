@@ -58,10 +58,10 @@ export async function authenticateUser(request: Request, env: Env): Promise<Auth
   return { ok: true, user: data.user };
 }
 
-export async function isStaffUser(
+async function getUserRole(
   supabaseService: SupabaseClient,
   userId: string
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ role?: string; error?: string }> {
   const { data, error } = await supabaseService
     .from('user_roles')
     .select('role')
@@ -69,9 +69,32 @@ export async function isStaffUser(
     .maybeSingle();
 
   if (error) {
-    return { ok: false, error: error.message };
+    return { error: error.message };
   }
 
-  const role = data?.role;
+  return { role: typeof data?.role === 'string' ? data.role : undefined };
+}
+
+export async function isStaffUser(
+  supabaseService: SupabaseClient,
+  userId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const { role, error } = await getUserRole(supabaseService, userId);
+  if (error) {
+    return { ok: false, error };
+  }
+
   return { ok: role === 'admin' || role === 'moderator' };
+}
+
+export async function isAdminUser(
+  supabaseService: SupabaseClient,
+  userId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const { role, error } = await getUserRole(supabaseService, userId);
+  if (error) {
+    return { ok: false, error };
+  }
+
+  return { ok: role === 'admin' };
 }
