@@ -9,3 +9,5 @@ definition/
 .migration_fetch_staging
 image.png
 .wrangler/
+.dev.vars
+node_modules/
