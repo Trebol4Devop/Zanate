@@ -1,0 +1,9 @@
+# Copiar a .dev.vars para desarrollo local con `wrangler dev` (NUNCA commitear .dev.vars)
+RECURRENTE_ENVIRONMENT=sandbox
+RECURRENTE_EXPECTED_SANDBOX_ID=sbx_replace_me
+RECURRENTE_SECRET_KEY=sk_test_replace_me
+RECURRENTE_WEBHOOK_SECRET=whsec_replace_me
+SUPABASE_URL=http://127.0.0.1:54321
+SUPABASE_ANON_KEY=replace_with_local_anon_key
+SUPABASE_SERVICE_ROLE_KEY=replace_with_local_service_role_key
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080

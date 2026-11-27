@@ -1,0 +1,8 @@
+name = "comunidad-usac-billing"
+main = "src/index.ts"
+compatibility_date = "2026-11-10"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+RECURRENTE_ENVIRONMENT = "live"
+ALLOWED_ORIGINS = "https://zanate.pages.dev,http://localhost:3000,http://localhost:8080"
