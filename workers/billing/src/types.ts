@@ -28,7 +28,9 @@ export interface RecurrenteSubscriptionResponse {
   status?: string;
   current_period_start?: string | null;
   current_period_end?: string | null;
+  cancel_at?: string | null;
   cancel_at_period_end?: boolean;
+  metadata?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
@@ -48,4 +50,32 @@ export interface UpdateSubscriptionPayload {
   mode?: 'now' | 'next_cycle';
   act?: 'pause' | 'unpause';
   payment_method_id?: string;
+}
+
+export type AdminSubscriptionAction = 'cancel' | 'change_plan' | 'pause' | 'unpause';
+
+export interface AdminSubscriptionActionPayload {
+  recurrente_subscription_id?: string;
+  action?: AdminSubscriptionAction | string;
+  plan_id?: string;
+  mode?: 'now' | 'next_cycle' | string;
+  note?: string;
+}
+
+export type WebhookProcessingStatus = 'received' | 'processed' | 'ignored' | 'failed';
+
+export interface AdminReprocessWebhookPayload {
+  svix_id?: string;
+}
+
+export interface RecurrenteWebhookEventRow {
+  svix_id: string;
+  event_type: string;
+  sandbox_id: string | null;
+  live_mode: boolean;
+  processing_status: WebhookProcessingStatus;
+  error_message: string | null;
+  received_at: string;
+  processed_at: string | null;
+  payload: unknown;
 }

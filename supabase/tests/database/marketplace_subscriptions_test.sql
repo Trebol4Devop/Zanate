@@ -4,7 +4,7 @@
 -- =============================================================================
 begin;
 
-select plan(16);
+select plan(18);
 
 create extension if not exists pgtap;
 
@@ -155,6 +155,50 @@ select lives_ok(
         'subscription.past_due'
     )$$,
     'past_due inserta notificación billing_past_due sin violar user_notifications_type_check'
+);
+
+-- Reintento del mismo past_due: la notificación no se duplica
+select public.billing_apply_subscription_event(
+    '61000000-0000-0000-0000-000000000001'::uuid,
+    'pro_student',
+    'sub_rec_001',
+    'cus_rec_001',
+    'past_due',
+    now(),
+    now() + interval '30 days',
+    false,
+    'sbx_test_1',
+    false,
+    'subscription.past_due'
+);
+
+select is(
+    (select count(*)::integer from public.user_notifications
+     where user_id = '61000000-0000-0000-0000-000000000001'::uuid
+       and type = 'billing_past_due'),
+    1,
+    'past_due repetido no duplica la notificación billing_past_due'
+);
+
+-- Plan activo sin período explícito no queda con vigencia infinita
+select public.billing_apply_subscription_event(
+    '61000000-0000-0000-0000-000000000001'::uuid,
+    'pro_student',
+    'sub_rec_001',
+    'cus_rec_001',
+    'active',
+    now(),
+    null,
+    false,
+    'sbx_test_1',
+    false,
+    'subscription.create'
+);
+
+select ok(
+    (select plan_expires_at is not null from public.seller_profiles
+     where user_id = '61000000-0000-0000-0000-000000000001'::uuid),
+    'active sin period_end conserva una vigencia no nula'
 );
 
 -- Crear 5 items disponibles (plan free permite máximo 3) y cancelar inmediatamente
