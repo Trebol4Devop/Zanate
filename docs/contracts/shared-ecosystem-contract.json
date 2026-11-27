@@ -1,0 +1,133 @@
+{
+  "schema_version": "1.0.0",
+  "updated_at": "2026-11-27",
+  "supabase": {
+    "project_ref": "hfvsstkfqszpjrsrwhql",
+    "project_name": "PEMTREE",
+    "deprecated_refs": [
+      "jsdshvnkbrkwobfhdysh"
+    ],
+    "canonical_migrations_owner": "Comunidad_USAC",
+    "mirror_required": true
+  },
+  "repositories": {
+    "app": {
+      "display_name": "Zanate",
+      "local_dir": "Comunidad_USAC",
+      "github": "Trebol4Devop/Zanate",
+      "integration_branch": "develop",
+      "protected_branches": [
+        "main",
+        "beta/release"
+      ],
+      "stack": [
+        "flutter",
+        "cloudflare-workers",
+        "supabase"
+      ]
+    },
+    "admin": {
+      "display_name": "Zanate Admin",
+      "local_dir": "PEMTREE-admin",
+      "github": "Trebol4Devop/PEMTREE-admin",
+      "integration_branch": "develop",
+      "protected_branches": [
+        "main"
+      ],
+      "stack": [
+        "react",
+        "vite",
+        "supabase"
+      ]
+    }
+  },
+  "edge_functions_ownership": {
+    "Comunidad_USAC": [
+      "moderation-worker",
+      "send-push"
+    ],
+    "PEMTREE-admin": [
+      "r2-signer"
+    ]
+  },
+  "cloudflare_workers_ownership": {
+    "Comunidad_USAC": [
+      "workers/verification",
+      "workers/billing",
+      "worker"
+    ]
+  },
+  "r2_signer_allowed_filenames": [
+    "usac_buildings.geojson",
+    "usac_pois_and_indoors.json",
+    "campus_places_info.json",
+    "campus_graph.json",
+    "usac_boundary.geojson",
+    "map_version.json"
+  ],
+  "required_env_vars": {
+    "PEMTREE-admin": {
+      "public_vite": [
+        "VITE_SUPABASE_URL",
+        "VITE_SUPABASE_PUBLISHABLE_KEY",
+        "VITE_COMMUNITY_AUTH_URL",
+        "VITE_MODERATION_API_URL",
+        "VITE_BILLING_WORKER_URL",
+        "VITE_MAP_R2_PUBLIC_URL"
+      ],
+      "supabase_private": [
+        "CLOUDFLARE_ACCOUNT_ID",
+        "CLOUDFLARE_R2_ACCESS_KEY_ID",
+        "CLOUDFLARE_R2_SECRET_ACCESS_KEY",
+        "CLOUDFLARE_R2_BUCKET_NAME"
+      ]
+    }
+  },
+  "required_csp_connect_src": {
+    "PEMTREE-admin": [
+      "https://*.supabase.co",
+      "wss://*.supabase.co",
+      "https://*.workers.dev",
+      "https://*.r2.cloudflarestorage.com"
+    ]
+  },
+  "moderation_status_codes": {
+    "0": "pending_auto",
+    "1": "approved",
+    "2": "hidden_rejected",
+    "3": "human_review_queue"
+  },
+  "forbidden_columns": [
+    "profiles.full_name",
+    "profiles.cui",
+    "profiles.cui_hash",
+    "verification_requests.extracted_ocr_text",
+    "merchant_verification_requests.dpi_hash"
+  ],
+  "allowed_profile_columns_notes": {
+    "profiles.alias": "Válido desde migración 20261123164346_media_video_unique_alias_and_cooldown.sql (alias único no-PII)."
+  },
+  "critical_shared_rpcs": [
+    "is_pemtree_admin",
+    "is_pemtree_moderator",
+    "admin_list_grouped_entity_reports",
+    "admin_resolve_entity_reports",
+    "admin_toggle_legal_hold",
+    "ocultar_contenido_moderado",
+    "restaurar_contenido_moderado",
+    "eliminar_contenido_moderado",
+    "test_profanity_filter",
+    "admin_issue_forum_strike",
+    "admin_list_marketplace_subscriptions",
+    "admin_get_marketplace_subscription",
+    "admin_list_recurrente_webhook_events",
+    "claim_student_credentials",
+    "get_marketplace_feed"
+  ],
+  "mirrored_contract_files": [
+    "docs/contracts/SYNC_PROTOCOL.md",
+    "docs/contracts/shared-ecosystem-contract.json",
+    "scripts/sync-supabase-migrations.sh",
+    "scripts/ci/check_ecosystem_sync.py"
+  ]
+}
