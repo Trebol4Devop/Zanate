@@ -1,3 +1,6 @@
+-- Fuente remota: supabase_migrations.schema_migrations (20261127024304_recurrente_admin_backend)
+-- Equivalente funcional de Comunidad_USAC:supabase/migrations/20261127020000_recurrente_admin_backend.sql
+
 -- =============================================================================
 -- Migración: 20261127020000_recurrente_admin_backend.sql
 -- Módulo: Marketplace — Panel administrativo de suscripciones y webhooks Recurrente
@@ -729,5 +732,3 @@ COMMENT ON FUNCTION public.admin_upsert_marketplace_plan(jsonb) IS
 
 REVOKE ALL ON FUNCTION public.admin_upsert_marketplace_plan(jsonb) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.admin_upsert_marketplace_plan(jsonb) TO authenticated, service_role;
-
-COMMIT;
