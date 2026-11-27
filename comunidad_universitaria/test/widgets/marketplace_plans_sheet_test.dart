@@ -72,6 +72,7 @@ void main() {
   Widget buildTestWidget({
     List<MarketplacePlan>? plans,
     MarketplaceSellerStatus? status,
+    MarketplaceSubscription? subscription,
   }) {
     return MaterialApp(
       theme: AppTheme.lightTheme,
@@ -79,6 +80,7 @@ void main() {
         body: MarketplacePlansSheet(
           initialPlans: plans ?? testPlans,
           initialStatus: status,
+          initialSubscription: subscription,
         ),
       ),
     );
@@ -146,6 +148,26 @@ void main() {
 
       // Y para los otros planes muestra el CTA correspondiente
       expect(find.text('Inicia sesión para solicitar'), findsNWidgets(2));
+    });
+
+    testWidgets('Usa la suscripción activa para marcar el plan actual sin esperar al status', (tester) async {
+      tester.view.physicalSize = const Size(1200, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          subscription: const MarketplaceSubscription(
+            id: 'sub-1',
+            planId: 'pro_student',
+            status: 'active',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Chip "Plan actual" + botón deshabilitado del plan Emprendedor
+      expect(find.text('Plan actual'), findsNWidgets(2));
     });
 
     testWidgets('RN-MKT-04: Simulación de error en fetchPlans muestra estado de error con retry y NO muestra precios inventados (Q25/Q75)', (tester) async {
