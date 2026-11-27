@@ -30,6 +30,7 @@ jobs:
       # por defecto de lib/core/config/supabase_config.dart.
       SUPABASE_URL: ${{ vars.SUPABASE_URL }}
       SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+      BILLING_WORKER_URL: ${{ vars.BILLING_WORKER_URL || 'https://comunidad-usac-billing.carlosdelcidramirez.workers.dev' }}
 
     steps:
       - name: Checkout del repositorio
@@ -63,6 +64,9 @@ jobs:
           fi
           if [[ -n "$SUPABASE_ANON_KEY" ]]; then
             defines+=("--dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY")
+          fi
+          if [[ -n "$BILLING_WORKER_URL" ]]; then
+            defines+=("--dart-define=BILLING_WORKER_URL=$BILLING_WORKER_URL")
           fi
           flutter build web --release "${defines[@]}"
 
