@@ -95,6 +95,38 @@ jobs:
         run: npm test
 
   # ===========================================================================
+  # Job 2b: Pruebas Unitarias de Cloudflare Worker (Facturación Recurrente)
+  # No requiere secrets. Se ejecuta en cada PR y push.
+  # ===========================================================================
+  billing-worker-tests:
+    name: Cloudflare Billing Worker Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: workers/billing/package-lock.json
+
+      - name: Instalar dependencias de billing worker
+        working-directory: workers/billing
+        run: npm ci
+
+      - name: Verificar tipos de billing worker
+        working-directory: workers/billing
+        run: npm run typecheck
+
+      - name: Ejecutar pruebas unitarias de billing worker
+        working-directory: workers/billing
+        run: npm test
+
+  # ===========================================================================
   # Job 3: Pruebas de Integración pgTAP en Base de Datos Supabase (Opcional / Gated)
   #
   # SECRETS Y VARIABLES REQUERIDAS:
