@@ -1,24 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/zanate_colors.dart';
+import '../../../core/models/marketplace_subscription.dart';
+import '../../../core/services/billing_service.dart';
 import '../../../core/services/marketplace_service.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/responsive.dart';
 import '../../shared/widgets/auth_modal.dart';
 import '../marketplace_theme.dart';
-import 'sponsor_request_dialog.dart';
 
 class MarketplacePlansSheet extends StatefulWidget {
   final List<MarketplacePlan>? initialPlans;
   final MarketplaceSellerStatus? initialStatus;
+  final MarketplaceSubscription? initialSubscription;
   final String? initialError;
+  final BillingService? billingService;
+  final Future<bool> Function(Uri url)? launchUrlFn;
+  final bool? isAuthenticatedOverride;
 
   const MarketplacePlansSheet({
     super.key,
     this.initialPlans,
     this.initialStatus,
+    this.initialSubscription,
     this.initialError,
+    this.billingService,
+    this.launchUrlFn,
+    this.isAuthenticatedOverride,
   });
 
   static Future<void> show(BuildContext context) {
@@ -33,21 +43,30 @@ class MarketplacePlansSheet extends StatefulWidget {
   State<MarketplacePlansSheet> createState() => _MarketplacePlansSheetState();
 }
 
-class _MarketplacePlansSheetState extends State<MarketplacePlansSheet> {
+class _MarketplacePlansSheetState extends State<MarketplacePlansSheet>
+    with WidgetsBindingObserver {
+  late final BillingService _billingService;
   List<MarketplacePlan> _plans = [];
   MarketplaceSellerStatus? _myStatus;
+  MarketplaceSubscription? _subscription;
   bool _isLoading = true;
+  bool _isSubmittingBilling = false;
+  bool _awaitingPaymentConfirmation = false;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _billingService = widget.billingService ?? BillingService();
+
     if (widget.initialError != null) {
       _errorMessage = widget.initialError;
       _isLoading = false;
     } else if (widget.initialPlans != null) {
       _plans = widget.initialPlans!;
       _myStatus = widget.initialStatus;
+      _subscription = widget.initialSubscription;
       _isLoading = false;
       if (_plans.isEmpty) {
         _errorMessage =
@@ -55,6 +74,19 @@ class _MarketplacePlansSheetState extends State<MarketplacePlansSheet> {
       }
     } else {
       _loadPlansAndStatus();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _awaitingPaymentConfirmation) {
+      _refreshAfterCheckout();
     }
   }
 
@@ -68,15 +100,18 @@ class _MarketplacePlansSheetState extends State<MarketplacePlansSheet> {
       final results = await Future.wait([
         MarketplaceService.fetchPlans(),
         MarketplaceService.fetchMyStatus(),
+        _safeFetchSubscription(),
       ]);
 
       if (!mounted) return;
       final fetchedPlans = results[0] as List<MarketplacePlan>;
       final fetchedStatus = results[1] as MarketplaceSellerStatus?;
+      final fetchedSub = results[2] as MarketplaceSubscription?;
 
       setState(() {
         _plans = fetchedPlans;
         _myStatus = fetchedStatus;
+        _subscription = fetchedSub;
         _isLoading = false;
         if (fetchedPlans.isEmpty) {
           _errorMessage =
@@ -94,8 +129,64 @@ class _MarketplacePlansSheetState extends State<MarketplacePlansSheet> {
     }
   }
 
-  void _handlePlanAction(MarketplacePlan plan) {
-    if (!SupabaseService.isAuthenticated) {
+  bool get _isAuthenticated =>
+      widget.isAuthenticatedOverride ?? SupabaseService.isAuthenticated;
+
+  Future<MarketplaceSubscription?> _safeFetchSubscription() async {
+    if (!_isAuthenticated) return null;
+    try {
+      return await _billingService.fetchMySubscription();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _refreshAfterCheckout() async {
+    if (!mounted) return;
+    setState(() {
+      _awaitingPaymentConfirmation = true;
+    });
+
+    try {
+      final results = await Future.wait([
+        MarketplaceService.fetchMyStatus(),
+        _safeFetchSubscription(),
+      ]);
+      if (!mounted) return;
+      final fetchedStatus = results[0] as MarketplaceSellerStatus?;
+      final fetchedSub = results[1] as MarketplaceSubscription?;
+      final confirmed =
+          fetchedSub?.isActive == true ||
+          (fetchedStatus != null && fetchedStatus.planId != 'free');
+
+      setState(() {
+        _myStatus = fetchedStatus;
+        _subscription = fetchedSub;
+        if (confirmed) {
+          _awaitingPaymentConfirmation = false;
+        }
+      });
+    } catch (_) {
+      // Mantiene el banner de confirmación pendiente para reintento manual
+    }
+  }
+
+  Future<void> _launchCheckoutUrl(String rawUrl) async {
+    final uri = Uri.tryParse(rawUrl);
+    if (uri == null) {
+      throw const BillingException('URL de pago inválida.');
+    }
+    final launcher =
+        widget.launchUrlFn ??
+        (u) => launchUrl(u, mode: LaunchMode.externalApplication);
+    final launched = await launcher(uri);
+    if (!launched) {
+      throw const BillingException('No se pudo abrir la pasarela de pago.');
+    }
+  }
+
+  Future<void> _handlePlanAction(MarketplacePlan plan) async {
+    if (!_isAuthenticated) {
       AuthModal.show(
         context,
         title: 'Inicia sesión para solicitar un plan',
@@ -108,11 +199,50 @@ class _MarketplacePlansSheetState extends State<MarketplacePlansSheet> {
       return;
     }
 
-    SponsorRequestDialog.show(
-      context,
-      planId: plan.id,
-      planName: plan.name,
-    );
+    if (plan.priceMonthly <= 0 || plan.id == 'free') {
+      return;
+    }
+
+    setState(() => _isSubmittingBilling = true);
+    try {
+      final checkoutUrl = await _billingService.createCheckoutSession(plan.id);
+      await _launchCheckoutUrl(checkoutUrl);
+      if (!mounted) return;
+      setState(() {
+        _awaitingPaymentConfirmation = true;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmittingBilling = false);
+      }
+    }
+  }
+
+  Future<void> _handleUpdateCard() async {
+    if (!_isAuthenticated) return;
+    setState(() => _isSubmittingBilling = true);
+    try {
+      final setupUrl = await _billingService.createCardSetupSession();
+      await _launchCheckoutUrl(setupUrl);
+      if (!mounted) return;
+      setState(() {
+        _awaitingPaymentConfirmation = true;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmittingBilling = false);
+      }
+    }
   }
 
   @override
@@ -256,6 +386,17 @@ class _MarketplacePlansSheetState extends State<MarketplacePlansSheet> {
                     ],
                   ),
                 ),
+
+                if (_subscription?.isPastDue == true) ...[
+                  const SizedBox(height: 12),
+                  _buildPastDueBanner(isDark),
+                ],
+
+                if (_awaitingPaymentConfirmation) ...[
+                  const SizedBox(height: 12),
+                  _buildConfirmingBanner(isDark),
+                ],
+
                 const SizedBox(height: 18),
 
                 if (isDesktop)
@@ -326,16 +467,89 @@ class _MarketplacePlansSheetState extends State<MarketplacePlansSheet> {
     );
   }
 
+  Widget _buildPastDueBanner(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF2F2),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFFCA5A5)),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            PhosphorIconsBold.warningCircle,
+            color: Color(0xFFDC2626),
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'Tu suscripción está pendiente de pago. Actualiza tu tarjeta para mantener tus beneficios.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Color(0xFF991B1B),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: _isSubmittingBilling ? null : _handleUpdateCard,
+            child: const Text('Actualizar tarjeta'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConfirmingBanner(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: ZanateColors.surface(isDark),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: ZanateColors.zanateEyeYellow),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'Confirmando pago… Estamos esperando la confirmación de la pasarela.',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+          ),
+          TextButton(
+            onPressed: _refreshAfterCheckout,
+            child: const Text('Ya completé mi pago'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPlanCard(MarketplacePlan plan, bool isDark) {
-    final currentPlanId = _myStatus?.planId ?? 'free';
+    final currentPlanId = _myStatus?.planId ?? _subscription?.planId ?? 'free';
     final isCurrentPlan = plan.id == currentPlanId;
     final isRecommended = plan.id == 'pro_student';
+    final isFreePlan = plan.priceMonthly <= 0 || plan.id == 'free';
 
     final borderColor = isCurrentPlan
         ? const Color(0xFF10B981)
         : (isRecommended
             ? ZanateColors.zanateEyeYellow
             : ZanateColors.border(isDark));
+
+    final bool disableAction =
+        isCurrentPlan ||
+        _isSubmittingBilling ||
+        (_isAuthenticated && isFreePlan);
 
     return Container(
       decoration: BoxDecoration(
@@ -490,10 +704,10 @@ class _MarketplacePlansSheetState extends State<MarketplacePlansSheet> {
           // Action Button
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: isCurrentPlan
+              backgroundColor: disableAction
                   ? ZanateColors.pill(isDark)
                   : ZanateColors.ctaBg(isDark),
-              foregroundColor: isCurrentPlan
+              foregroundColor: disableAction
                   ? ZanateColors.textMuted(isDark)
                   : ZanateColors.ctaFg(isDark),
               elevation: 0,
@@ -502,21 +716,17 @@ class _MarketplacePlansSheetState extends State<MarketplacePlansSheet> {
               ),
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
-            onPressed: isCurrentPlan
-                ? null
-                : () => _handlePlanAction(plan),
+            onPressed: disableAction ? null : () => _handlePlanAction(plan),
             child: Text(
               isCurrentPlan
                   ? 'Plan actual'
-                  : (!SupabaseService.isAuthenticated
+                  : (!_isAuthenticated
                       ? 'Inicia sesión para solicitar'
-                      : (plan.priceMonthly == 0
-                          ? 'Solicitar plan'
-                          : 'Mejorar plan')),
+                      : (isFreePlan ? 'Plan base' : 'Mejorar plan')),
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
-                color: isCurrentPlan
+                color: disableAction
                     ? Colors.grey
                     : (isDark ? ZanateColors.zanateBlack : Colors.white),
               ),

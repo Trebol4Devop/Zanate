@@ -1,10 +1,16 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import 'package:comunidad_universitaria/core/config/app_theme.dart';
 import 'package:comunidad_universitaria/core/models/marketplace_plan.dart';
 import 'package:comunidad_universitaria/core/models/marketplace_seller_status.dart';
+import 'package:comunidad_universitaria/core/models/marketplace_subscription.dart';
+import 'package:comunidad_universitaria/core/services/billing_service.dart';
+import 'package:comunidad_universitaria/core/services/supabase_service.dart';
 import 'package:comunidad_universitaria/features/marketplace/widgets/marketplace_plans_sheet.dart';
 
 void main() {
@@ -248,5 +254,108 @@ void main() {
         expect(find.byType(Dialog), findsNothing);
       },
     );
+
+    testWidgets('Muestra banner past_due con CTA Actualizar tarjeta y lanza setup-card', (tester) async {
+      tester.view.physicalSize = const Size(1200, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      SupabaseService.debugUserId = 'seller-123';
+      addTearDown(() => SupabaseService.debugUserId = null);
+
+      Uri? launchedUri;
+      final billingService = BillingService(
+        httpClient: MockClient((req) async {
+          return http.Response(
+            jsonEncode({
+              'checkout_id': 'chk_setup_1',
+              'checkout_url': 'https://app.recurrente.com/c/chk_setup_1',
+            }),
+            201,
+          );
+        }),
+        workerUrl: 'https://billing.example.workers.dev',
+        accessTokenProvider: () => 'jwt-test',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            body: MarketplacePlansSheet(
+              initialPlans: testPlans,
+              initialSubscription: const MarketplaceSubscription(
+                id: 'sub-1',
+                planId: 'pro_student',
+                status: 'past_due',
+              ),
+              billingService: billingService,
+              isAuthenticatedOverride: true,
+              launchUrlFn: (uri) async {
+                launchedUri = uri;
+                return true;
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Actualizar tarjeta'), findsOneWidget);
+      await tester.tap(find.text('Actualizar tarjeta'));
+      await tester.pump();
+
+      expect(launchedUri?.toString(), 'https://app.recurrente.com/c/chk_setup_1');
+      expect(find.text('Ya completé mi pago'), findsOneWidget);
+    });
+
+    testWidgets('Plan pago inicia checkout en Recurrente y muestra estado Confirmando pago', (tester) async {
+      tester.view.physicalSize = const Size(1200, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      SupabaseService.debugUserId = 'seller-123';
+      addTearDown(() => SupabaseService.debugUserId = null);
+
+      Uri? launchedUri;
+      final billingService = BillingService(
+        httpClient: MockClient((req) async {
+          expect(req.url.path, '/api/v1/billing/checkout');
+          return http.Response(
+            jsonEncode({
+              'checkout_id': 'chk_pro_1',
+              'checkout_url': 'https://app.recurrente.com/c/chk_pro_1',
+            }),
+            201,
+          );
+        }),
+        workerUrl: 'https://billing.example.workers.dev',
+        accessTokenProvider: () => 'jwt-test',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            body: MarketplacePlansSheet(
+              initialPlans: testPlans,
+              billingService: billingService,
+              isAuthenticatedOverride: true,
+              launchUrlFn: (uri) async {
+                launchedUri = uri;
+                return true;
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Mejorar plan').first);
+      await tester.pump();
+
+      expect(launchedUri?.toString(), 'https://app.recurrente.com/c/chk_pro_1');
+      expect(find.textContaining('Confirmando pago'), findsOneWidget);
+    });
   });
 }
