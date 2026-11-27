@@ -5,4 +5,5 @@ compatibility_flags = ["nodejs_compat"]
 
 [vars]
 RECURRENTE_ENVIRONMENT = "live"
-ALLOWED_ORIGINS = "https://zanate.pages.dev,http://localhost:3000,http://localhost:8080"
+# Agregar aquí también el dominio de producción del panel admin (Zanate-admin) cuando se despliegue.
+ALLOWED_ORIGINS = "https://zanate.pages.dev,http://localhost:3000,http://localhost:8080,http://localhost:5173,http://127.0.0.1:5173"

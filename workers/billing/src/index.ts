@@ -7,6 +7,12 @@ import {
   handleUpdateSubscription,
 } from './handlers/subscription';
 import { handleRecurrenteWebhook } from './handlers/webhook';
+import {
+  handleAdminGetSubscription,
+  handleAdminListWebhooks,
+  handleAdminReprocessWebhook,
+  handleAdminSubscriptionAction,
+} from './handlers/admin';
 
 export function getCorsHeaders(
   request: Request,
@@ -66,6 +72,18 @@ export default {
       }
       if (pathname === '/api/v1/webhooks/recurrente' && request.method === 'POST') {
         return await handleRecurrenteWebhook(request, env, corsHeaders);
+      }
+      if (pathname === '/api/v1/billing/admin/subscription' && request.method === 'GET') {
+        return await handleAdminGetSubscription(request, env, corsHeaders);
+      }
+      if (pathname === '/api/v1/billing/admin/subscription/action' && request.method === 'POST') {
+        return await handleAdminSubscriptionAction(request, env, corsHeaders);
+      }
+      if (pathname === '/api/v1/billing/admin/webhooks' && request.method === 'GET') {
+        return await handleAdminListWebhooks(request, env, corsHeaders);
+      }
+      if (pathname === '/api/v1/billing/admin/webhooks/reprocess' && request.method === 'POST') {
+        return await handleAdminReprocessWebhook(request, env, corsHeaders);
       }
 
       return errorResponse(
